@@ -1,6 +1,6 @@
-# NIFTY Midcap 100 Swing Trading Scanner
+# Small Cap Swing Scanner
 
-An automated daily swing-trading scanner for the NIFTY Midcap 100 index with real-time Telegram alerts. It identifies high-probability momentum setups combining Mark Minervini's Trend Template, Volatility Contraction Patterns (VCP), Bollinger/Keltner squeezes, and RSI mean-reversion pullbacks, paired with strict risk management and position sizing.
+An automated daily swing-trading scanner for small-cap stocks with real-time Telegram alerts. It identifies high-probability momentum setups combining Mark Minervini's Trend Template, Volatility Contraction Patterns (VCP), Bollinger/Keltner squeezes, and RSI mean-reversion pullbacks, paired with strict risk management and position sizing.
 
 ---
 
@@ -151,6 +151,8 @@ You can manage your entire trading journal in real time directly through Telegra
 ---
 
 ## Logic Audit (do not skip)
+
+Baseline copied from mid-cap; rules re-baselined in S2/S3.
 
 To safeguard trading integrity and prevent unintended changes to indicator definitions, signal generation, risk budgeting, or notification gating, this repository includes an offline regression harness.
 

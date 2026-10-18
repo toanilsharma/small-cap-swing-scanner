@@ -1,3 +1,6 @@
+const REPO_OWNER = "toanilsharma";
+const REPO_SLUG  = "smallcap-swing-scanner";
+
 // =====================================================================
 // AUTHENTICATION CONFIGURATION
 // Replace PASSWORD_HASH with the SHA-256 of your own password before deploying.
@@ -8,7 +11,7 @@ const PASSWORD_HASH = "ad15418e84fe6e94ec8dd2c22e7f952fc90457256ffbc0f59dcffdef0
 // =====================================================================
 // GITHUB RAW ENDPOINTS
 // =====================================================================
-const REPO_BASE = "https://raw.githubusercontent.com/toanilsharma/midcap-swing-scanner/main";
+const REPO_BASE = `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_SLUG}/main`;
 const SCAN_RESULTS_URL = `${REPO_BASE}/scan_results.json`;
 const OPEN_POSITIONS_URL = `${REPO_BASE}/open_positions.json`;
 const TRADES_URL = `${REPO_BASE}/trades.json`;
@@ -598,7 +601,7 @@ function renderNearBuy(scanData, openPositions) {
     regimeBanner.className = "regime-banner defensive";
     regimeText.textContent = "🔴 MARKET FILTER ACTIVE: Index in pullback/downtrend. New entry signals blocked (O'Neil M-rule).";
   }
-  scannedMeta.textContent = `${scanData.scanned_count || 100} midcap stocks scanned`;
+  scannedMeta.textContent = `${scanData.scanned_count || 100} Small Cap stocks scanned`;
   regimeBanner.style.display = "flex";
 
   // Render Signals if present
@@ -731,7 +734,7 @@ function applyWatchlistFiltering(watchlist, scanData) {
 
   if (!watchlist || watchlist.length === 0) {
     watchlistBody.innerHTML = `
-      <tr><td colspan="9" class="empty-state">📋 Watchlist empty: no midcaps currently in uptrend within 5% of breakout.</td></tr>
+      <tr><td colspan="9" class="empty-state">📋 Watchlist empty: no small caps currently in uptrend within 5% of breakout.</td></tr>
     `;
     updateFilterCounts([], 0);
     return;
@@ -2089,7 +2092,7 @@ async function renderOpenPositions(positions) {
   if (sectorAlert) {
     const sectorCount = {};
     for (const pos of positions) {
-      let sec = "Midcap";
+      let sec = "Small Cap";
       if (_cachedScanData && _cachedScanData.watchlist) {
         const match = _cachedScanData.watchlist.find(w => w.Symbol === pos.symbol);
         if (match && match.Sector) sec = match.Sector;
@@ -3200,7 +3203,7 @@ function archiveScanData(data) {
   try {
     const scanTime = data.scan_time || new Date().toISOString();
     const dateKey = scanTime.substring(0, 10);
-    const storageKey = "midcap_scan_archive";
+    const storageKey = "smallcap_scan_archive";
     const existingStr = localStorage.getItem(storageKey);
     const archive = existingStr ? JSON.parse(existingStr) : {};
 
@@ -3229,7 +3232,7 @@ function updateArchiveDropdown() {
   const select = document.getElementById("watchlistDateSelect");
   if (!select) return;
   try {
-    const storageKey = "midcap_scan_archive";
+    const storageKey = "smallcap_scan_archive";
     const existingStr = localStorage.getItem(storageKey);
     const archive = existingStr ? JSON.parse(existingStr) : {};
     const dates = Object.keys(archive).sort().reverse();
@@ -3264,7 +3267,7 @@ function initScanArchiveListeners() {
         }
       } else {
         try {
-          const archive = JSON.parse(localStorage.getItem("midcap_scan_archive") || "{}");
+          const archive = JSON.parse(localStorage.getItem("smallcap_scan_archive") || "{}");
           const archivedScan = archive[val];
           if (archivedScan) {
             _isViewingArchive = true;
@@ -3300,7 +3303,7 @@ function initScanArchiveListeners() {
 // =====================================================================
 function getTradePostMortem(symbol, entryDate) {
   if (!symbol) return null;
-  const key = `midcap_pm_${String(symbol).replace(/\.NS$/i, "").toUpperCase()}_${String(entryDate).substring(0, 10)}`;
+  const key = `smallcap_pm_${String(symbol).replace(/\.NS$/i, "").toUpperCase()}_${String(entryDate).substring(0, 10)}`;
   try {
     const raw = localStorage.getItem(key);
     return raw ? JSON.parse(raw) : null;
@@ -3311,7 +3314,7 @@ function getTradePostMortem(symbol, entryDate) {
 
 function saveTradePostMortem(symbol, entryDate, data) {
   if (!symbol) return;
-  const key = `midcap_pm_${String(symbol).replace(/\.NS$/i, "").toUpperCase()}_${String(entryDate).substring(0, 10)}`;
+  const key = `smallcap_pm_${String(symbol).replace(/\.NS$/i, "").toUpperCase()}_${String(entryDate).substring(0, 10)}`;
   try {
     localStorage.setItem(key, JSON.stringify(data));
   } catch (e) {
@@ -3518,7 +3521,7 @@ function exportTradesToCsv() {
   const link = document.createElement("a");
   const dateStr = new Date().toISOString().substring(0, 10);
   link.setAttribute("href", url);
-  link.setAttribute("download", `midcap_swing_trade_journal_${dateStr}.csv`);
+  link.setAttribute("download", `smallcap_swing_trade_journal_${dateStr}.csv`);
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);

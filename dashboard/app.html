@@ -1,0 +1,1647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Midcap Swing Terminal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <!-- Immediate Auth Guard (prevents flash of protected content) -->
+  <script>
+    if (localStorage.getItem("auth") !== "1") {
+      window.location.replace("index.html");
+    }
+  </script>
+  <!-- Chart.js for smooth equity curve rendering -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <!-- Header Bar -->
+  <header class="app-header">
+    <div class="page-container header-container">
+      <div class="header-title-group">
+        <span style="font-size: 22px;">📊</span>
+        <div>
+          <h1 class="header-title">Midcap Swing Terminal</h1>
+          <div class="header-meta">
+            <span id="marketBadge" class="badge badge-neutral">Checking Market...</span>
+            <span class="meta-dot">•</span>
+            <span id="lastUpdatedText">Updated: Loading...</span>
+          </div>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button id="globalSearchBtn" class="search-trigger-btn" title="Search terms and definitions (Press /)">
+          <span style="font-size: 14px;">🔍</span>
+          <span>Search</span>
+          <kbd class="search-shortcut-kbd">/</kbd>
+        </button>
+        <button id="refreshBtn" class="btn btn-secondary" title="Fetch fresh data">
+          🔄 Refresh
+        </button>
+        <button id="logoutBtn" class="btn btn-danger" title="Sign out">
+          Sign Out
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Tabs Navigation -->
+  <nav class="tabs-bar">
+    <div class="page-container tabs-container">
+      <button class="tab-btn active" data-tab="tabNearBuy">🎯 Near Buy (Watchlist)</button>
+      <button class="tab-btn" data-tab="tabOpen">💼 Open Positions (<span id="openCountBadge">0</span>)</button>
+      <button class="tab-btn" data-tab="tabHistory">📜 Trade History</button>
+      <button class="tab-btn" data-tab="tabStats">📈 Performance Stats</button>
+      <button class="tab-btn" data-tab="tabHelp" id="helpTabBtn">📖 Help & Guide</button>
+    </div>
+  </nav>
+
+  <!-- Main Container -->
+  <main class="page-container main-container">
+    <!-- TAB 1: NEAR BUY / WATCHLIST -->
+    <section id="tabNearBuy" class="tab-content active">
+      <!-- Tab Guide Banner -->
+      <div class="tab-guide-banner" id="bannerNearBuy" data-tab-banner="near_buy">
+        <div class="tab-guide-content">
+          <span class="tab-guide-icon">💡</span>
+          <span class="tab-guide-text">Stocks in uptrend closest to their breakout. Act only on Grade A/A+ when the market badge is green.</span>
+        </div>
+        <button class="tab-guide-dismiss" title="Dismiss banner" aria-label="Dismiss">×</button>
+      </div>
+
+      <!-- TODAY'S PLAN CARD -->
+      <div id="todaysPlanCard" class="todays-plan-card">
+        <div class="todays-plan-header">
+          <div class="todays-plan-title-group">
+            <span class="todays-plan-icon">📋</span>
+            <div>
+              <h3 class="todays-plan-title">Today's Action Plan</h3>
+              <span id="planMetaTime" class="todays-plan-meta">Updated: Today</span>
+            </div>
+          </div>
+          <span id="planStatusPill" class="badge badge-success">Active Strategy</span>
+        </div>
+        <ul id="todaysPlanBullets" class="todays-plan-list">
+          <li class="todays-plan-item">
+            <span class="todays-plan-bullet-icon">•</span>
+            <span class="todays-plan-bullet-text">Analyzing market regime and watchlist setups...</span>
+          </li>
+        </ul>
+      </div>
+
+      <div id="regimeBanner" class="regime-banner" style="display: none;">
+        <span id="regimeText">Market Regime: Checking...</span>
+        <span id="scannedMeta">100 constituents scanned</span>
+      </div>
+
+      <!-- SECTOR LEADERSHIP STRIP (Item #2) -->
+      <div id="sectorLeadershipStrip" class="sector-strip-card" style="display: none;">
+        <div class="sector-strip-header">
+          <div class="sector-strip-title-group">
+            <span style="font-size: 16px;">🧭</span>
+            <span class="sector-strip-title">Sector Leadership & Rotation</span>
+            <span id="sectorActiveFilterBadge" class="badge badge-primary sector-filter-badge" style="display: none; cursor: pointer;" title="Click to clear sector filter">
+              Filtered: <strong id="sectorFilterName"></strong> &times;
+            </span>
+          </div>
+          <span class="sector-strip-hint">Click a sector chip to filter setups</span>
+        </div>
+        <div id="sectorChipsContainer" class="sector-chips-row"></div>
+      </div>
+
+      <div id="signalsContainer" style="margin-bottom: 24px; display: none;">
+        <h2 style="font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 12px;">🟢 Active Today's Signals</h2>
+        <div class="table-scroll" tabindex="0">
+          <table id="signalsTable">
+            <thead>
+              <tr>
+                <th>Type</th>
+                <th>Symbol</th>
+                <th>Entry</th>
+                <th><span class="term-lookup" data-term="Stop loss">Stop</span></th>
+                <th><span class="term-lookup" data-term="Target">Target</span></th>
+                <th><span class="term-lookup" data-term="Position size">Qty</span></th>
+                <th>Risk Amount</th>
+                <th><span class="term-lookup" data-term="Sector filter">Sector</span></th>
+              </tr>
+            </thead>
+            <tbody id="signalsBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- SCAN ARCHIVE RETROSPECTIVE BANNER (Item #8) -->
+      <div id="archiveScanNoticeBanner" class="archive-notice-banner" style="display: none;">
+        <div class="archive-notice-content">
+          <span class="archive-notice-icon">🕒</span>
+          <span id="archiveNoticeText" class="archive-notice-text">Viewing Historical Scan Archive</span>
+        </div>
+        <button id="returnToLatestScanBtn" class="btn btn-xs btn-primary">Return to Latest (Live)</button>
+      </div>
+
+      <!-- WATCHLIST FILTER & SORT TOOLBAR (Item #1) -->
+      <div class="watchlist-controls-card">
+        <div class="watchlist-controls-top">
+          <div class="watchlist-search-box">
+            <span class="search-box-icon">🔍</span>
+            <input type="text" id="watchlistSearchInput" placeholder="Filter by symbol or sector (e.g. TRENT, Auto)..." autocomplete="off" />
+            <button id="clearWatchlistSearchBtn" class="search-clear-btn" style="display: none;" title="Clear search">&times;</button>
+          </div>
+          <div class="watchlist-sort-group">
+            <label for="watchlistSortSelect">Sort:</label>
+            <select id="watchlistSortSelect" class="form-select-sm">
+              <option value="score_desc">Setup Score (High &rarr; Low)</option>
+              <option value="dist_asc">Dist to Breakout (Closest)</option>
+              <option value="price_desc">Price (High &rarr; Low)</option>
+              <option value="price_asc">Price (Low &rarr; High)</option>
+              <option value="symbol_asc">Symbol (A &rarr; Z)</option>
+            </select>
+          </div>
+          <div class="watchlist-archive-group">
+            <label for="watchlistDateSelect">📅 Scan:</label>
+            <select id="watchlistDateSelect" class="form-select-sm" title="Select today's live scan or view past cached daily scans">
+              <option value="latest">Latest (Live)</option>
+            </select>
+          </div>
+        </div>
+        <div class="watchlist-filter-chips">
+          <button class="wl-filter-chip active" data-filter="all">All Setups (<span id="countAll">0</span>)</button>
+          <button class="wl-filter-chip" data-filter="grade_a">Grade A+ / A (<span id="countGradeA">0</span>)</button>
+          <button class="wl-filter-chip" data-filter="near_breakout">&le; 2% to Breakout (<span id="countNearBreakout">0</span>)</button>
+          <button class="wl-filter-chip" data-filter="coiling">Coiling Vol (<span id="countCoiling">0</span>)</button>
+          <button class="wl-filter-chip" data-filter="sector_bullish">Sector Bullish (<span id="countSectorBullish">0</span>)</button>
+        </div>
+        <div class="watchlist-status-bar">
+          <span id="watchlistCountStatus">Showing all setups</span>
+          <button id="resetWatchlistFiltersBtn" class="btn-link-sm" style="display: none;">Reset all filters</button>
+        </div>
+      </div>
+
+      <div class="table-scroll" tabindex="0">
+        <table id="watchlistTable">
+          <thead>
+            <tr>
+              <th>Symbol</th>
+              <th><span class="term-lookup" data-term="Setup score">Score</span></th>
+              <th><span class="term-lookup" data-term="Grade">Grade</span></th>
+              <th>Close</th>
+              <th><span class="term-lookup" data-term="Dist to Breakout">Dist to Breakout</span></th>
+              <th><span class="term-lookup" data-term="Coiling">Coiling</span></th>
+              <th>Sector</th>
+              <th><span class="term-lookup" data-term="Sector Bullish">Sector Bullish</span></th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="watchlistBody">
+            <tr>
+              <td colspan="9" class="empty-state">Loading scan results from GitHub...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- TAB 2: OPEN POSITIONS -->
+    <section id="tabOpen" class="tab-content">
+      <!-- Tab Guide Banner -->
+      <div class="tab-guide-banner" id="bannerOpenPositions" data-tab-banner="open_positions">
+        <div class="tab-guide-content">
+          <span class="tab-guide-icon">💡</span>
+          <span class="tab-guide-text">Your live trades. Red rows are near stop - defend or exit. Green rows are near target - consider booking.</span>
+        </div>
+        <button class="tab-guide-dismiss" title="Dismiss banner" aria-label="Dismiss">×</button>
+      </div>
+
+      <!-- Position Sizer Card -->
+      <div id="positionSizerCard" class="sizer-card">
+        <div class="sizer-header">
+          <div>
+            <h2 class="sizer-title"><span>📐</span> Position Sizer & Risk Calculator</h2>
+            <p class="sizer-subtitle">Auto-compute position quantity, risk budget, and 2R profit targets</p>
+          </div>
+          <button id="sizerResetBtn" class="btn btn-secondary btn-sm" title="Reset to defaults">Reset</button>
+        </div>
+
+        <div class="sizer-form-grid">
+          <div class="sizer-input-group">
+            <label for="sizerSymbol">Symbol</label>
+            <input type="text" id="sizerSymbol" placeholder="e.g. NYKAA" autocomplete="off" />
+          </div>
+          <div class="sizer-input-group">
+            <label for="sizerCapital">Capital (₹)</label>
+            <input type="number" id="sizerCapital" value="100000" min="1000" step="1000" />
+          </div>
+          <div class="sizer-input-group">
+            <label for="sizerRiskPct">Risk (%)</label>
+            <input type="number" id="sizerRiskPct" value="1" min="0.1" max="10" step="0.1" />
+          </div>
+          <div class="sizer-input-group">
+            <label for="sizerEntry">Entry Price (₹)</label>
+            <input type="number" id="sizerEntry" placeholder="0.00" min="0" step="any" />
+          </div>
+          <div class="sizer-input-group">
+            <label for="sizerStop">Stop Loss (₹)</label>
+            <input type="number" id="sizerStop" placeholder="0.00" min="0" step="any" />
+          </div>
+        </div>
+
+        <div id="sizerError" class="sizer-error" style="display: none;"></div>
+
+        <div class="sizer-results-strip">
+          <div class="sizer-stat-card">
+            <div class="sizer-stat-label">Risk Per Unit</div>
+            <div id="sizerRiskPerUnit" class="sizer-stat-value">₹0.00</div>
+          </div>
+          <div class="sizer-stat-card">
+            <div class="sizer-stat-label"><span class="term-lookup" data-term="Position size">Suggested Qty (Floor)</span></div>
+            <div id="sizerQty" class="sizer-stat-value highlight">0 units</div>
+          </div>
+          <div class="sizer-stat-card">
+            <div class="sizer-stat-label"><span class="term-lookup" data-term="1% risk rule">Max Loss (Rupees)</span></div>
+            <div id="sizerMaxLoss" class="sizer-stat-value loss">₹0.00</div>
+          </div>
+          <div class="sizer-stat-card">
+            <div class="sizer-stat-label"><span class="term-lookup" data-term="2R">Target (2R)</span></div>
+            <div id="sizerTarget" class="sizer-stat-value profit">₹0.00</div>
+          </div>
+          <div class="sizer-stat-card">
+            <div class="sizer-stat-label">Total Exposure</div>
+            <div id="sizerExposure" class="sizer-stat-value">₹0.00</div>
+          </div>
+        </div>
+
+        <div class="sizer-command-bar">
+          <div>
+            <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px; font-weight: 600; text-transform: uppercase;">
+              Telegram Buy Command
+            </div>
+            <div id="sizerCmdPreview" class="sizer-command-preview">/buy SYMBOL 0 0 0 0</div>
+          </div>
+          <button id="copyBuyCmdBtn" class="btn btn-primary" title="Copy to clipboard">
+            📋 Copy /buy command
+          </button>
+        </div>
+      </div>
+
+      <div class="summary-strip">
+        <div class="stat-card">
+          <div class="stat-label"><span class="term-lookup" data-term="Unrealized PnL">Total Unrealized PnL</span></div>
+          <div id="openTotalPnl" class="stat-value neutral">₹0.00</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label"><span class="term-lookup" data-term="Open positions">Open Positions</span></div>
+          <div id="openPositionsCount" class="stat-value">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Total Capital Deployed</div>
+          <div id="openCapitalDeployed" class="stat-value">₹0.00</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label"><span class="term-lookup" data-term="Portfolio heat">Portfolio Heat (Risk)</span></div>
+          <div id="openPortfolioHeat" class="stat-value neutral">0.0%</div>
+          <div id="openPortfolioHeatSub" class="stat-sub-text">₹0 at risk across 0 trades</div>
+        </div>
+      </div>
+
+      <!-- SECTOR CONCENTRATION ALERT BANNER (Item #6) -->
+      <div id="openPositionsSectorAlert" class="positions-alert-banner" style="display: none;"></div>
+
+      <div class="table-scroll" tabindex="0">
+        <table id="openPositionsTable">
+          <thead>
+            <tr>
+              <th>Symbol</th>
+              <th>Entry Date</th>
+              <th>Entry Price</th>
+              <th><span class="term-lookup" data-term="Position size">Qty</span></th>
+              <th><span class="term-lookup" data-term="Stop loss">Stop</span></th>
+              <th><span class="term-lookup" data-term="Target">Target</span></th>
+              <th>Last Price</th>
+              <th><span class="term-lookup" data-term="Unrealized PnL">Unrealized PnL</span></th>
+              <th><span class="term-lookup" data-term="% to Stop">% to Stop</span></th>
+              <th><span class="term-lookup" data-term="% to Target">% to Target</span></th>
+              <th><span class="term-lookup" data-term="R-multiple">R-Trajectory &amp; Progress</span></th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="openPositionsBody">
+            <tr>
+              <td colspan="12" class="empty-state">Loading active positions...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- TAB 3: TRADE HISTORY & EQUITY CURVE -->
+    <section id="tabHistory" class="tab-content">
+      <!-- Tab Guide Banner -->
+      <div class="tab-guide-banner" id="bannerHistory" data-tab-banner="history">
+        <div class="tab-guide-content">
+          <span class="tab-guide-icon">💡</span>
+          <span class="tab-guide-text">Every closed trade. The curve shows your journey; red bars are lessons, green bars are proof the system works.</span>
+        </div>
+        <button class="tab-guide-dismiss" title="Dismiss banner" aria-label="Dismiss">×</button>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-header">
+          <h2 class="chart-title"><span class="term-lookup" data-term="Equity curve">Cumulative Equity Curve</span> (<span class="term-lookup" data-term="Realized PnL">Realized PnL</span>)</h2>
+          <div class="chart-actions-group">
+            <button id="exportTradesCsvBtn" class="btn btn-xs btn-outline-primary" title="Export closed trade journal to CSV for Excel / Tax calculations">
+              📥 Export Journal (CSV)
+            </button>
+            <span id="equityTotalBadge" class="badge badge-success">₹0.00</span>
+          </div>
+        </div>
+        <div class="canvas-wrapper">
+          <canvas id="equityChart"></canvas>
+        </div>
+      </div>
+
+      <div class="table-scroll" tabindex="0" style="margin-top: 24px;">
+        <table id="tradesTable">
+          <thead>
+            <tr>
+              <th>Symbol</th>
+              <th>Tags</th>
+              <th>Entry Date</th>
+              <th>Entry</th>
+              <th><span class="term-lookup" data-term="Position size">Qty</span></th>
+              <th>Exit Date</th>
+              <th>Exit</th>
+              <th><span class="term-lookup" data-term="Realized PnL">Realized PnL</span></th>
+              <th>Return %</th>
+              <th><span class="term-lookup" data-term="R-multiple">R-Multiple</span></th>
+              <th>Note &amp; Reflection</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="tradesBody">
+            <tr>
+              <td colspan="12" class="empty-state">Loading closed trades...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- TAB 4: PERFORMANCE STATS -->
+    <section id="tabStats" class="tab-content">
+      <!-- Tab Guide Banner -->
+      <div class="tab-guide-banner" id="bannerStats" data-tab-banner="stats">
+        <div class="tab-guide-content">
+          <span class="tab-guide-icon">💡</span>
+          <span class="tab-guide-text">Your report card. Judge the system over 20+ trades, not 2.</span>
+        </div>
+        <button class="tab-guide-dismiss" title="Dismiss banner" aria-label="Dismiss">×</button>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; margin-bottom: 12px;">
+        <button id="exportStatsCsvBtn" class="btn btn-xs btn-outline-primary" title="Export closed trade journal to CSV for Excel / Tax calculations">
+          📥 Export Journal (CSV)
+        </button>
+      </div>
+
+      <div class="summary-strip">
+        <div class="stat-card">
+          <div class="stat-label">Total Closed Trades</div>
+          <div id="statTotalTrades" class="stat-value">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label"><span class="term-lookup" data-term="Win rate">Win Rate</span></div>
+          <div id="statWinRate" class="stat-value">0.0%</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label"><span class="term-lookup" data-term="Realized PnL">Total Realized PnL</span></div>
+          <div id="statTotalPnl" class="stat-value">₹0.00</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label"><span class="term-lookup" data-term="Profit factor">Profit Factor</span></div>
+          <div id="statProfitFactor" class="stat-value">0.00</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label"><span class="term-lookup" data-term="Expectancy">Expectancy / Trade</span></div>
+          <div id="statExpectancy" class="stat-value">₹0.00</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Average Win</div>
+          <div id="statAvgWin" class="stat-value positive">+₹0.00</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Average Loss</div>
+          <div id="statAvgLoss" class="stat-value negative">-₹0.00</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label"><span class="term-lookup" data-term="Max drawdown">Max Drawdown</span></div>
+          <div id="statMaxDD" class="stat-value negative">₹0.00</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Best Trade</div>
+          <div id="statBestTrade" class="stat-value positive">+₹0.00</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Worst Trade</div>
+          <div id="statWorstTrade" class="stat-value negative">-₹0.00</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label"><span class="term-lookup" data-term="Discipline index">Discipline Index</span></div>
+          <div id="statDisciplineIndex" class="stat-value positive">100%</div>
+          <div id="statDisciplineSub" class="stat-sub-text">0 mistakes flagged</div>
+        </div>
+      </div>
+
+      <!-- Advanced Discipline & Setup Analytics -->
+      <div class="stats-insights-section">
+        <h2 class="stats-section-title"><span>🧠</span> Discipline & Setup Breakdown</h2>
+
+        <div class="stats-insights-grid">
+          <!-- 1. By setup type -->
+          <div class="stats-insight-card">
+            <div class="stats-insight-header">
+              <span class="stats-insight-icon">🎯</span>
+              <div>
+                <h3 class="stats-insight-title">By Setup Type</h3>
+                <span class="stats-insight-sub">Win rate for #breakout vs #pullback</span>
+              </div>
+            </div>
+            <div id="statsSetupTypeContent" class="stats-insight-body">
+              <div class="empty-state-sm">No setup tag data yet</div>
+            </div>
+          </div>
+
+          <!-- 2. Plan discipline -->
+          <div class="stats-insight-card">
+            <div class="stats-insight-header">
+              <span class="stats-insight-icon">📋</span>
+              <div>
+                <h3 class="stats-insight-title">Plan Discipline</h3>
+                <span class="stats-insight-sub">#plan_followed vs untagged / deviated</span>
+              </div>
+            </div>
+            <div id="statsPlanDisciplineContent" class="stats-insight-body">
+              <div class="empty-state-sm">No discipline tag data yet</div>
+            </div>
+          </div>
+
+          <!-- 3. Mistakes -->
+          <div class="stats-insight-card">
+            <div class="stats-insight-header">
+              <span class="stats-insight-icon">⚠️</span>
+              <div>
+                <h3 class="stats-insight-title">Mistakes Tracker</h3>
+                <span class="stats-insight-sub">Count of each mistake type</span>
+              </div>
+            </div>
+            <div id="statsMistakesContent" class="stats-insight-body">
+              <div class="empty-state-sm">No mistake records yet</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 5: HELP CENTER & HANDBOOK -->
+    <section id="tabHelp" class="tab-content">
+      <div class="help-layout">
+        <!-- Sticky Table of Contents -->
+        <aside class="help-sidebar">
+          <div class="help-toc-card">
+            <h3 class="help-toc-title">Handbook Guide</h3>
+            <nav class="help-toc-nav">
+              <a href="#help-start" class="help-toc-link active"><span>🚀</span> Start Here</a>
+              <a href="#help-architecture" class="help-toc-link"><span>⚙️</span> How It Works</a>
+              <a href="#help-glossary" class="help-toc-link"><span>📚</span> Indicator Glossary</a>
+              <a href="#help-rules" class="help-toc-link"><span>🎨</span> Rules in Pictures</a>
+              <a href="#help-telegram" class="help-toc-link"><span>💬</span> Telegram Commands</a>
+              <a href="#help-commandments" class="help-toc-link"><span>🛡️</span> Risk Commandments</a>
+              <a href="#help-faq" class="help-toc-link"><span>❓</span> FAQ</a>
+            </nav>
+            <div class="help-badge-info">
+              <span>Synchronized with <code>main.py</code></span>
+            </div>
+          </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <div class="help-content">
+          <!-- SECTION 1: START HERE -->
+          <article id="help-start" class="help-section">
+            <div class="help-section-header">
+              <h2 class="help-section-title"><span>🚀</span> START HERE: What Should I Do?</h2>
+              <p class="help-section-subtitle">A mechanical 9-step daily routine and binary decision flowchart for disciplined swing trading</p>
+            </div>
+
+            <!-- Daily Routine Timeline -->
+            <div class="timeline-container">
+              <div class="timeline-step">
+                <div class="timeline-step-icon">⏰</div>
+                <div class="timeline-step-body">
+                  <div class="timeline-step-header">
+                    <span class="timeline-step-title">1. Automated Scan Runs</span>
+                    <span class="timeline-step-time">4:15 PM IST</span>
+                  </div>
+                  <p class="timeline-step-desc">GitHub Actions runs automatically Monday through Friday. It scans all liquid NIFTY Midcap 100 stocks and sends alert messages to your Telegram bot.</p>
+                </div>
+              </div>
+
+              <div class="timeline-step">
+                <div class="timeline-step-icon">🌐</div>
+                <div class="timeline-step-body">
+                  <div class="timeline-step-header">
+                    <span class="timeline-step-title">2. Open Dashboard Terminal</span>
+                    <span class="timeline-step-time">4:20 PM IST</span>
+                  </div>
+                  <p class="timeline-step-desc">Open this dashboard on your browser. Enter your password to load the private terminal with freshly published results.</p>
+                </div>
+              </div>
+
+              <div class="timeline-step">
+                <div class="timeline-step-icon">🚦</div>
+                <div class="timeline-step-body">
+                  <div class="timeline-step-header">
+                    <span class="timeline-step-title">3. Check Market Badge (O'Neil M-Rule)</span>
+                    <span class="timeline-step-time">Immediate</span>
+                  </div>
+                  <p class="timeline-step-desc">Look at the top bar. If <strong>Market: Uptrend (Green)</strong>, buying is allowed. If <strong>Market: Defensive (Red)</strong>, stop here — do not trade! Cash is an active position.</p>
+                </div>
+              </div>
+
+              <div class="timeline-step">
+                <div class="timeline-step-icon">🎯</div>
+                <div class="timeline-step-body">
+                  <div class="timeline-step-header">
+                    <span class="timeline-step-title">4. Filter for Grade A / A+ Setups</span>
+                    <span class="timeline-step-time">Near Buy Tab</span>
+                  </div>
+                  <p class="timeline-step-desc">Focus strictly on candidates with Grade A+ (Score ≥80) or Grade A (Score ≥70) whose sector index is also in an active Stage 2 uptrend. Ignore Grade B and C.</p>
+                </div>
+              </div>
+
+              <div class="timeline-step">
+                <div class="timeline-step-icon">📐</div>
+                <div class="timeline-step-body">
+                  <div class="timeline-step-header">
+                    <span class="timeline-step-title">5. Size with Position Sizer</span>
+                    <span class="timeline-step-time">1 Click</span>
+                  </div>
+                  <p class="timeline-step-desc">Click <strong>"Size this trade"</strong> on the chosen stock row. The system switches to the Open Positions tab and auto-computes exact suggested units based on 1% portfolio risk budget (₹1,000 on ₹1 Lakh).</p>
+                </div>
+              </div>
+
+              <div class="timeline-step">
+                <div class="timeline-step-icon">💬</div>
+                <div class="timeline-step-body">
+                  <div class="timeline-step-header">
+                    <span class="timeline-step-title">6. Copy & Send Telegram /buy Command</span>
+                    <span class="timeline-step-time">1 Click</span>
+                  </div>
+                  <p class="timeline-step-desc">Click <strong>"📋 Copy /buy command"</strong> and paste into your Telegram bot chat. The bot records entry price, quantity, stop loss, and 2R target in <code>open_positions.json</code>.</p>
+                </div>
+              </div>
+
+              <div class="timeline-step">
+                <div class="timeline-step-icon">🛡️</div>
+                <div class="timeline-step-body">
+                  <div class="timeline-step-header">
+                    <span class="timeline-step-title">7. Manage Mechanically</span>
+                    <span class="timeline-step-time">Next Sessions</span>
+                  </div>
+                  <p class="timeline-step-desc">Place your Stop-Loss GTT order on your broker terminal. If profit reaches <strong>+8%</strong>, immediately ratchet stop loss to entry (breakeven). If trade makes zero progress in <strong>5 trading days</strong>, cut it via the time stop.</p>
+                </div>
+              </div>
+
+              <div class="timeline-step">
+                <div class="timeline-step-icon">🚪</div>
+                <div class="timeline-step-body">
+                  <div class="timeline-step-header">
+                    <span class="timeline-step-title">8. Log Exits with /sell</span>
+                    <span class="timeline-step-time">On Exit</span>
+                  </div>
+                  <p class="timeline-step-desc">When either the 2R target or the stop loss is triggered, send <code>/sell SYMBOL EXIT_PRICE</code> on Telegram. The trade moves from open positions to closed trade history with PnL and return %.</p>
+                </div>
+              </div>
+
+              <div class="timeline-step">
+                <div class="timeline-step-icon">📊</div>
+                <div class="timeline-step-body">
+                  <div class="timeline-step-header">
+                    <span class="timeline-step-title">9. Review Stats Weekly</span>
+                    <span class="timeline-step-time">Every Weekend</span>
+                  </div>
+                  <p class="timeline-step-desc">Open the Performance Stats tab to review win rate (target: 45-55%), profit factor (target: &gt;1.5), expectancy (target: &gt;₹500 per trade), and equity curve progression.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Decision Flowchart Inline SVG -->
+            <div class="flowchart-wrapper">
+              <h3 style="font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 12px; text-align: center;">Daily Decision Flowchart</h3>
+              <svg class="flowchart-svg" viewBox="0 0 800 440" xmlns="http://www.w3.org/2000/svg">
+                <!-- Background grid lines -->
+                <rect width="800" height="440" fill="#090d15" rx="8" />
+
+                <!-- Nodes -->
+                <!-- Start Node -->
+                <rect x="290" y="20" width="220" height="44" rx="8" fill="#1e293b" stroke="#4f46e5" stroke-width="2" />
+                <text x="400" y="47" fill="#fff" font-family="Inter, sans-serif" font-size="13" font-weight="700" text-anchor="middle">4:15 PM IST Daily Scan</text>
+
+                <!-- Arrow 1 -->
+                <path d="M 400 64 L 400 95" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)" />
+
+                <!-- Decision 1: Market OK? -->
+                <polygon points="400,95 530,145 400,195 270,145" fill="#111827" stroke="#38bdf8" stroke-width="2" />
+                <text x="400" y="140" fill="#fff" font-family="Inter, sans-serif" font-size="12" font-weight="700" text-anchor="middle">Is Market OK?</text>
+                <text x="400" y="156" fill="#94a3b8" font-family="Inter, sans-serif" font-size="10" text-anchor="middle">(^NSEI &gt; SMA50 &gt; SMA200)</text>
+
+                <!-- Market NO Path -->
+                <path d="M 270 145 L 140 145 L 140 230" stroke="#ef4444" stroke-width="2" />
+                <text x="195" y="136" fill="#ef4444" font-family="Inter, sans-serif" font-size="11" font-weight="700" text-anchor="middle">NO</text>
+                <rect x="40" y="230" width="200" height="60" rx="8" fill="rgba(239, 68, 68, 0.12)" stroke="#ef4444" stroke-width="2" />
+                <text x="140" y="255" fill="#fca5a5" font-family="Inter, sans-serif" font-size="12" font-weight="700" text-anchor="middle">⛔ DO NOTHING</text>
+                <text x="140" y="275" fill="#cbd5e1" font-family="Inter, sans-serif" font-size="10" text-anchor="middle">Cash is a position. Protect capital.</text>
+
+                <!-- Market YES Path -->
+                <path d="M 400 195 L 400 230" stroke="#10b981" stroke-width="2" />
+                <text x="415" y="215" fill="#10b981" font-family="Inter, sans-serif" font-size="11" font-weight="700">YES</text>
+
+                <!-- Decision 2: Any Grade A/A+? -->
+                <polygon points="400,230 530,275 400,320 270,275" fill="#111827" stroke="#fbbf24" stroke-width="2" />
+                <text x="400" y="270" fill="#fff" font-family="Inter, sans-serif" font-size="12" font-weight="700" text-anchor="middle">Any Grade A / A+?</text>
+                <text x="400" y="286" fill="#94a3b8" font-family="Inter, sans-serif" font-size="10" text-anchor="middle">(Score ≥ 70 / 80)</text>
+
+                <!-- Grade NO Path -->
+                <path d="M 530 275 L 680 275 L 680 340" stroke="#f59e0b" stroke-width="2" />
+                <text x="605" y="266" fill="#f59e0b" font-family="Inter, sans-serif" font-size="11" font-weight="700" text-anchor="middle">NO</text>
+                <rect x="580" y="340" width="200" height="55" rx="8" fill="rgba(245, 158, 11, 0.12)" stroke="#f59e0b" stroke-width="2" />
+                <text x="680" y="363" fill="#fcd34d" font-family="Inter, sans-serif" font-size="12" font-weight="700" text-anchor="middle">👀 WATCH ONLY</text>
+                <text x="680" y="381" fill="#cbd5e1" font-family="Inter, sans-serif" font-size="10" text-anchor="middle">Do not force sub-par trades.</text>
+
+                <!-- Grade YES Path -->
+                <path d="M 400 320 L 400 345" stroke="#10b981" stroke-width="2" />
+                <text x="415" y="336" fill="#10b981" font-family="Inter, sans-serif" font-size="11" font-weight="700">YES</text>
+
+                <!-- Action: Size & Execute -->
+                <rect x="280" y="345" width="240" height="70" rx="8" fill="rgba(16, 185, 129, 0.15)" stroke="#10b981" stroke-width="2" />
+                <text x="400" y="368" fill="#34d399" font-family="Inter, sans-serif" font-size="12" font-weight="700" text-anchor="middle">🎯 SIZE AT 1% RISK & BUY</text>
+                <text x="400" y="386" fill="#cbd5e1" font-family="Inter, sans-serif" font-size="10" text-anchor="middle">Use Position Sizer -&gt; Send /buy</text>
+                <text x="400" y="402" fill="#cbd5e1" font-family="Inter, sans-serif" font-size="10" text-anchor="middle">Follow stop and 2R target mechanically.</text>
+              </svg>
+            </div>
+          </article>
+
+          <!-- SECTION 2: HOW THIS DASHBOARD WORKS -->
+          <article id="help-architecture" class="help-section">
+            <div class="help-section-header">
+              <h2 class="help-section-title"><span>⚙️</span> HOW THIS DASHBOARD WORKS</h2>
+              <p class="help-section-subtitle">A serverless, private swing trading terminal powered by GitHub Actions, Yahoo Finance, and Telegram</p>
+            </div>
+
+            <!-- Architecture SVG Diagram -->
+            <div class="schematic-wrapper">
+              <svg class="schematic-svg" viewBox="0 0 800 260" xmlns="http://www.w3.org/2000/svg">
+                <rect width="800" height="260" fill="#090d15" rx="8" />
+
+                <!-- Box 1: GitHub Actions Scanners -->
+                <rect x="30" y="30" width="210" height="90" rx="8" fill="#1e293b" stroke="#4f46e5" stroke-width="2" />
+                <text x="135" y="55" fill="#818cf8" font-family="Inter, sans-serif" font-size="12" font-weight="700" text-anchor="middle">🤖 GitHub Actions</text>
+                <text x="135" y="75" fill="#cbd5e1" font-family="Inter, sans-serif" font-size="11" text-anchor="middle">daily_scan.yml (4:15 PM)</text>
+                <text x="135" y="93" fill="#94a3b8" font-family="Inter, sans-serif" font-size="10" text-anchor="middle">Hourly checks during market</text>
+
+                <!-- Arrow 1 to Repo -->
+                <path d="M 240 75 L 310 75" stroke="#94a3b8" stroke-width="2" />
+                <polygon points="310,71 318,75 310,79" fill="#94a3b8" />
+                <text x="275" y="67" fill="#64748b" font-family="Inter, sans-serif" font-size="9" text-anchor="middle">writes</text>
+
+                <!-- Box 2: GitHub Repository Data -->
+                <rect x="320" y="30" width="180" height="190" rx="8" fill="#0f172a" stroke="#38bdf8" stroke-width="2" />
+                <text x="410" y="55" fill="#38bdf8" font-family="Inter, sans-serif" font-size="12" font-weight="700" text-anchor="middle">📦 Private GitHub Repo</text>
+                <rect x="335" y="72" width="150" height="26" rx="4" fill="rgba(56, 189, 248, 0.1)" />
+                <text x="410" y="89" fill="#e2e8f0" font-family="Inter, sans-serif" font-size="11" text-anchor="middle">scan_results.json</text>
+                <rect x="335" y="108" width="150" height="26" rx="4" fill="rgba(56, 189, 248, 0.1)" />
+                <text x="410" y="125" fill="#e2e8f0" font-family="Inter, sans-serif" font-size="11" text-anchor="middle">open_positions.json</text>
+                <rect x="335" y="144" width="150" height="26" rx="4" fill="rgba(56, 189, 248, 0.1)" />
+                <text x="410" y="161" fill="#e2e8f0" font-family="Inter, sans-serif" font-size="11" text-anchor="middle">trades.json</text>
+                <text x="410" y="198" fill="#64748b" font-family="Inter, sans-serif" font-size="9" text-anchor="middle">Single source of truth</text>
+
+                <!-- Arrow 2 to Dashboard -->
+                <path d="M 500 125 L 570 125" stroke="#10b981" stroke-width="2" />
+                <polygon points="570,121 578,125 570,129" fill="#10b981" />
+                <text x="535" y="117" fill="#10b981" font-family="Inter, sans-serif" font-size="9" text-anchor="middle">reads (5m)</text>
+
+                <!-- Box 3: Terminal Web Dashboard -->
+                <rect x="580" y="60" width="190" height="130" rx="8" fill="#1e293b" stroke="#10b981" stroke-width="2" />
+                <text x="675" y="88" fill="#34d399" font-family="Inter, sans-serif" font-size="13" font-weight="700" text-anchor="middle">💻 Netlify Dashboard</text>
+                <text x="675" y="110" fill="#cbd5e1" font-family="Inter, sans-serif" font-size="11" text-anchor="middle">Near Buy Watchlist</text>
+                <text x="675" y="128" fill="#cbd5e1" font-family="Inter, sans-serif" font-size="11" text-anchor="middle">Position Sizer Helper</text>
+                <text x="675" y="146" fill="#cbd5e1" font-family="Inter, sans-serif" font-size="11" text-anchor="middle">Live Portfolio Tracker</text>
+                <text x="675" y="168" fill="#94a3b8" font-family="Inter, sans-serif" font-size="9" text-anchor="middle">Auto-refreshes every 5 mins</text>
+
+                <!-- Box 4: Telegram Bot Listener -->
+                <rect x="30" y="145" width="210" height="75" rx="8" fill="#1e293b" stroke="#0ea5e9" stroke-width="2" />
+                <text x="135" y="170" fill="#38bdf8" font-family="Inter, sans-serif" font-size="12" font-weight="700" text-anchor="middle">📱 Telegram Bot Listener</text>
+                <text x="135" y="190" fill="#cbd5e1" font-family="Inter, sans-serif" font-size="10" text-anchor="middle">Polls every 5 mins for /buy & /sell</text>
+                <text x="135" y="206" fill="#94a3b8" font-family="Inter, sans-serif" font-size="9" text-anchor="middle">Commits trades to repo</text>
+
+                <!-- Arrow 3 to Repo -->
+                <path d="M 240 180 L 320 180" stroke="#0ea5e9" stroke-width="2" />
+                <polygon points="320,176 328,180 320,184" fill="#0ea5e9" />
+              </svg>
+            </div>
+
+            <!-- Bullet list of update frequency -->
+            <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border); border-radius: 8px; padding: 18px;">
+              <h4 style="font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 10px;">Data Update Cadence & Timings</h4>
+              <ul style="font-size: 13px; color: var(--text-muted); line-height: 1.8; padding-left: 20px;">
+                <li><strong>Scan Data:</strong> Runs hourly during Indian market hours (09:15–15:30 IST) for silent updates, plus a full closing scan at <strong>16:15 IST</strong> that broadcasts Telegram alerts.</li>
+                <li><strong>Trade Execution Logging:</strong> When you send <code>/buy</code> or <code>/sell</code> on Telegram, the background listener picks it up and updates <code>trades.json</code> and <code>open_positions.json</code> within <strong>5 minutes</strong>.</li>
+                <li><strong>Dashboard Auto-Refresh:</strong> The browser dashboard automatically polls GitHub's raw endpoints every <strong>5 minutes (300 seconds)</strong>, so you always see up-to-date portfolio and watchlist values without manual page reloads.</li>
+              </ul>
+            </div>
+          </article>
+
+          <!-- SECTION 3: INDICATOR GLOSSARY -->
+          <article id="help-glossary" class="help-section">
+            <div class="help-section-header">
+              <h2 class="help-section-title"><span>📚</span> INDICATOR GLOSSARY (All 39 Metrics)</h2>
+              <p class="help-section-subtitle">Plain-English meanings, swing trading importance, exact thresholds from <code>main.py</code>, and practical examples</p>
+            </div>
+
+            <div class="glossary-search-box">
+              <input type="text" id="glossarySearchInput" placeholder="🔍 Search indicators, rules, or formulas (e.g. SMA, ATR, VCP, R-multiple)..." />
+            </div>
+
+            <div class="glossary-grid" id="glossaryGrid">
+              <!-- Cards dynamically or statically rendered with anchors -->
+              <div class="glossary-card" id="glossary-sma50">
+                <div class="glossary-card-header"><span class="glossary-term">SMA 50</span><span class="glossary-category">Trend Indicator</span></div>
+                <p class="glossary-meaning">The average closing price over the last 50 trading sessions (roughly 10 calendar weeks).</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Serves as institutional support during uptrends. Strong swing winners rarely break below a rising 50 SMA.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">main.py Threshold:</span><span class="glossary-threshold">Close &gt; SMA50 and SMA50 &gt; SMA150</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Example:</span><span class="glossary-example">If 50-day average is ₹500, stock trading at ₹540 confirms healthy institutional accumulation.</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-sma150">
+                <div class="glossary-card-header"><span class="glossary-term">SMA 150</span><span class="glossary-category">Intermediate Trend</span></div>
+                <p class="glossary-meaning">The average closing price over 150 trading days (roughly 7 months).</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Validates intermediate-term trend structure between the 50-day and 200-day moving averages.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">main.py Threshold:</span><span class="glossary-threshold">SMA150 &gt; SMA200 and Close &gt; SMA150</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Example:</span><span class="glossary-example">SMA150 at ₹460 cleanly above SMA200 at ₹430 confirms a sustained Stage 2 cycle.</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-sma200">
+                <div class="glossary-card-header"><span class="glossary-term">SMA 200</span><span class="glossary-category">Long-Term Trend</span></div>
+                <p class="glossary-meaning">The average closing price over 200 trading days (roughly 10 months). The premier long-term institutional line.</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Separates bull markets from bear markets. Never buy swing trades below a falling 200-day SMA.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">main.py Threshold:</span><span class="glossary-threshold">SMA200 &gt; SMA200[50 days ago] (Must be trending up for ≥1 month)</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Example:</span><span class="glossary-example">SMA200 today is ₹420 vs ₹400 fifty sessions ago: confirms ascending macro support.</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-ema10">
+                <div class="glossary-card-header"><span class="glossary-term">EMA 10</span><span class="glossary-category">Short-Term Momentum</span></div>
+                <p class="glossary-meaning">10-period Exponential Moving Average, weighted heavily toward the most recent sessions.</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Used for our trailing exit rule once a winning position exceeds its initial target.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">main.py Threshold:</span><span class="glossary-threshold">Trailing Stop: Exit if daily Close &lt; EMA10</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Example:</span><span class="glossary-example">Stock climbs from ₹1,000 to ₹1,200; we hold until a daily candle closes below the 10 EMA.</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-ema20">
+                <div class="glossary-card-header"><span class="glossary-term">EMA 20</span><span class="glossary-category">Base Support</span></div>
+                <p class="glossary-meaning">20-period Exponential Moving Average capturing the 1-month short-term trend speed.</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Leading stocks in strong momentum pull back to test their 20 EMA before breaking out to new highs.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">main.py Threshold:</span><span class="glossary-threshold">Used in Bollinger Bands centerline and Keltner Squeeze calculations</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Example:</span><span class="glossary-example">Stock consolidates tightly around its 20 EMA while volume contracts.</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-atr14">
+                <div class="glossary-card-header"><span class="glossary-term">ATR 14</span><span class="glossary-category">Volatility Gauge</span></div>
+                <p class="glossary-meaning">14-day Average True Range. Measures the average rupee movement of a stock per session including gaps.</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Allows dynamic stop loss setting based on actual volatility rather than arbitrary percentages.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">main.py Threshold:</span><span class="glossary-threshold">ATR_STOP_MULTIPLIER = 1.5 (Stop = Entry - 1.5 × ATR14)</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Example:</span><span class="glossary-example">For ₹1,000 stock with ATR14 of ₹20, initial stop is placed at ₹970 (1.5 × 20 = ₹30 below entry).</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-rsi14">
+                <div class="glossary-card-header"><span class="glossary-term">RSI 14</span><span class="glossary-category">Momentum Filter</span></div>
+                <p class="glossary-meaning">Standard 14-day Relative Strength Index oscillator bounded between 0 and 100.</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Ensures we buy stocks with healthy momentum without entering at overheated/exhaustion tops.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">main.py Threshold:</span><span class="glossary-threshold">40.0 &lt;= RSI14 &lt;= 65.0 (+10 Score Points)</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Example:</span><span class="glossary-example">RSI14 at 58 indicates positive accumulation without being overbought (&gt;70).</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-rsi2">
+                <div class="glossary-card-header"><span class="glossary-term">RSI 2</span><span class="glossary-category">Pullback Trigger</span></div>
+                <p class="glossary-meaning">Ultra-fast 2-period RSI popularized by Larry Connors to identify short-term rubber-band pullbacks.</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Catches institutional dips in ongoing uptrends for high-reward pullback entries.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">main.py Threshold:</span><span class="glossary-threshold">RSI2 &lt; 10 (Dip) then bouncing with Close &gt; Close[1]</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Example:</span><span class="glossary-example">Strong uptrend stock drops 2 days, driving RSI2 down to 6.2, then prints a green reversal candle.</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-volumedryup">
+                <div class="glossary-card-header"><span class="glossary-term">Volume Dry-Up (VOL_DRYUP)</span><span class="glossary-category">Supply Contraction</span></div>
+                <p class="glossary-meaning">Occurs when trading activity drops significantly during consolidation, proving sellers have dried up.</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Without sellers in the order book, it takes minimal institutional demand to propel price upward.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">main.py Threshold:</span><span class="glossary-threshold">VOL5 &lt; 0.80 × VOL50 (5-day avg volume &lt; 80% of 50-day average)</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Example:</span><span class="glossary-example">Stock usually trades 1,000,000 shares/day; drops to 600,000 shares/day during tight coiling.</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-pricecontraction">
+                <div class="glossary-card-header"><span class="glossary-term">Price Contraction (PRICE_TIGHT)</span><span class="glossary-category">Volatility Squeeze</span></div>
+                <p class="glossary-meaning">Daily high-to-low percentage range shrinks dramatically compared to historical norms.</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Indicates equilibrium and quiet accumulation before an explosive expansion in volatility.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">main.py Threshold:</span><span class="glossary-threshold">RANGE5 &lt; 0.80 × RANGE50 (5-day candle range &lt; 80% of 50-day range)</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Example:</span><span class="glossary-example">Stock daily swings narrow from 4% down to under 1.2% per day.</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-vcp">
+                <div class="glossary-card-header"><span class="glossary-term">VCP / Coiling (SETUP_OK)</span><span class="glossary-category">Mark Minervini Pattern</span></div>
+                <p class="glossary-meaning">Volatility Contraction Pattern. Simultaneous occurrence of volume dry-up and price range contraction.</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">The core signature of institutional absorption preceding multi-week breakout moves.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">main.py Threshold:</span><span class="glossary-threshold">VOL_DRYUP & PRICE_TIGHT (+15 Score Points)</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Example:</span><span class="glossary-example">Stock prints 3 successive contractions with diminishing volume, tagged as "Coiling: YES".</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-high20">
+                <div class="glossary-card-header"><span class="glossary-term">20-Day Breakout Level (HIGH20)</span><span class="glossary-category">Resistance Line</span></div>
+                <p class="glossary-meaning">The highest intra-day price reached across the previous 20 sessions, excluding today's candle.</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Represents the ceiling that trapped overhead supply. Crossing it triggers momentum buying.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">main.py Threshold:</span><span class="glossary-threshold">HIGH20 = df["High"].rolling(20).max().shift(1)</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Example:</span><span class="glossary-example">Stock hits ceiling at ₹1,250 multiple times; ₹1,250 becomes the breakout trigger line.</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-breakout">
+                <div class="glossary-card-header"><span class="glossary-term">Breakout Trigger</span><span class="glossary-category">Entry Signal</span></div>
+                <p class="glossary-meaning">Price penetrates and closes above the 20-day high resistance level on heavy volume.</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Signals that buyers have absorbed all available supply and are bidding price into new territory.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">main.py Threshold:</span><span class="glossary-threshold">Close &gt; HIGH20 and Close[1] &lt;= HIGH20</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Example:</span><span class="glossary-example">Stock crosses ₹1,250 resistance and closes at ₹1,265 on 2.5x volume: generates /buy signal.</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-volumespike">
+                <div class="glossary-card-header"><span class="glossary-term">Volume Spike (VOL_SPIKE)</span><span class="glossary-category">Confirmation Fuel</span></div>
+                <p class="glossary-meaning">Session volume surges well above the 50-day average volume on the day of the breakout.</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Distinguishes true institutional buying power from fake retail breakouts.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">main.py Threshold:</span><span class="glossary-threshold">Volume &gt; 1.5 × VOL50 (VOLUME_SPIKE_MULTIPLIER = 1.5)</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Example:</span><span class="glossary-example">Stock with 200,000 average volume trades 450,000 shares on breakout day (2.25x spike).</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-strongclose">
+                <div class="glossary-card-header"><span class="glossary-term">Strong Close (STRONG_CLOSE)</span><span class="glossary-category">Candle Quality</span></div>
+                <p class="glossary-meaning">The candle finishes in the top tier of its daily high-to-low trading range.</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Filters out intraday rejection wicks and ensure bulls maintained control until the market close.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">main.py Threshold:</span><span class="glossary-threshold">(Close - Low) / (High - Low) &gt; 0.60 (Top 40% of range)</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Example:</span><span class="glossary-example">Stock ranges from ₹98 to ₹108 and closes at ₹106: strong close ratio is (106-98)/(108-98) = 0.80.</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-sectorfilter">
+                <div class="glossary-card-header"><span class="glossary-term">Sector Filter</span><span class="glossary-category">Double Confirmation</span></div>
+                <p class="glossary-meaning">Requires the individual stock's sector index (e.g. ^CNXIT, ^NSEBANK) to be in an active Stage 2 uptrend.</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Prevents buying strong individual stocks swimming upstream against a declining industry group.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">main.py Threshold:</span><span class="glossary-threshold">Close_sector &gt; SMA50_sector &gt; SMA200_sector (+15 Score Points)</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Example:</span><span class="glossary-example">COFORGE breakout is confirmed because NIFTY IT (^CNXIT) is in a healthy Stage 2 uptrend.</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-mrule">
+                <div class="glossary-card-header"><span class="glossary-term">Market Regime (M-Rule)</span><span class="glossary-category">William O'Neil Rule</span></div>
+                <p class="glossary-meaning">Benchmark index filter. 3 out of 4 stocks follow the broader market direction.</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">In a market correction, even great setups fail at a 75% rate. Staying in cash protects all profits.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">main.py Threshold:</span><span class="glossary-threshold">^NSEI Close &gt; SMA50 &gt; SMA200. Else caps ALL scores at 50!</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Example:</span><span class="glossary-example">NIFTY 50 drops below 50 SMA -&gt; Market badge turns Defensive -&gt; new entries blocked.</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-dist">
+                <div class="glossary-card-header"><span class="glossary-term">Distance to Breakout</span><span class="glossary-category">Watchlist Metric</span></div>
+                <p class="glossary-meaning">Percentage difference between the current closing price and the 20-day high resistance level.</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Stocks within 0-2% of breakout are prime candidates ready to trigger immediately.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">main.py Threshold:</span><span class="glossary-threshold">dist &lt;= 5.0% for Watchlist; Scale: 20 × max(0, 1 - dist/5)</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Example:</span><span class="glossary-example">Stock close is ₹990, 20-day high is ₹1,000 -&gt; Distance is 1.01% away (earns +16 points).</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-setupwindow">
+                <div class="glossary-card-header"><span class="glossary-term">Setup Window</span><span class="glossary-category">Pattern Memory</span></div>
+                <p class="glossary-meaning">A memory buffer that keeps a stock eligible for a breakout if it coiled within recent days.</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Stocks don't always break out on the exact day they coil; the explosion can occur 1-5 days later.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">main.py Threshold:</span><span class="glossary-threshold">SETUP_WINDOW_DAYS = 10 (10 trading sessions)</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Example:</span><span class="glossary-example">Stock coiled 3 sessions ago; today's breakout trigger still qualifies for a valid signal.</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-1percentsizing">
+                <div class="glossary-card-header"><span class="glossary-term">1% Risk Rule</span><span class="glossary-category">Capital Preservation</span></div>
+                <p class="glossary-meaning">Risking no more than 1% of total portfolio equity on any single swing trade.</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Ensures you can survive 10 consecutive losses with your portfolio virtually intact (&gt;90% remaining).</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">main.py Threshold:</span><span class="glossary-threshold">CAPITAL = 100000, RISK_PCT = 0.01 (₹1,000 risk budget)</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Example:</span><span class="glossary-example">If entry is ₹500 and stop is ₹475 (risk ₹25), Qty = floor(1000 / 25) = 40 shares.</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-maxstop">
+                <div class="glossary-card-header"><span class="glossary-term">7% Max Stop Loss</span><span class="glossary-category">Hard Ceiling</span></div>
+                <p class="glossary-meaning">An absolute risk floor preventing any trade from having a stop loss wider than 7% from entry.</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Wide stops destroy expectancy and require massive recovery gains. Small losses keep you alive.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">main.py Threshold:</span><span class="glossary-threshold">MAX_STOP_LOSS_PCT = 0.07 (stop &gt;= entry × 0.93)</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Example:</span><span class="glossary-example">If ATR would place stop at 9% below entry, the code caps the stop at exactly 7% (₹930 on ₹1,000).</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-2rtarget">
+                <div class="glossary-card-header"><span class="glossary-term">2R Target (Asymmetric Reward)</span><span class="glossary-category">Profit Target</span></div>
+                <p class="glossary-meaning">Target set at exactly twice the rupee risk taken on the trade.</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Allows a swing trader to be profitable with only a 40% win rate (winning ₹2 for every ₹1 lost).</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">main.py Threshold:</span><span class="glossary-threshold">TARGET_R_MULTIPLE = 2.0 (Target = Entry + 2 × RiskPerUnit)</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Example:</span><span class="glossary-example">Entry ₹1,000, Stop ₹950 (Risk ₹50). Target is ₹1,000 + (2 × 50) = ₹1,100 (+10% gain).</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-breakeven">
+                <div class="glossary-card-header"><span class="glossary-term">Breakeven Ratchet (+8%)</span><span class="glossary-category">Discipline Rule</span></div>
+                <p class="glossary-meaning">Moving the stop loss from the original catastrophic line up to the exact entry price once in solid profit.</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Guarantees that a substantial winning trade never turns into a loss. Eliminates downside risk.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">main.py Threshold:</span><span class="glossary-threshold">Discipline rule: Move stop to Entry price when gain reaches +8%</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Example:</span><span class="glossary-example">Bought at ₹500, stock rallies to ₹540 (+8%). Stop moved to ₹500 for a free roll.</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-timestop">
+                <div class="glossary-card-header"><span class="glossary-term">5-Day Time Stop</span><span class="glossary-category">Opportunity Cost</span></div>
+                <p class="glossary-meaning">Exiting a breakout trade if the stock makes no upward progress within 5 trading sessions.</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">True momentum breakouts follow through immediately. Stagnant trades tie up capital and usually fail.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">main.py Threshold:</span><span class="glossary-threshold">Discipline rule: Cut trade after 5 days without progress</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Example:</span><span class="glossary-example">Bought breakout on Monday; by next Monday price is hovering flat around entry -&gt; close trade.</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-gradescore">
+                <div class="glossary-card-header"><span class="glossary-term">Setup Score & Grade</span><span class="glossary-category">Composite Rank</span></div>
+                <p class="glossary-meaning">A composite score (0-100) and letter Grade (A+, A, B, C) ranking overall setup perfection.</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Filters out the noise and directs your limited capital exclusively to the top 10% of market setups.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">main.py Threshold:</span><span class="glossary-threshold">A+: Score ≥80 & Sector Bullish & Market OK; A: Score ≥70; B: Score ≥60; C: &lt;60</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Example:</span><span class="glossary-example">Stock scoring 85 in a confirmed market with a bullish IT sector receives an "A+" green pill.</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-volume">
+                <div class="glossary-card-header"><span class="glossary-term">Volume & Liquidity</span><span class="glossary-category">Market Activity</span></div>
+                <p class="glossary-meaning">The total number of shares transacted during a trading day. Price moves without volume lack true institutional backing.</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Ensures institutional participation and prevents slippage when executing swing positions.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">main.py Threshold:</span><span class="glossary-threshold">MIN_AVG_TURNOVER = 200,000,000 (₹20 Cr daily turnover filter)</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Example:</span><span class="glossary-example">Stock trading ₹35 Cr turnover ensures effortless entry and exit without market impact.</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-vol50">
+                <div class="glossary-card-header"><span class="glossary-term">50-Day Average Volume (VOL50)</span><span class="glossary-category">Volume Baseline</span></div>
+                <p class="glossary-meaning">The simple 50-session moving average of daily volume used as the baseline for volume anomalies.</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Defines what "normal" activity looks like, allowing accurate detection of dry-ups and breakout spikes.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">main.py Threshold:</span><span class="glossary-threshold">VOL50 = df["Volume"].rolling(50).mean()</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Example:</span><span class="glossary-example">Baseline is 500,000 shares; today's 1.25M volume signals 2.5x institutional expansion.</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-52whighlow">
+                <div class="glossary-card-header"><span class="glossary-term">52-Week High and Low</span><span class="glossary-category">Annual Range</span></div>
+                <p class="glossary-meaning">The highest and lowest price reached by the stock over the past 252 trading sessions (1 year).</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Minervini rule: winning swing stocks emerge near 52-week highs, never from 52-week lows.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">main.py Threshold:</span><span class="glossary-threshold">Close &gt; 1.30 × LOW52W and Close &gt; 0.75 × HIGH52W</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Example:</span><span class="glossary-example">Stock is 45% above its 52-week low and within 12% of its 52-week high: qualifies for Stage 2.</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-rs">
+                <div class="glossary-card-header"><span class="glossary-term">Relative Strength vs Index</span><span class="glossary-category">Leadership Rank</span></div>
+                <p class="glossary-meaning">How strongly a stock performs compared to the benchmark NIFTY 50 index over 1 to 6 months.</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">True market leaders hold their ground or make new highs while the market index pulls back.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">main.py Threshold:</span><span class="glossary-threshold">Sector Stage-2 filter and stock Stage-2 Minervini template</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Example:</span><span class="glossary-example">NIFTY is flat over 3 months while COFORGE gains +18%: displays outstanding relative strength.</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-stoploss">
+                <div class="glossary-card-header"><span class="glossary-term">Stop Loss</span><span class="glossary-category">Risk Control</span></div>
+                <p class="glossary-meaning">A predetermined price level at which you automatically exit if the trade moves against you.</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Guarantees that a bad trade remains an insignificant loss and never threatens your account.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">main.py Threshold:</span><span class="glossary-threshold">Stop = max(Entry - 1.5 × ATR14, Entry × 0.93)</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Example:</span><span class="glossary-example">Entry ₹1,000, Stop ₹950: Risk is strictly limited to ₹50 per share.</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-15atr">
+                <div class="glossary-card-header"><span class="glossary-term">1.5x ATR Stop</span><span class="glossary-category">Dynamic Volatility Stop</span></div>
+                <p class="glossary-meaning">Placing the initial stop loss at exactly 1.5 times the 14-day Average True Range below entry.</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Avoids being shaken out by normal daily market noise while keeping risk strictly controlled.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">main.py Threshold:</span><span class="glossary-threshold">ATR_STOP_MULTIPLIER = 1.5</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Example:</span><span class="glossary-example">ATR14 is ₹30; 1.5 × 30 = ₹45 cushion below entry price.</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-target">
+                <div class="glossary-card-header"><span class="glossary-term">Profit Target</span><span class="glossary-category">Exit Target</span></div>
+                <p class="glossary-meaning">The predetermined price level where you book profits into momentum strength.</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Locks in gains before predictable mean reversion or pullbacks occur.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">main.py Threshold:</span><span class="glossary-threshold">Target = Entry + 2 × (Entry - Stop) (2.0R Multiple)</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Example:</span><span class="glossary-example">Entry ₹500, Stop ₹475 (Risk ₹25); Target is ₹500 + 2×25 = ₹550.</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-rmultiple">
+                <div class="glossary-card-header"><span class="glossary-term">R-Multiple</span><span class="glossary-category">Standardized Metric</span></div>
+                <p class="glossary-meaning">Expressing trade profit or loss in units of your initial risk (1R = Risk Budget).</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Allows objective comparison of performance regardless of stock price or account size.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">main.py Threshold:</span><span class="glossary-threshold">1R = ₹1,000 (1% on ₹1 Lakh). Target = +2R (+₹2,000). Max Stop = -1R (-₹1,000).</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Example:</span><span class="glossary-example">A trade with ₹1,000 risk that earns ₹2,200 is an outcome of +2.2R.</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-positionsize">
+                <div class="glossary-card-header"><span class="glossary-term">Position Size</span><span class="glossary-category">Money Management</span></div>
+                <p class="glossary-meaning">The exact number of shares purchased to align total trade risk with your portfolio risk budget.</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Too many shares leads to account ruin; too few shares leads to negligible returns.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">main.py Threshold:</span><span class="glossary-threshold">Quantity = floor( (Capital × RiskPct) / (Entry - Stop) )</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Example:</span><span class="glossary-example">Risk budget ₹1,000, risk/unit ₹20 -&gt; Quantity = 50 shares.</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-expectancy">
+                <div class="glossary-card-header"><span class="glossary-term">Expectancy</span><span class="glossary-category">System Edge</span></div>
+                <p class="glossary-meaning">The expected average rupee payoff per trade over hundreds of historical trades.</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Proves mathematically whether your strategy is profitable long-term or a coin toss.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">main.py Threshold:</span><span class="glossary-threshold">Expectancy = (Win% × AvgWin) - (Loss% × AvgLoss) &gt; ₹0</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Example:</span><span class="glossary-example">50% wins × ₹2,000 - 50% losses × ₹1,000 = +₹500 positive edge per trade.</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-winrate">
+                <div class="glossary-card-header"><span class="glossary-term">Win Rate</span><span class="glossary-category">Probability</span></div>
+                <p class="glossary-meaning">The percentage of total closed trades that generated positive realized profit.</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Helps evaluate consistency. With a 2:1 reward-to-risk ratio, you only need a 35-40% win rate to be profitable.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">main.py Threshold:</span><span class="glossary-threshold">Target Win Rate: 45% - 55%</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Example:</span><span class="glossary-example">10 wins out of 20 trades = 50% win rate; produces +10R net account growth.</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-profitfactor">
+                <div class="glossary-card-header"><span class="glossary-term">Profit Factor</span><span class="glossary-category">System Efficiency</span></div>
+                <p class="glossary-meaning">Gross profits divided by gross losses across all closed trades.</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">A profit factor above 1.5 indicates a robust, high-performing trading edge.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">main.py Threshold:</span><span class="glossary-threshold">Profit Factor = Gross Winning PnL / Gross Losing PnL (Target &gt; 1.5)</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Example:</span><span class="glossary-example">₹30,000 gross gains / ₹15,000 gross losses = 2.0 Profit Factor.</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-maxdrawdown">
+                <div class="glossary-card-header"><span class="glossary-term">Max Drawdown</span><span class="glossary-category">Peak-to-Trough Risk</span></div>
+                <p class="glossary-meaning">The largest percentage or rupee decline from an equity peak to a subsequent trough.</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Protects psychology and prevents emotional breakdowns during normal losing streaks.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">main.py Threshold:</span><span class="glossary-threshold">Strictly mitigated via 1% risk rule and 2% daily loss limit (Target &lt; 8% account DD)</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Example:</span><span class="glossary-example">Account grows to ₹115,000 then dips to ₹110,000 before reaching new highs: Drawdown is ₹5,000 (4.3%).</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-trailingema10">
+                <div class="glossary-card-header"><span class="glossary-term">Trailing Stop (10 EMA)</span><span class="glossary-category">Dynamic Trend Exit</span></div>
+                <p class="glossary-meaning">An exit rule where you ride big winners by holding until a session closes below the 10 EMA.</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Allows exceptional market leaders to turn into 3R, 4R, or 5R multi-week trend runners.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">main.py Threshold:</span><span class="glossary-threshold">Exit if daily Close &lt; EMA10 once past initial target</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Example:</span><span class="glossary-example">Stock runs from ₹500 to ₹650 without a single daily close under its rising 10 EMA line.</span></div>
+              </div>
+            </div>
+          </article>
+
+          <!-- SECTION 4: OUR RULES IN PICTURE FORM -->
+          <article id="help-rules" class="help-section">
+            <div class="help-section-header">
+              <h2 class="help-section-title"><span>🎨</span> OUR RULES IN PICTURE FORM</h2>
+              <p class="help-section-subtitle">Schematic vector blueprints of the core patterns and mechanical execution rules</p>
+            </div>
+
+            <div class="schematics-grid">
+              <!-- Schematic 1: Stage 2 Uptrend -->
+              <div class="schematic-card">
+                <div class="schematic-header">
+                  <h3 class="schematic-title">1. Stage-2 Uptrend (Minervini Template)</h3>
+                </div>
+                <div class="schematic-canvas-box">
+                  <svg viewBox="0 0 360 160" width="100%" height="150">
+                    <rect width="360" height="150" fill="#070a10" rx="6" />
+                    <!-- Rising SMA200 (Blue) -->
+                    <path d="M 20 135 C 100 130, 200 115, 340 85" stroke="#3b82f6" stroke-width="2.5" fill="none" />
+                    <text x="330" y="78" fill="#3b82f6" font-size="9" font-weight="700">SMA 200</text>
+                    <!-- Rising SMA150 (Teal) -->
+                    <path d="M 20 115 C 110 105, 200 90, 340 60" stroke="#06b6d4" stroke-width="2.5" fill="none" />
+                    <text x="330" y="54" fill="#06b6d4" font-size="9" font-weight="700">SMA 150</text>
+                    <!-- Rising SMA50 (Orange) -->
+                    <path d="M 20 95 C 100 80, 210 65, 340 35" stroke="#f97316" stroke-width="2.5" fill="none" />
+                    <text x="330" y="30" fill="#f97316" font-size="9" font-weight="700">SMA 50</text>
+                    <!-- Price Line (White) -->
+                    <path d="M 20 75 Q 60 50, 100 70 T 180 50 T 260 35 T 330 20" stroke="#f8fafc" stroke-width="2" fill="none" />
+                    <!-- Green check marker -->
+                    <circle cx="330" cy="20" r="5" fill="#10b981" />
+                  </svg>
+                </div>
+                <div class="schematic-rules-box">
+                  <ul>
+                    <li><strong>Order of Averages:</strong> Current Price &gt; SMA 50 &gt; SMA 150 &gt; SMA 200.</li>
+                    <li><strong>Ascending 200 SMA:</strong> The 200-day average must be trending upward for at least 50 days.</li>
+                    <li><strong>Proximity Rule:</strong> Price must be at least 30% above its 52-week low and within 25% of its 52-week high.</li>
+                  </ul>
+                </div>
+              </div>
+
+              <!-- Schematic 2: VCP Coiling -->
+              <div class="schematic-card">
+                <div class="schematic-header">
+                  <h3 class="schematic-title">2. Volatility Contraction Pattern (VCP)</h3>
+                </div>
+                <div class="schematic-canvas-box">
+                  <svg viewBox="0 0 360 160" width="100%" height="150">
+                    <rect width="360" height="150" fill="#070a10" rx="6" />
+                    <!-- Resistance Line -->
+                    <line x1="20" y1="35" x2="340" y2="35" stroke="#ef4444" stroke-dasharray="4,4" stroke-width="1.5" />
+                    <text x="30" y="28" fill="#ef4444" font-size="9" font-weight="700">Resistance Ceiling</text>
+                    <!-- Contracting Swings (T1, T2, T3) -->
+                    <path d="M 30 35 Q 70 100, 110 35 Q 150 75, 190 35 Q 225 55, 260 35 Q 285 45, 310 35" stroke="#38bdf8" stroke-width="2" fill="none" />
+                    <text x="70" y="112" fill="#94a3b8" font-size="9" text-anchor="middle">T1 (-15%)</text>
+                    <text x="150" y="88" fill="#94a3b8" font-size="9" text-anchor="middle">T2 (-8%)</text>
+                    <text x="225" y="68" fill="#94a3b8" font-size="9" text-anchor="middle">T3 (-3%)</text>
+                    <!-- Volume Bars Below -->
+                    <rect x="55" y="125" width="8" height="20" fill="rgba(148, 163, 184, 0.6)" />
+                    <rect x="135" y="132" width="8" height="13" fill="rgba(148, 163, 184, 0.45)" />
+                    <rect x="215" y="138" width="8" height="7" fill="rgba(16, 185, 129, 0.8)" />
+                    <text x="215" y="125" fill="#34d399" font-size="8" text-anchor="middle">Vol Dry-Up</text>
+                  </svg>
+                </div>
+                <div class="schematic-rules-box">
+                  <ul>
+                    <li><strong>Successive Contractions:</strong> Price pullbacks get shallower on each test (e.g. 15% -&gt; 8% -&gt; 3%).</li>
+                    <li><strong>Volume Dries Up:</strong> Trading volume shrinks steadily as sellers run out of stock.</li>
+                    <li><strong>Spring Loaded:</strong> The tightest contraction right below resistance requires minimal volume to trigger breakout.</li>
+                  </ul>
+                </div>
+              </div>
+
+              <!-- Schematic 3: Breakout Trigger -->
+              <div class="schematic-card">
+                <div class="schematic-header">
+                  <h3 class="schematic-title">3. Breakout Entry & Risk Setup</h3>
+                </div>
+                <div class="schematic-canvas-box">
+                  <svg viewBox="0 0 360 160" width="100%" height="150">
+                    <rect width="360" height="150" fill="#070a10" rx="6" />
+                    <!-- 20D High Resistance -->
+                    <line x1="20" y1="70" x2="340" y2="70" stroke="#f59e0b" stroke-dasharray="4,4" stroke-width="1.5" />
+                    <text x="30" y="64" fill="#f59e0b" font-size="9" font-weight="700">20-Day High (HIGH20)</text>
+                    <!-- 2R Target Line -->
+                    <line x1="220" y1="20" x2="340" y2="20" stroke="#10b981" stroke-dasharray="3,3" stroke-width="1.5" />
+                    <text x="225" y="15" fill="#10b981" font-size="9" font-weight="700">Target (+2R = +10%)</text>
+                    <!-- Stop Loss Line -->
+                    <line x1="220" y1="100" x2="340" y2="100" stroke="#ef4444" stroke-dasharray="3,3" stroke-width="1.5" />
+                    <text x="225" y="112" fill="#ef4444" font-size="9" font-weight="700">Stop (-1R = -5%)</text>
+                    <!-- Breakout Candle -->
+                    <line x1="235" y1="50" x2="235" y2="85" stroke="#10b981" stroke-width="1.5" />
+                    <rect x="230" y="55" width="10" height="25" fill="#10b981" />
+                    <!-- Entry Arrow -->
+                    <polygon points="215,67 225,67 225,63 232,70 225,77 225,73 215,73" fill="#38bdf8" />
+                    <text x="180" y="73" fill="#38bdf8" font-size="9" font-weight="700">Entry</text>
+                    <!-- Volume Spike Bar -->
+                    <rect x="230" y="125" width="10" height="22" fill="#10b981" />
+                    <line x1="210" y1="135" x2="260" y2="135" stroke="#f59e0b" stroke-dasharray="2,2" />
+                    <text x="270" y="138" fill="#f59e0b" font-size="8">&gt;1.5x Vol</text>
+                  </svg>
+                </div>
+                <div class="schematic-rules-box">
+                  <ul>
+                    <li><strong>Decisive Close:</strong> Daily price finishes cleanly above the 20-day high resistance level.</li>
+                    <li><strong>Volume Confirmation:</strong> Session volume is at least 1.5x higher than the 50-day average.</li>
+                    <li><strong>Mathematical Asymmetry:</strong> Target is set at 2R reward against a 1R dynamic ATR stop.</li>
+                  </ul>
+                </div>
+              </div>
+
+              <!-- Schematic 4: Pullback (2-RSI) -->
+              <div class="schematic-card">
+                <div class="schematic-header">
+                  <h3 class="schematic-title">4. Pullback Setup (2-Period RSI)</h3>
+                </div>
+                <div class="schematic-canvas-box">
+                  <svg viewBox="0 0 360 160" width="100%" height="150">
+                    <rect width="360" height="150" fill="#070a10" rx="6" />
+                    <!-- Ascending Trendline -->
+                    <path d="M 20 120 L 140 40 L 200 90 L 320 20" stroke="#64748b" stroke-width="1.5" stroke-dasharray="3,3" fill="none" />
+                    <!-- Pullback dip -->
+                    <path d="M 140 40 L 170 65 L 200 90" stroke="#ef4444" stroke-width="2.5" fill="none" />
+                    <text x="175" y="55" fill="#f87171" font-size="8" font-weight="700">2-3 Day Dip</text>
+                    <text x="175" y="105" fill="#fcd34d" font-size="8">RSI2 &lt; 10 (Oversold)</text>
+                    <!-- Reversal Candle -->
+                    <line x1="220" y1="75" x2="220" y2="95" stroke="#10b981" stroke-width="1.5" />
+                    <rect x="215" y="78" width="10" height="14" fill="#10b981" />
+                    <text x="240" y="85" fill="#34d399" font-size="9" font-weight="700">Reversal Entry</text>
+                  </svg>
+                </div>
+                <div class="schematic-rules-box">
+                  <ul>
+                    <li><strong>Stage 2 Context:</strong> Stock must already be established in an overarching uptrend.</li>
+                    <li><strong>Extreme Oversold:</strong> 2-period RSI drops below 10, signaling short-term panic selling.</li>
+                    <li><strong>Confirmation Candle:</strong> Buy only after the first green day where Close &gt; previous Close.</li>
+                  </ul>
+                </div>
+              </div>
+
+              <!-- Schematic 5: Market Filter -->
+              <div class="schematic-card">
+                <div class="schematic-header">
+                  <h3 class="schematic-title">5. Market Filter (NIFTY 50 Regime)</h3>
+                </div>
+                <div class="schematic-canvas-box">
+                  <svg viewBox="0 0 360 160" width="100%" height="150">
+                    <rect width="360" height="150" fill="#070a10" rx="6" />
+                    <!-- Green Zone -->
+                    <rect x="20" y="20" width="160" height="110" fill="rgba(16, 185, 129, 0.08)" stroke="#10b981" stroke-dasharray="3,3" />
+                    <text x="100" y="40" fill="#34d399" font-size="10" font-weight="700" text-anchor="middle">UPTREND ZONE</text>
+                    <text x="100" y="56" fill="#cbd5e1" font-size="8" text-anchor="middle">Trades Allowed</text>
+                    <!-- Red Zone -->
+                    <rect x="190" y="20" width="150" height="110" fill="rgba(239, 68, 68, 0.08)" stroke="#ef4444" stroke-dasharray="3,3" />
+                    <text x="265" y="40" fill="#f87171" font-size="10" font-weight="700" text-anchor="middle">DEFENSIVE ZONE</text>
+                    <text x="265" y="56" fill="#cbd5e1" font-size="8" text-anchor="middle">No New Buys (Hold Cash)</text>
+                    <!-- Index Path -->
+                    <path d="M 30 110 Q 70 60, 110 50 T 170 70 L 210 110 L 260 120 L 320 130" stroke="#38bdf8" stroke-width="2.5" fill="none" />
+                    <!-- 50 SMA -->
+                    <path d="M 30 90 Q 100 80, 180 85 T 320 115" stroke="#f97316" stroke-width="1.5" stroke-dasharray="2,2" fill="none" />
+                  </svg>
+                </div>
+                <div class="schematic-rules-box">
+                  <ul>
+                    <li><strong>Market Direction:</strong> NIFTY 50 Index must satisfy Close &gt; SMA50 &gt; SMA200.</li>
+                    <li><strong>Defensive Protection:</strong> If index dips below moving averages, regime flips to Defensive.</li>
+                    <li><strong>Capital Safeguard:</strong> All setup scores are capped at 50, blocking aggressive entries.</li>
+                  </ul>
+                </div>
+              </div>
+
+              <!-- Schematic 6: Trade Management -->
+              <div class="schematic-card">
+                <div class="schematic-header">
+                  <h3 class="schematic-title">6. Trade Management & Exits</h3>
+                </div>
+                <div class="schematic-canvas-box">
+                  <svg viewBox="0 0 360 160" width="100%" height="150">
+                    <rect width="360" height="150" fill="#070a10" rx="6" />
+                    <!-- Entry Line -->
+                    <line x1="20" y1="100" x2="340" y2="100" stroke="#64748b" stroke-dasharray="2,2" />
+                    <text x="25" y="94" fill="#94a3b8" font-size="8">Entry ₹1000</text>
+                    <!-- +8% Line -->
+                    <line x1="120" y1="60" x2="340" y2="60" stroke="#f59e0b" stroke-dasharray="2,2" />
+                    <text x="125" y="54" fill="#f59e0b" font-size="8">+8% (Stop moves to Breakeven)</text>
+                    <!-- Target Exit -->
+                    <path d="M 30 100 Q 70 80, 130 55 T 240 25 L 290 15" stroke="#10b981" stroke-width="2" fill="none" />
+                    <circle cx="290" cy="15" r="4" fill="#10b981" />
+                    <text x="300" y="18" fill="#10b981" font-size="9" font-weight="700">Target (+2R)</text>
+                    <!-- Stop Exit -->
+                    <path d="M 30 100 Q 60 115, 90 135" stroke="#ef4444" stroke-width="2" fill="none" />
+                    <circle cx="90" cy="135" r="4" fill="#ef4444" />
+                    <text x="100" y="138" fill="#ef4444" font-size="9" font-weight="700">Stop (-1R)</text>
+                  </svg>
+                </div>
+                <div class="schematic-rules-box">
+                  <ul>
+                    <li><strong>Initial Risk:</strong> Fixed stop loss at 1.5x ATR (maximum 7% from entry price).</li>
+                    <li><strong>Breakeven Ratchet:</strong> When profit reaches +8%, immediately move stop to entry.</li>
+                    <li><strong>Trailing Exit:</strong> Trail along 10 EMA close or take profit at predefined 2R target.</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <!-- SECTION 5: TELEGRAM COMMANDS -->
+          <article id="help-telegram" class="help-section">
+            <div class="help-section-header">
+              <h2 class="help-section-title"><span>💬</span> TELEGRAM COMMANDS</h2>
+              <p class="help-section-subtitle">Real-time trade logging, position management, and portfolio audit from your Telegram app</p>
+            </div>
+
+            <div class="table-scroll" tabindex="0">
+              <table class="telegram-cmd-table">
+                <thead>
+                  <tr>
+                    <th>Command</th>
+                    <th>Syntax</th>
+                    <th>Live Example</th>
+                    <th>What Happens After Sending</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td data-label="Command"><strong>/buy</strong></td>
+                    <td data-label="Syntax"><span class="telegram-cmd-code">/buy SYMBOL ENTRY QTY [STOP] [TARGET] [#tags...]</span></td>
+                    <td data-label="Live Example"><span class="telegram-cmd-code">/buy PERSISTENT 5200 10 4950 5700 #breakout #plan_followed</span></td>
+                    <td data-label="What Happens After Sending">Validates numbers, stores planned stop and tags in <code>open_positions.json</code>, returns trade confirmation card.</td>
+                  </tr>
+                  <tr>
+                    <td data-label="Command"><strong>/sell</strong></td>
+                    <td data-label="Syntax"><span class="telegram-cmd-code">/sell SYMBOL EXIT_PRICE [NOTE] [#tags...]</span></td>
+                    <td data-label="Live Example"><span class="telegram-cmd-code">/sell PERSISTENT 5650 hit target #plan_followed</span></td>
+                    <td data-label="What Happens After Sending">Closes position, compares exit to planned stop (audits <code>stop_moved</code> or <code>time_stop_ignored</code> mistakes), saves tags, archives in <code>trades.json</code>.</td>
+                  </tr>
+                  <tr>
+                    <td data-label="Command"><strong>/open</strong></td>
+                    <td data-label="Syntax"><span class="telegram-cmd-code">/open</span></td>
+                    <td data-label="Live Example"><span class="telegram-cmd-code">/open</span></td>
+                    <td data-label="What Happens After Sending">Replies with all currently active open positions, entry prices, trailing stops, 2R targets, and tags.</td>
+                  </tr>
+                  <tr>
+                    <td data-label="Command"><strong>/trades</strong></td>
+                    <td data-label="Syntax"><span class="telegram-cmd-code">/trades</span></td>
+                    <td data-label="Live Example"><span class="telegram-cmd-code">/trades</span></td>
+                    <td data-label="What Happens After Sending">Replies with the last 10 closed trades showing realized PnL, percentage return, R-multiple, tags, and discipline flags.</td>
+                  </tr>
+                  <tr>
+                    <td data-label="Command"><strong>/stats</strong></td>
+                    <td data-label="Syntax"><span class="telegram-cmd-code">/stats</span></td>
+                    <td data-label="Live Example"><span class="telegram-cmd-code">/stats</span></td>
+                    <td data-label="What Happens After Sending">Calculates lifetime performance: Win Rate, Profit Factor, Expectancy, plus #breakout vs #pullback and plan discipline audit.</td>
+                  </tr>
+                  <tr>
+                    <td data-label="Command"><strong>/help</strong></td>
+                    <td data-label="Syntax"><span class="telegram-cmd-code">/help</span></td>
+                    <td data-label="Live Example"><span class="telegram-cmd-code">/help</span></td>
+                    <td data-label="What Happens After Sending">Displays syntax guides, command usage examples, tag suggestions, and execution rules directly inside your chat.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+
+          <!-- SECTION 6: RISK COMMANDMENTS -->
+          <article id="help-commandments" class="help-section">
+            <div class="help-section-header">
+              <h2 class="help-section-title"><span>🛡️</span> THE 10 RISK COMMANDMENTS</h2>
+              <p class="help-section-subtitle">Non-negotiable trading principles that guarantee long-term survival and statistical edge</p>
+            </div>
+
+            <div class="commandments-grid">
+              <div class="commandment-card">
+                <div class="commandment-num">1</div>
+                <div class="commandment-body">
+                  <h4>Risk Exactly 1% Per Trade</h4>
+                  <p>Never risk more than ₹1,000 per trade on a ₹100,000 capital base. 10 consecutive bad trades will only reduce your account by ~9.5%.</p>
+                </div>
+              </div>
+
+              <div class="commandment-card">
+                <div class="commandment-num">2</div>
+                <div class="commandment-body">
+                  <h4>Maximum 2 Trades Per Day</h4>
+                  <p>Overtrading dilutes focus and causes poor entries. Strict 2-trade limit forces you to wait for the highest conviction Grade A+ setups.</p>
+                </div>
+              </div>
+
+              <div class="commandment-card">
+                <div class="commandment-num">3</div>
+                <div class="commandment-body">
+                  <h4>Stop Trading After 2% Daily Loss</h4>
+                  <p>If two trades hit stops in one day, close the terminal and walk away. Emotional revenge trading is the #1 killer of swing trading accounts.</p>
+                </div>
+              </div>
+
+              <div class="commandment-card">
+                <div class="commandment-num">4</div>
+                <div class="commandment-body">
+                  <h4>Never Average Down</h4>
+                  <p>Losers average losers. If a stock falls below your entry, it is proving your thesis wrong. Adding more capital to a losing trade is forbidden.</p>
+                </div>
+              </div>
+
+              <div class="commandment-card">
+                <div class="commandment-num">5</div>
+                <div class="commandment-body">
+                  <h4>Never Revenge Trade</h4>
+                  <p>Losses are simply the wholesale cost of doing business. Accept them dispassionately, log them in your journal, and wait for the next setup.</p>
+                </div>
+              </div>
+
+              <div class="commandment-card">
+                <div class="commandment-num">6</div>
+                <div class="commandment-body">
+                  <h4>Respect the 5-Day Time Stop</h4>
+                  <p>Real breakouts move swiftly. If a stock lingers around your entry for 5 trading sessions without follow-through, close it and free capital.</p>
+                </div>
+              </div>
+
+              <div class="commandment-card">
+                <div class="commandment-num">7</div>
+                <div class="commandment-body">
+                  <h4>Check Earnings Dates Before Entry</h4>
+                  <p>Never hold a swing trade through quarterly earnings reports. An unexpected earnings gap can plunge price 10-20% past your stop loss.</p>
+                </div>
+              </div>
+
+              <div class="commandment-card">
+                <div class="commandment-num">8</div>
+                <div class="commandment-body">
+                  <h4>Trade Only Grade A / A+ in a Green Market</h4>
+                  <p>Never compromise on setup quality. If the benchmark market is red or the stock is Grade B, sit on your hands. Cash is an active position.</p>
+                </div>
+              </div>
+
+              <div class="commandment-card">
+                <div class="commandment-num">9</div>
+                <div class="commandment-body">
+                  <h4>Journal Every Single Trade</h4>
+                  <p>Send <code>/buy</code> when you enter and <code>/sell</code> when you exit without exception. What gets measured gets managed and improved.</p>
+                </div>
+              </div>
+
+              <div class="commandment-card">
+                <div class="commandment-num">10</div>
+                <div class="commandment-body">
+                  <h4>Review Stats Weekly</h4>
+                  <p>Check the Performance Stats tab every weekend. If win rate or profit factor dips, decrease trade frequency and tighten selectivity.</p>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <!-- SECTION 7: FAQ -->
+          <article id="help-faq" class="help-section">
+            <div class="help-section-header">
+              <h2 class="help-section-title"><span>❓</span> FREQUENTLY ASKED QUESTIONS (FAQ)</h2>
+              <p class="help-section-subtitle">Straight answers to common questions about signals, defensive regimes, and emergency protocols</p>
+            </div>
+
+            <div class="faq-accordion" id="faqAccordion">
+              <div class="faq-item">
+                <div class="faq-question">
+                  <span>Why are there zero signals today?</span>
+                  <span class="faq-icon">▼</span>
+                </div>
+                <div class="faq-answer">
+                  Our scanner applies 7 simultaneous filters (Stage 2 trend, 10-day coiling, 20-day high breakout, 1.5x volume spike, strong close in top 40%, sector trend confirmation, and NIFTY benchmark trend). Most days, no stock meets all 7 criteria. Having zero signals is normal and expected — it protects your capital from choppy, sub-par market environments.
+                </div>
+              </div>
+
+              <div class="faq-item">
+                <div class="faq-question">
+                  <span>Why does the dashboard say "Market: Defensive"?</span>
+                  <span class="faq-icon">▼</span>
+                </div>
+                <div class="faq-answer">
+                  The O'Neil M-rule detected that the benchmark NIFTY 50 index (^NSEI) is trading below its 50-day or 200-day moving average, or the 50 SMA is below the 200 SMA. Statistical studies show that 75% of individual stocks follow the broader market direction. In a defensive market, all setup scores are capped at 50, and new buy signals are blocked to keep you safely in cash.
+                </div>
+              </div>
+
+              <div class="faq-item">
+                <div class="faq-question">
+                  <span>What does Grade B mean, can I trade it?</span>
+                  <span class="faq-icon">▼</span>
+                </div>
+                <div class="faq-answer">
+                  Grade B means the setup scored between 60 and 69, or scored higher but failed the Sector confirmation filter. Grade B stocks are placed on the Watchlist so you can observe their consolidation. <strong>You should NOT buy Grade B setups</strong>. Only Grade A+ and Grade A setups provide the statistical edge necessary for profitable swing trading.
+                </div>
+              </div>
+
+              <div class="faq-item">
+                <div class="faq-question">
+                  <span>How fresh is the data displayed on the dashboard?</span>
+                  <span class="faq-icon">▼</span>
+                </div>
+                <div class="faq-answer">
+                  The scanner runs automatically after the closing bell at <strong>16:15 IST</strong> on all trading days. In addition, the Telegram listener runs every <strong>5 minutes</strong> to sync trades, and this dashboard terminal refreshes its data from GitHub automatically every <strong>5 minutes</strong> in the background.
+                </div>
+              </div>
+
+              <div class="faq-item">
+                <div class="faq-question">
+                  <span>What if a stock gaps down past my stop loss overnight?</span>
+                  <span class="faq-icon">▼</span>
+                </div>
+                <div class="faq-answer">
+                  If bad news causes a stock to gap down below your stop loss at the 09:15 AM market open, <strong>exit immediately at market</strong>. Do NOT hope for an intraday bounce or average down. The 1% risk rule ensures that even a 2-3% gap-down loss will not cause catastrophic damage to your portfolio.
+                </div>
+              </div>
+
+              <div class="faq-item">
+                <div class="faq-question">
+                  <span>When should I NOT trade?</span>
+                  <span class="faq-icon">▼</span>
+                </div>
+                <div class="faq-answer">
+                  Do not take new trades under three conditions: (1) When the Market Regime badge is red (Defensive); (2) Within 7 days of an upcoming quarterly earnings report for that company; or (3) If you have already taken 2 trades or hit your 2% loss limit for the day.
+                </div>
+              </div>
+
+              <div class="faq-item">
+                <div class="faq-question">
+                  <span>How do I change my dashboard access password?</span>
+                  <span class="faq-icon">▼</span>
+                </div>
+                <div class="faq-answer">
+                  Generate the SHA-256 hash of your new password (using any online SHA-256 generator or browser console <code>crypto.subtle.digest</code>), and update the <code>PASSWORD_HASH</code> constant on line 6 of <code>dashboard/app.js</code> in your repository.
+                </div>
+              </div>
+
+              <div class="faq-item">
+                <div class="faq-question">
+                  <span>Where is my personal trading data stored?</span>
+                  <span class="faq-icon">▼</span>
+                </div>
+                <div class="faq-answer">
+                  All your data is stored in your private GitHub repository in three JSON files: <code>scan_results.json</code>, <code>open_positions.json</code>, and <code>trades.json</code>. There are no third-party tracking databases or external servers involved. You have complete private ownership of your trading logs.
+                </div>
+              </div>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Floating Circular Help Button -->
+  <button id="floatingHelpBtn" class="floating-help-btn" title="Open Help Center & Handbook" aria-label="Help & Guide">?</button>
+
+  <!-- Global Toast Notification Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- Site-Wide Term Search Modal -->
+  <div id="termSearchModal" class="term-search-modal" style="display: none;">
+    <div class="term-search-backdrop" id="termSearchBackdrop"></div>
+    <div class="term-search-dialog" role="dialog" aria-modal="true" aria-label="Term Search">
+      <div class="term-search-header">
+        <span class="term-search-icon">🔍</span>
+        <input type="text" id="termSearchInput" class="term-search-input" placeholder="Search trading terms, metrics, formulas, or UI labels... (Esc to close)" autocomplete="off" />
+        <span class="term-search-esc-hint"><kbd>ESC</kbd></span>
+      </div>
+      <div id="termSearchResults" class="term-search-results">
+        <!-- Injected dynamically -->
+      </div>
+      <div class="term-search-footer">
+        <span><kbd>↑</kbd> <kbd>↓</kbd> to navigate</span>
+        <span><kbd>↵</kbd> to select</span>
+        <span><kbd>ESC</kbd> to close</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Inline Term Definition Popover -->
+  <div id="termPopover" class="term-popover" style="display: none;">
+    <div class="term-popover-header">
+      <span id="termPopoverTitle" class="term-popover-title">Term Title</span>
+      <button id="termPopoverClose" class="term-popover-close" title="Close">×</button>
+    </div>
+    <div id="termPopoverBody" class="term-popover-body">Short meaning definition...</div>
+    <div class="term-popover-footer">
+      <span id="termPopoverWhere" class="term-popover-where">Used in: Near Buy</span>
+      <a href="#" id="termPopoverGuideLink" class="term-popover-link">Full guide ➔</a>
+    </div>
+  </div>
+
+  <!-- TRADINGVIEW INTERACTIVE CHART MODAL (Item #3) -->
+  <div id="tvChartModal" class="tv-modal" style="display: none;">
+    <div class="tv-modal-backdrop" id="tvModalBackdrop"></div>
+    <div class="tv-modal-dialog" role="dialog" aria-modal="true" aria-label="TradingView Interactive Chart">
+      <div class="tv-modal-header">
+        <div class="tv-modal-title-group">
+          <span style="font-size: 18px;">📊</span>
+          <h3 id="tvModalTitle" class="tv-modal-title">Interactive Chart: NSE:SYMBOL</h3>
+          <a id="tvExternalLink" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-xs btn-outline-primary" title="Open chart on TradingView in new tab">
+            ↗ Open on TradingView
+          </a>
+        </div>
+        <button id="tvModalCloseBtn" class="tv-modal-close" title="Close chart (Esc)">&times;</button>
+      </div>
+      <div class="tv-modal-body">
+        <div id="tvWidgetContainer" class="tv-widget-container"></div>
+      </div>
+    </div>
+  <!-- TRADE POST-MORTEM & LESSON MODAL (Item #9) -->
+  <div id="postMortemModal" class="tv-modal" style="display: none;">
+    <div class="tv-modal-backdrop" id="postMortemBackdrop"></div>
+    <div class="tv-modal-dialog postmortem-dialog" role="dialog" aria-modal="true" aria-label="Trade Post-Mortem & Execution Lessons">
+      <div class="tv-modal-header">
+        <div class="tv-modal-title-group">
+          <span style="font-size: 18px;">📝</span>
+          <h3 id="postMortemTitle" class="tv-modal-title">Trade Post-Mortem: SYMBOL</h3>
+        </div>
+        <button id="postMortemCloseBtn" class="tv-modal-close" title="Close (Esc)">&times;</button>
+      </div>
+      <div class="postmortem-body">
+        <div id="postMortemTradeSummary" class="postmortem-summary-strip"></div>
+
+        <div class="postmortem-section">
+          <label class="postmortem-label">Quick Execution Lesson Tags (Click to toggle):</label>
+          <div id="postMortemTagChips" class="postmortem-tag-chips">
+            <button type="button" class="pm-tag-btn" data-tag="#FollowedPlan">✅ #FollowedPlan</button>
+            <button type="button" class="pm-tag-btn" data-tag="#CleanBreakout">🚀 #CleanBreakout</button>
+            <button type="button" class="pm-tag-btn" data-tag="#TargetHit">🏆 #TargetHit</button>
+            <button type="button" class="pm-tag-btn" data-tag="#RatchetWorked">🎯 #RatchetWorked</button>
+            <button type="button" class="pm-tag-btn" data-tag="#ChasedGap">⚠️ #ChasedGap</button>
+            <button type="button" class="pm-tag-btn" data-tag="#EarlyExit">⏰ #EarlyExit</button>
+            <button type="button" class="pm-tag-btn" data-tag="#StopMoved">❌ #StopMoved</button>
+            <button type="button" class="pm-tag-btn" data-tag="#MarketWeakness">🌧️ #MarketWeakness</button>
+          </div>
+        </div>
+
+        <div class="postmortem-section">
+          <label for="postMortemNotesInput" class="postmortem-label">Qualitative Reflection & Takeaways:</label>
+          <textarea id="postMortemNotesInput" class="postmortem-textarea" rows="3" placeholder="What did you do right? What will you do better next time?"></textarea>
+        </div>
+
+        <div class="postmortem-footer">
+          <button id="postMortemSaveBtn" class="btn btn-primary btn-sm">💾 Save Reflection</button>
+          <button id="postMortemCancelBtn" class="btn btn-secondary btn-sm">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GLOBAL FLOATING TOAST NOTIFICATION -->
+  <div id="dashboardToast" class="dashboard-toast" style="display: none;">
+    <span id="toastIcon" class="toast-icon">✅</span>
+    <span id="toastMessage" class="toast-message">Notification message</span>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

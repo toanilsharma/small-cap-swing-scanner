@@ -1,0 +1,58 @@
+{
+  "textbook": {
+    "TREND_OK": true,
+    "VOL_DRYUP": true,
+    "PRICE_TIGHT": true,
+    "SETUP_OK": true,
+    "SQUEEZE_ON": false,
+    "SETUP_WINDOW": true,
+    "BREAKOUT": true,
+    "VOL_SPIKE": true,
+    "STRONG_CLOSE": true,
+    "PULLBACK": false,
+    "SIGNAL": true,
+    "SIGNAL_PULLBACK": false
+  },
+  "downtrend": {
+    "TREND_OK": false,
+    "VOL_DRYUP": false,
+    "PRICE_TIGHT": false,
+    "SETUP_OK": false,
+    "SQUEEZE_ON": false,
+    "SETUP_WINDOW": false,
+    "BREAKOUT": false,
+    "VOL_SPIKE": false,
+    "STRONG_CLOSE": false,
+    "PULLBACK": false,
+    "SIGNAL": false,
+    "SIGNAL_PULLBACK": false
+  },
+  "breakout_no_volume": {
+    "TREND_OK": true,
+    "VOL_DRYUP": true,
+    "PRICE_TIGHT": true,
+    "SETUP_OK": true,
+    "SQUEEZE_ON": false,
+    "SETUP_WINDOW": true,
+    "BREAKOUT": true,
+    "VOL_SPIKE": false,
+    "STRONG_CLOSE": true,
+    "PULLBACK": false,
+    "SIGNAL": false,
+    "SIGNAL_PULLBACK": false
+  },
+  "coil_no_breakout": {
+    "TREND_OK": true,
+    "VOL_DRYUP": true,
+    "PRICE_TIGHT": true,
+    "SETUP_OK": true,
+    "SQUEEZE_ON": true,
+    "SETUP_WINDOW": true,
+    "BREAKOUT": false,
+    "VOL_SPIKE": false,
+    "STRONG_CLOSE": false,
+    "PULLBACK": false,
+    "SIGNAL": false,
+    "SIGNAL_PULLBACK": false
+  }
+}

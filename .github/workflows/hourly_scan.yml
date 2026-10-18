@@ -1,0 +1,54 @@
+# Hourly Market-Hours Scan
+# Cron: 30 4-10 * * 1-5
+# UTC 04:30, 05:30, 06:30, 07:30, 08:30, 09:30, 10:30 Mon-Fri
+# IST (UTC+5:30): 10:00, 11:00, 12:00, 13:00, 14:00, 15:00, 16:00 Mon-Fri (hourly during NSE market hours)
+name: Hourly Market-Hours Scan
+
+on:
+  schedule:
+    - cron: "30 4-10 * * 1-5"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Set git identity
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Run scanner
+        env:
+          QUIET: "1"
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          SKIP_GIT_PUSH: "0"
+        run: |
+          python main.py

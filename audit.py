@@ -21,6 +21,7 @@ TEST_LAYERS = [
     ("tests/test_hermetic_scan.py", "HERMETIC SCAN"),
     ("tests/test_schema_drift.py", "SCHEMA DRIFT"),
     ("tests/test_thresholds_locked.py", "THRESHOLDS LOCKED"),
+    ("tests/test_smallcap_survival.py", "SURVIVAL / REGIME"),
 ]
 
 
@@ -43,7 +44,7 @@ def regenerate_golden():
 
 def run_audit(live: bool = False):
     print("=" * 60)
-    print("MIDCAP SWING TRADING SCANNER - LOGIC & GATING AUDIT")
+    print("SMALL-CAP SWING TRADING SCANNER - LOGIC & GATING AUDIT")
     print("=" * 60)
 
     pytest_args = [sys.executable, "-m", "pytest", "-v"]

@@ -33,6 +33,11 @@ EXPECTED_SIGNAL_KEYS = {
     "Risk Amount",
     "ATR14",
     "RSI14",
+    "catalyst",
+    "adv20_cr",
+    "gap_qty_applied",
+    "next_earnings",
+    "circuit_skipped_reason",
 }
 
 EXPECTED_WATCHLIST_KEYS = {

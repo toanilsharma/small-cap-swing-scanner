@@ -43,21 +43,52 @@ CAPITAL = 100000
 RISK_PCT = 0.01
 SEND_NO_SIGNAL_MESSAGE = True
 SEND_WATCHLIST = True
-ATR_STOP_MULTIPLIER = 1.5
+ATR_STOP_MULTIPLIER = 2.0
 TARGET_R_MULTIPLE = 2.0
-MAX_STOP_LOSS_PCT = 0.07
-VOLUME_SPIKE_MULTIPLIER = 1.5
+MAX_STOP_LOSS_PCT = 0.09
+VOLUME_SPIKE_MULTIPLIER = 2.0
+VOLUME_SPIKE_MIN = 2.0
 SETUP_WINDOW_DAYS = 10
 INDEX_SYMBOL = "^NSEI"
-MIN_AVG_TURNOVER = 200000000  # 20 Crores daily average turnover
-ENABLE_PULLBACK = True
+USE_LARGE_CAP_CRASH_CHECK = False
+BASKET_MIN_SYMBOLS_PCT = 0.80
+BASKET_DRAWDOWN_GUARD_PCT = -0.07
+
+# Position-aware liquidity
+ADV20_MIN_RUPEES = 50000000  # 5 Crores hard sanity floor
+MAX_POSITION_ADV_PCT = 0.015  # 1.5% size-aware cap of ADV20
+
+# Gap / circuit survival sizing
+WORST_CASE_GAP_PCT = 0.19
+MAX_GAP_LOSS_PCT = 0.025
+DEFAULT_CIRCUIT_BAND = 0.10
+CIRCUIT_PROXIMITY_PCT = 0.02
+
+# Earnings blackout
+EARNINGS_BLACKOUT_DAYS = 5
+
+# Portfolio heat & drawdown limits (Elder circuit-breaker)
+MAX_CONCURRENT_SMALLCAP = 4
+MAX_TOTAL_HEAT_PCT = 0.05
+DAILY_STOP_PCT = 0.02
+MONTHLY_STOP_PCT = 0.06
+
+# Execution flags
+ENABLE_PULLBACK = False
 ENABLE_SQUEEZE = True
+TIME_STOP_DAYS = 8
+
+# File paths & sources
+SYMBOL_SOURCE_URL = "https://www.niftyindices.com/IndexConstituent/ind_niftysmallcap100list.csv"
+SYMBOLS_SMALLCAP_FILE = "symbols_smallcap.txt"
 SYMBOLS_FILE = "symbols.txt"
 TRADES_FILE = "trades.json"
 OPEN_POSITIONS_FILE = "open_positions.json"
 TG_OFFSET_FILE = "tg_offset.txt"
 ALERT_SETTINGS_FILE = "alert_settings.json"
 SCAN_RESULTS_FILE = "scan_results.json"
+CIRCUITS_FILE = "circuits.json"
+EARNINGS_FILE = "earnings_dates.json"
 
 IST_TZ = datetime.timezone(datetime.timedelta(hours=5, minutes=30))
 
@@ -493,44 +524,52 @@ def send_telegram(
 # =====================================================================
 # 3) SYMBOL LIST RETRIEVAL
 # =====================================================================
+def parse_symbols_file(filepath: str) -> List[str]:
+    """Parse symbols from a local text file with comments (#) and comma/whitespace delimiters."""
+    if not os.path.exists(filepath):
+        return []
+    symbols: List[str] = []
+    try:
+        with open(filepath, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                parts = re.split(r"[\s,]+", line)
+                for part in parts:
+                    if part.startswith("#"):
+                        break
+                    cleaned = part.strip().upper()
+                    if not cleaned:
+                        continue
+                    if cleaned.endswith(".NS"):
+                        cleaned = cleaned[:-3]
+                    sym = f"{cleaned}.NS"
+                    if sym not in symbols:
+                        symbols.append(sym)
+    except Exception as exc:
+        print(f"Warning reading {filepath}: {exc}")
+    return symbols
+
+
 def get_symbols() -> List[str]:
     """
-    Load symbols from symbols.txt if available.
-    If empty or missing, download NIFTY Midcap 100 constituents from niftyindices.com.
+    Load symbols from symbols_smallcap.txt if available and non-empty.
+    Fallback to symbols.txt. If empty or missing, download NIFTY Smallcap 100 constituents
+    from SYMBOL_SOURCE_URL. If download fails/404s/blocks, fail gracefully without crashing.
     """
-    symbols: List[str] = []
-
-    # Check local symbols.txt
-    if os.path.exists(SYMBOLS_FILE):
-        try:
-            with open(SYMBOLS_FILE, "r", encoding="utf-8") as f:
-                for line in f:
-                    line = line.strip()
-                    if not line or line.startswith("#"):
-                        continue
-                    # Split on commas and spaces
-                    parts = re.split(r"[\s,]+", line)
-                    for part in parts:
-                        if part.startswith("#"):
-                            break
-                        cleaned = part.strip().upper()
-                        if not cleaned:
-                            continue
-                        if cleaned.endswith(".NS"):
-                            cleaned = cleaned[:-3]
-                        sym = f"{cleaned}.NS"
-                        if sym not in symbols:
-                            symbols.append(sym)
-        except Exception as exc:
-            print(f"Warning reading {SYMBOLS_FILE}: {exc}")
-
-    # Return local symbols if any were configured
+    # 1. Check small-cap manual override file
+    symbols = parse_symbols_file(SYMBOLS_SMALLCAP_FILE)
     if symbols:
         return symbols
 
-    # Fallback: Download NIFTY Midcap 100 list
-    print("symbols.txt is empty or missing. Auto-downloading NIFTY Midcap 100 list...")
-    url = "https://www.niftyindices.com/IndexConstituent/ind_niftymidcap100list.csv"
+    # 2. Check legacy symbols.txt
+    symbols = parse_symbols_file(SYMBOLS_FILE)
+    if symbols:
+        return symbols
+
+    # 3. Fallback: Download NIFTY Smallcap 100 constituents from CSV
+    print(f"symbols_smallcap.txt is empty or missing. Auto-downloading small-cap constituents from {SYMBOL_SOURCE_URL}...")
     headers = {
         "User-Agent": "Mozilla/5.0",
         "Accept": "text/csv,application/csv,*/*",
@@ -538,7 +577,7 @@ def get_symbols() -> List[str]:
     }
 
     try:
-        resp = requests.get(url, headers=headers, timeout=20)
+        resp = requests.get(SYMBOL_SOURCE_URL, headers=headers, timeout=20)
         if resp.status_code == 200 and resp.text:
             lines = resp.text.splitlines()
             start_line_idx = None
@@ -567,13 +606,16 @@ def get_symbols() -> List[str]:
                             sym = f"{raw_sym}.NS"
                             if sym not in symbols:
                                 symbols.append(sym)
+        else:
+            print(f"Notice: CSV URL {SYMBOL_SOURCE_URL} returned HTTP {resp.status_code}.")
+            print(f"Instruction: Please populate '{SYMBOLS_SMALLCAP_FILE}' with small-cap symbols (one per line).")
     except Exception as exc:
-        print(f"Error downloading constituents from niftyindices: {exc}")
+        print(f"Notice: Could not fetch small-cap list from {SYMBOL_SOURCE_URL}: {exc}")
+        print(f"Instruction: Please populate '{SYMBOLS_SMALLCAP_FILE}' with small-cap symbols (one per line).")
 
     if not symbols:
-        print(f"ERROR: Failed to retrieve symbols from {SYMBOLS_FILE} and web source.")
-        print(f"Please populate '{SYMBOLS_FILE}' with symbols and re-run.")
-        sys.exit(1)
+        print(f"Warning: No small-cap symbols found. Please create and populate '{SYMBOLS_SMALLCAP_FILE}'.")
+        return []
 
     return symbols
 
@@ -716,7 +758,15 @@ def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
 
     # Breakout triggers
     df["BREAKOUT"] = (df["Close"] > df["HIGH20"]) & (df["Close"].shift(1) <= df["HIGH20"])
-    df["VOL_SPIKE"] = df["Volume"] > (VOLUME_SPIKE_MULTIPLIER * df["VOL50"])
+    
+    # Small-cap volume spike: >= 2.0x 50-day average volume AND 3-day rising volume across breakout window
+    vol_today = df["Volume"]
+    vol_yesterday = df["Volume"].shift(1)
+    vol_2days_ago = df["Volume"].shift(2)
+    vol50 = df["VOL50"]
+    vol_spike_today = vol_today >= (VOLUME_SPIKE_MIN * vol50)
+    vol_rising_3day = (vol_today > vol_yesterday) & (vol_yesterday > vol_2days_ago) & (vol_2days_ago >= 0.3 * vol50)
+    df["VOL_SPIKE"] = vol_spike_today & vol_rising_3day
 
     # Strong close (>60% of candle's range)
     safe_hl = (df["High"] - df["Low"]).replace(0, np.nan)
@@ -757,8 +807,12 @@ def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
 
 
 # =====================================================================
-# 6) MARKET REGIME FILTER
+# 6) SMALL-CAP REGIME FILTER (EQUAL-WEIGHT BASKET)
 # =====================================================================
+_INDEX_CACHE: Optional[pd.DataFrame] = None
+_BASKET_CACHE: Optional[pd.DataFrame] = None
+
+
 def get_cached_index_df() -> Optional[pd.DataFrame]:
     """Retrieve and cache the benchmark index history."""
     global _INDEX_CACHE
@@ -769,38 +823,291 @@ def get_cached_index_df() -> Optional[pd.DataFrame]:
     return _INDEX_CACHE
 
 
-def market_ok() -> bool:
+def get_basket_df(symbols: Optional[List[str]] = None, force_rebuild: bool = False) -> Optional[pd.DataFrame]:
     """
-    O'Neil M-rule: Benchmark index must be in a healthy uptrend.
-    Last Close > SMA50 and Last Close > SMA200 and SMA50 > SMA200.
+    Build and cache an equal-weight basket index series from universe constituents:
+    - Collect historical Close for each symbol with >=200 bars.
+    - Require >=80% of symbols in the universe to have valid data, else regime is UNAVAILABLE.
+    - Normalize Close to 1.0 at oldest common date.
+    - Average across symbols per day (equal weight).
     """
-    idx_df = get_cached_index_df()
-    if idx_df is None or len(idx_df) < 200:
+    global _BASKET_CACHE
+    if _BASKET_CACHE is not None and not force_rebuild:
+        return _BASKET_CACHE
+
+    if symbols is None:
+        symbols = get_symbols()
+    if not symbols:
+        return None
+
+    total_symbols = len(symbols)
+    valid_dfs: Dict[str, pd.Series] = {}
+
+    for sym in symbols:
+        df_sym = get_history(sym)
+        if df_sym is not None and not df_sym.empty and len(df_sym) >= 200:
+            df_s = df_sym.copy()
+            df_s["Date"] = pd.to_datetime(df_s["Date"])
+            df_s = df_s.sort_values("Date").drop_duplicates(subset=["Date"])
+            valid_dfs[sym] = df_s.set_index("Date")["Close"]
+
+    min_required_symbols = math.ceil(BASKET_MIN_SYMBOLS_PCT * total_symbols)
+    if len(valid_dfs) < min_required_symbols or len(valid_dfs) == 0:
+        return None
+
+    combined = pd.DataFrame(valid_dfs)
+    valid_rows = combined.dropna(thresh=min_required_symbols)
+    if len(valid_rows) < 200:
+        return None
+
+    first_row = valid_rows.bfill().iloc[0]
+    first_row = first_row.replace(0, np.nan)
+    normalized = valid_rows.div(first_row)
+
+    basket_close = normalized.mean(axis=1)
+
+    basket_df = pd.DataFrame({
+        "Date": valid_rows.index,
+        "Close": basket_close.values,
+    })
+    basket_df["SMA50"] = basket_df["Close"].rolling(50).mean()
+    basket_df["SMA200"] = basket_df["Close"].rolling(200).mean()
+    basket_df["HIGH20"] = basket_df["Close"].rolling(20).max()
+
+    _BASKET_CACHE = basket_df
+    return basket_df
+
+
+def regime_ok() -> bool:
+    """
+    Equal-weight basket regime filter for small caps (fail-closed).
+    Returns True if:
+      basket_close > basket_SMA50
+      AND basket_close > basket_SMA200
+      AND basket_SMA50 > basket_SMA200
+      AND (basket_close / basket_20d_high - 1) > -0.07 (sharp-drawdown guard).
+    If basket cannot be built (e.g. <80% valid symbols), returns False.
+    """
+    b_df = get_basket_df()
+    if b_df is None or len(b_df) < 200:
         return False
 
-    last_row = idx_df.iloc[-1]
-    is_ok = (
-        (last_row["Close"] > last_row["SMA50"])
-        and (last_row["Close"] > last_row["SMA200"])
-        and (last_row["SMA50"] > last_row["SMA200"])
-    )
-    return bool(is_ok)
+    last_row = b_df.iloc[-1]
+    c = float(last_row["Close"])
+    sma50 = float(last_row["SMA50"])
+    sma200 = float(last_row["SMA200"])
+    high20 = float(last_row["HIGH20"])
+
+    if pd.isna(c) or pd.isna(sma50) or pd.isna(sma200) or pd.isna(high20) or high20 <= 0:
+        return False
+
+    dd = (c / high20) - 1.0
+    is_ok = (c > sma50) and (c > sma200) and (sma50 > sma200) and (dd > BASKET_DRAWDOWN_GUARD_PCT)
+    if not is_ok:
+        return False
+
+    # Optional secondary crash-check on large-cap benchmark (^NSEI)
+    if USE_LARGE_CAP_CRASH_CHECK:
+        idx_df = get_cached_index_df()
+        if idx_df is not None and len(idx_df) >= 200:
+            idx_last = idx_df.iloc[-1]
+            if not ((idx_last["Close"] > idx_last["SMA200"]) or (idx_last["Close"] > idx_last["SMA50"])):
+                return False
+
+    return True
+
+
+_real_regime_ok = regime_ok
+
+
+def market_ok() -> bool:
+    """Alias for regime_ok to preserve backward compatibility."""
+    return regime_ok()
 
 
 def index_return_50() -> Optional[float]:
     """
-    50-day return of the benchmark index: (Last Close / Close 50 rows ago) - 1.
+    50-day return of the equal-weight basket (or benchmark index if basket unavailable).
     """
+    b_df = get_basket_df()
+    if b_df is not None and len(b_df) >= 51:
+        last_close = float(b_df["Close"].iloc[-1])
+        close_50 = float(b_df["Close"].iloc[-51])
+        if close_50 > 0:
+            return float((last_close / close_50) - 1.0)
+
     idx_df = get_cached_index_df()
     if idx_df is None or len(idx_df) < 51:
         return None
 
-    last_close = idx_df["Close"].iloc[-1]
-    close_50 = idx_df["Close"].iloc[-51]
+    last_close = float(idx_df["Close"].iloc[-1])
+    close_50 = float(idx_df["Close"].iloc[-51])
     if close_50 <= 0:
         return None
 
     return float((last_close / close_50) - 1.0)
+
+
+# =====================================================================
+# CIRCUIT, EARNINGS & HEAT GUARDS (SMALL-CAP SURVIVAL LAYER)
+# =====================================================================
+def load_circuits() -> Dict[str, float]:
+    """Load circuit band map from circuits.json if present."""
+    if not os.path.exists(CIRCUITS_FILE):
+        return {}
+    try:
+        with open(CIRCUITS_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def check_circuit_proximity(symbol: str, df: pd.DataFrame) -> Tuple[bool, Optional[str]]:
+    """
+    Skip entry if last close is within 2% of the upper or lower band computed vs previous close.
+    Default band is 0.10 (10%) if circuits.json missing or symbol unlisted.
+    """
+    if len(df) < 2:
+        return False, None
+
+    circuits = load_circuits()
+    clean_sym = symbol.replace(".NS", "").upper()
+    band_pct = circuits.get(symbol, circuits.get(clean_sym, DEFAULT_CIRCUIT_BAND))
+
+    prev_close = float(df["Close"].iloc[-2])
+    last_close = float(df["Close"].iloc[-1])
+    if prev_close <= 0 or last_close <= 0:
+        return False, None
+
+    upper_band = prev_close * (1.0 + band_pct)
+    lower_band = prev_close * (1.0 - band_pct)
+
+    if last_close >= upper_band * (1.0 - CIRCUIT_PROXIMITY_PCT):
+        return True, f"Within 2% of upper circuit band (₹{upper_band:.2f})"
+    if last_close <= lower_band * (1.0 + CIRCUIT_PROXIMITY_PCT):
+        return True, f"Within 2% of lower circuit band (₹{lower_band:.2f})"
+
+    return False, None
+
+
+def load_earnings_dates() -> Dict[str, str]:
+    """Load earnings date map from earnings_dates.json."""
+    if not os.path.exists(EARNINGS_FILE):
+        return {}
+    try:
+        with open(EARNINGS_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def get_next_earnings(symbol: str) -> Optional[str]:
+    """Get next earnings date for a symbol if registered."""
+    dates = load_earnings_dates()
+    clean_sym = symbol.replace(".NS", "").upper()
+    return dates.get(symbol) or dates.get(clean_sym)
+
+
+def check_earnings_blackout(symbol: str, current_date: datetime.date) -> Tuple[bool, str]:
+    """
+    Fail-closed earnings check for small caps:
+    If symbol has NO entry -> treat next earnings as UNKNOWN -> BLOCK entry.
+    If next earnings is within EARNINGS_BLACKOUT_DAYS (5 days) -> BLOCK entry.
+    """
+    next_earn_str = get_next_earnings(symbol)
+    if not next_earn_str:
+        return True, "UNKNOWN->blocked"
+
+    try:
+        earn_date = datetime.date.fromisoformat(next_earn_str)
+        delta_days = (earn_date - current_date).days
+        if 0 <= delta_days <= EARNINGS_BLACKOUT_DAYS:
+            return True, next_earn_str
+        return False, next_earn_str
+    except Exception:
+        return True, "UNKNOWN->blocked"
+
+
+def check_buy_limits(sym: str, entry_price: float, qty: int, stop: Optional[float]) -> Optional[str]:
+    """
+    Enforces risk and drawdown caps for /buy:
+    - MAX_CONCURRENT_SMALLCAP (4)
+    - MAX_TOTAL_HEAT_PCT (0.05 / 5%)
+    - DAILY_STOP_PCT (0.02 / 2%)
+    - MONTHLY_STOP_PCT (0.06 / 6%) - Elder circuit-breaker
+    Returns error string if rejected, None if approved.
+    """
+    open_positions = load_open_positions()
+
+    # 1. Concurrent positions cap
+    if len(open_positions) >= MAX_CONCURRENT_SMALLCAP:
+        return (
+            f"⚠️ BUY REJECTED: Maximum concurrent small-cap positions reached ({MAX_CONCURRENT_SMALLCAP}). "
+            f"Close an existing position before opening a new one."
+        )
+
+    # Calculate proposed trade risk
+    eff_stop = stop if (stop is not None and stop < entry_price) else (entry_price * (1.0 - MAX_STOP_LOSS_PCT))
+    new_risk = max(0.0, (entry_price - eff_stop) * qty)
+
+    # 2. Total portfolio heat cap (5% of capital)
+    curr_heat = 0.0
+    for pos in open_positions:
+        p_entry = float(pos.get("entry_price", 0))
+        p_stop = float(pos.get("stop", p_entry * (1.0 - MAX_STOP_LOSS_PCT)))
+        p_qty = int(pos.get("qty", 0))
+        curr_heat += max(0.0, (p_entry - p_stop) * p_qty)
+
+    total_heat = curr_heat + new_risk
+    total_heat_pct = total_heat / CAPITAL
+    if total_heat_pct > MAX_TOTAL_HEAT_PCT:
+        return (
+            f"⚠️ BUY REJECTED: Total open risk ({total_heat_pct*100:.1f}%) exceeds maximum heat limit "
+            f"of {MAX_TOTAL_HEAT_PCT*100:.1f}% (₹{CAPITAL * MAX_TOTAL_HEAT_PCT:,.2f})."
+        )
+
+    # 3. Daily loss limit (2% of capital) from trades.json
+    trades = load_trades()
+    today_str = datetime.date.today().isoformat()
+    daily_realized_loss = 0.0
+    for t in trades:
+        exit_date = str(t.get("exit_date", ""))
+        if exit_date == today_str:
+            pnl = float(t.get("pnl", 0.0))
+            if pnl < 0:
+                daily_realized_loss += abs(pnl)
+    if daily_realized_loss >= (CAPITAL * DAILY_STOP_PCT):
+        return (
+            f"⚠️ BUY REJECTED: Daily stop loss limit reached (₹{daily_realized_loss:,.2f} >= "
+            f"₹{CAPITAL * DAILY_STOP_PCT:,.2f}, {DAILY_STOP_PCT*100:.1f}% limit). Trading halted for today."
+        )
+
+    # 4. Monthly drawdown limit (6% of capital realized + unrealized)
+    month_prefix = today_str[:7]
+    monthly_realized_loss = 0.0
+    for t in trades:
+        exit_date = str(t.get("exit_date", ""))
+        if exit_date.startswith(month_prefix):
+            pnl = float(t.get("pnl", 0.0))
+            monthly_realized_loss -= pnl
+    monthly_realized_loss = max(0.0, monthly_realized_loss)
+
+    monthly_unrealized_loss = 0.0
+    for pos in open_positions:
+        p_entry = float(pos.get("entry_price", 0))
+        p_curr = float(pos.get("current_price", pos.get("entry_price", 0)))
+        p_qty = int(pos.get("qty", 0))
+        if p_curr < p_entry:
+            monthly_unrealized_loss += (p_entry - p_curr) * p_qty
+
+    total_month_loss = monthly_realized_loss + monthly_unrealized_loss
+    if total_month_loss >= (CAPITAL * MONTHLY_STOP_PCT):
+        return (
+            f"⚠️ BUY REJECTED: Monthly drawdown limit reached (₹{total_month_loss:,.2f} >= "
+            f"₹{CAPITAL * MONTHLY_STOP_PCT:,.2f}, {MONTHLY_STOP_PCT*100:.1f}% limit). Elder circuit-breaker active."
+        )
+
+    return None
 
 
 def get_sector_df(sector_symbol: str) -> Optional[pd.DataFrame]:
@@ -863,12 +1170,19 @@ def scan_symbol(symbol: str) -> Optional[Dict[str, Any]]:
 
     df = add_indicators(df)
 
-    # 1) Liquidity filter: 50-day average daily turnover >= MIN_AVG_TURNOVER
-    avg_turnover = (df["Volume"] * df["Close"]).iloc[-50:].mean()
-    if avg_turnover < MIN_AVG_TURNOVER:
+    # 1) Position-aware liquidity filter
+    # Compute ADV20_rupees = mean(Volume*Close) over last 20 rows.
+    # Hard sanity floor: ADV20_rupees >= 50,000,000 (5 crore) else skip
+    adv20_rupees = float((df["Volume"] * df["Close"]).iloc[-20:].mean())
+    if adv20_rupees < ADV20_MIN_RUPEES:
         return None
 
-    # 2) Relative strength filter: 50-day stock return must beat index 50-day return
+    # 2) Circuit proximity check
+    circuit_skip, circuit_reason = check_circuit_proximity(symbol, df)
+    if circuit_skip:
+        return None
+
+    # 3) Relative strength filter: 50-day stock return must beat index/basket 50-day return
     idx_ret = index_return_50()
     if idx_ret is not None and len(df) >= 60:
         stock_close_now = df["Close"].iloc[-1]
@@ -879,12 +1193,18 @@ def scan_symbol(symbol: str) -> Optional[Dict[str, Any]]:
         if stock_ret_50 <= idx_ret:
             return None
 
-    # 3) Sector strength filter: stock's sector index must be in an uptrend
+    # 4) Sector strength filter: stock's sector index must be in an uptrend
     if not sector_ok(symbol):
         return None
 
-    # 4) Setup trigger check
+    # 5) Earnings blackout check (fail-closed)
     last_row = df.iloc[-1]
+    curr_date = pd.to_datetime(last_row["Date"]).date() if "Date" in last_row else datetime.date.today()
+    is_blocked, next_earnings = check_earnings_blackout(symbol, curr_date)
+    if is_blocked:
+        return None
+
+    # 6) Setup trigger check
     if last_row["SIGNAL"]:
         signal_type = "BREAKOUT"
     elif ENABLE_PULLBACK and last_row["SIGNAL_PULLBACK"]:
@@ -892,23 +1212,30 @@ def scan_symbol(symbol: str) -> Optional[Dict[str, Any]]:
     else:
         return None
 
-    # 5) Entry and Stop Loss
+    # 7) Entry and Stop Loss
     entry = float(last_row["Close"])
     atr = float(last_row["ATR14"])
     if pd.isna(entry) or pd.isna(atr) or atr <= 0 or entry <= 0:
         return None
 
     stop = entry - (ATR_STOP_MULTIPLIER * atr)
-    # Floor stop loss at 7% (max 7% risk from entry)
-    stop = max(stop, entry * 0.93)
+    # Floor stop loss at MAX_STOP_LOSS_PCT (9% maximum risk from entry)
+    stop = max(stop, entry * (1.0 - MAX_STOP_LOSS_PCT))
     if stop >= entry:
         return None
 
-    # 6) Sizing and target
+    # 8) Sizing and target (gap / circuit survival sizing)
     risk_per_unit = entry - stop
     target = entry + (TARGET_R_MULTIPLE * risk_per_unit)
-    qty = math.floor((CAPITAL * RISK_PCT) / risk_per_unit)
+    gap_based_qty = math.floor((CAPITAL * MAX_GAP_LOSS_PCT) / (entry * WORST_CASE_GAP_PCT))
+    risk_based_qty = math.floor((CAPITAL * RISK_PCT) / risk_per_unit)
+    qty = min(risk_based_qty, gap_based_qty)
     if qty <= 0:
+        return None
+
+    # Size-aware cap: max_position_value = 0.015 * ADV20_rupees (notional <= 1.5% of avg daily turnover)
+    max_position_value = MAX_POSITION_ADV_PCT * adv20_rupees
+    if (qty * entry) > max_position_value:
         return None
 
     risk_amount = qty * risk_per_unit
@@ -928,6 +1255,11 @@ def scan_symbol(symbol: str) -> Optional[Dict[str, Any]]:
         "Risk Amount": round(risk_amount, 2),
         "ATR14": round(atr, 2),
         "RSI14": round(float(last_row["RSI14"]), 1),
+        "catalyst": None,
+        "adv20_cr": round(adv20_rupees / 10000000.0, 2),
+        "gap_qty_applied": bool(gap_based_qty < risk_based_qty),
+        "next_earnings": next_earnings,
+        "circuit_skipped_reason": circuit_reason,
     }
 
 
@@ -935,20 +1267,20 @@ def scan_symbol(symbol: str) -> Optional[Dict[str, Any]]:
 # 8) MESSAGES AND SCANNER RUNNER
 # =====================================================================
 DISCIPLINE_CARD = (
-    "Execution & Risk Rules:\n"
-    "• Max 2 trades per day and 2 percent daily loss limit\n"
-    "• Move stop to entry when price reaches +8 percent\n"
-    "• Exit if no +3 percent within 5 days (time stop)\n"
-    "• Trail stop with 10 EMA while in profit\n"
-    "• Never average down and never revenge trade\n"
-    "• Check earnings date before entering"
+    "Small-Cap Survival & Risk Rules:\n"
+    "• Max 4 concurrent positions | 5% max portfolio heat\n"
+    "• 2% daily loss limit | 6% monthly drawdown stop (Elder circuit-breaker)\n"
+    "• Worst-case 2-circuit gap sizing enforced (max 2.5% loss on 19% gap)\n"
+    "• Position notional capped at <=1.5% of 20-day ADV (min ₹5 Cr ADV)\n"
+    "• Fail-closed earnings blackout (5-day window) & circuit proximity skip\n"
+    "• 2.0x ATR stop with 9% max stop-loss floor"
 )
 
 
 def format_signal(sig: Dict[str, Any]) -> str:
     """Format signal dictionary into a Telegram alert message."""
     lines = [
-        f"🟢 MIDCAP SWING SIGNAL ({sig['Type']})",
+        f"🟢 SMALL-CAP SWING SIGNAL ({sig['Type']})",
         f"Symbol: {sig['Symbol']}",
         f"Sector: {sig.get('Sector', 'N/A')}",
         f"Signal Date: {sig['Signal Date']}",
@@ -959,6 +1291,8 @@ def format_signal(sig: Dict[str, Any]) -> str:
         f"Quantity: {sig['Qty']}",
         f"Risk/Unit: ₹{sig['Risk Per Unit']:.2f}",
         f"Risk Amount: ₹{sig['Risk Amount']:.2f}",
+        f"ADV20: ₹{sig.get('adv20_cr', 0.0)} Cr | Gap Sizing: {'YES' if sig.get('gap_qty_applied') else 'NO'}",
+        f"Next Earnings: {sig.get('next_earnings', 'N/A')}",
         f"ATR14: {sig['ATR14']:.2f}",
         f"RSI14: {sig['RSI14']:.1f}",
     ]
@@ -970,13 +1304,13 @@ def run_scanner() -> Tuple[List[Dict[str, Any]], int, bool]:
     Execute the scan across all candidate symbols.
     Returns (signals, scanned_count, is_market_ok).
     """
-    print("Checking market regime filter...")
-    is_mkt_ok = market_ok()
+    print("Checking small-cap regime filter (basket)...")
+    is_mkt_ok = regime_ok()
     settings = load_alert_settings()
     is_digest = settings.get("digest", False)
 
     if not is_mkt_ok:
-        msg = "🔴 MARKET FILTER: Index not in uptrend. No new entries today (O'Neil M-rule)."
+        msg = "🔴 SMALL-CAP REGIME FILTER (basket): Small-cap basket not in uptrend. No new entries today."
         print(msg)
         if is_digest:
             _DIGEST_MESSAGES.append(("market", msg))
@@ -1007,7 +1341,7 @@ def run_scanner() -> Tuple[List[Dict[str, Any]], int, bool]:
         else:
             send_telegram(joined_message, kind="proactive", msg_type="scan")
     elif SEND_NO_SIGNAL_MESSAGE:
-        no_sig_msg = "No new midcap swing signals today."
+        no_sig_msg = "No new small-cap swing signals today."
         if is_digest:
             _DIGEST_MESSAGES.append(("scan", no_sig_msg))
         else:
@@ -1138,9 +1472,9 @@ def build_watchlist_text(candidates: Optional[List[Dict[str, Any]]] = None) -> s
         candidates = get_watchlist_candidates()
 
     if not candidates:
-        return "📋 Watchlist empty: no midcap in uptrend near breakout."
+        return "📋 Watchlist empty: no small-cap in uptrend near breakout."
 
-    lines = ["📋 MIDCAP WATCHLIST (near breakout)"]
+    lines = ["📋 SMALL-CAP WATCHLIST (near breakout)"]
     for item in candidates:
         sec_info = f"{item['Sector']} (Bullish: {item['SectorBullish']})"
         score_val = item.get("score", item.get("Score", "-"))
@@ -1235,12 +1569,15 @@ def get_updates(offset: Optional[int] = None) -> List[Dict[str, Any]]:
     return []
 
 
-def handle_command(text: str, chat_id: Any) -> Optional[str]:
+def handle_command(text: str, chat_id: Any = None) -> Optional[str]:
     """
     Parse and process journal commands received from Telegram.
     Security: Only responds to messages originating from the configured TELEGRAM_CHAT_ID.
     Case-insensitive, supports bot username mentions (e.g. /buy@my_bot).
     """
+    if chat_id is None:
+        chat_id = TELEGRAM_CHAT_ID
+
     if not TELEGRAM_CHAT_ID or str(chat_id).strip() != str(TELEGRAM_CHAT_ID).strip():
         print(f"Ignored unauthorized message from chat_id: {chat_id}")
         return None
@@ -1325,6 +1662,11 @@ def handle_command(text: str, chat_id: Any) -> Optional[str]:
                     target = float(non_tag_args[4])
                 except ValueError:
                     return "⚠️ Invalid format: Target price must be a number."
+
+            # Enforce small-cap survival risk, heat and drawdown limits
+            limit_err = check_buy_limits(sym, entry_price, qty, stop)
+            if limit_err:
+                return limit_err
 
             open_positions = load_open_positions()
             today_str = datetime.date.today().isoformat()
@@ -1777,6 +2119,13 @@ def handle_command(text: str, chat_id: Any) -> Optional[str]:
     except Exception as exc:
         print(f"Error handling command '{text}': {exc}")
         return f"⚠️ Error processing command: {exc}"
+
+
+def handle_telegram_command(text: str, chat_id: Any = None) -> Optional[str]:
+    """Convenience alias for command processing in tests and CLI."""
+    if chat_id is None:
+        chat_id = TELEGRAM_CHAT_ID or "987654321"
+    return handle_command(text, chat_id)
 
 
 def select_new_updates(

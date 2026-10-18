@@ -69,12 +69,14 @@ def build_scenario_dataframe(scenario: str) -> pd.DataFrame:
             volume[j] = 300000.0
 
         if scenario == "textbook":
-            # Scenario (a): Valid breakout ~1% above prior 20d high (205), volume spike 2.0x, strong close in top 10%
+            # Scenario (a): Valid breakout ~1% above prior 20d high (205), volume spike 2.0x, 3-day rising volume, strong close
             close[-1] = 207.0
             high[-1] = 207.2
             low[-1] = 204.0
             open_[-1] = 205.0
-            volume[-1] = 2000000.0
+            volume[-3] = 310000.0
+            volume[-2] = 350000.0
+            volume[-1] = 1900000.0
         elif scenario == "breakout_no_volume":
             # Scenario (c): Identical breakout price but weak volume (~0.8x avg)
             close[-1] = 207.0
@@ -127,7 +129,7 @@ def test_scenario_intent_direct():
     assert tb["SETUP_OK"] is True, "Textbook long must exhibit volume dry-up and price contraction"
     assert tb["SETUP_WINDOW"] is True, "Setup window must be active from prior coiling sessions"
     assert tb["BREAKOUT"] is True, "Close must pierce 20-day high"
-    assert tb["VOL_SPIKE"] is True, "Volume must exceed 1.5x 50-day average volume"
+    assert tb["VOL_SPIKE"] is True, "Volume must exceed 2.0x 50-day average volume with 3-day rising breakout window"
     assert tb["STRONG_CLOSE"] is True, "Close must finish in upper 40% of session candle range"
     assert tb["SIGNAL"] is True, "Full AND-condition must trigger valid Breakout SIGNAL"
 

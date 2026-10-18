@@ -125,8 +125,10 @@ def hermetic_scan_environment(monkeypatch: pytest.MonkeyPatch, request: pytest.F
 
     monkeypatch.setattr(main, "get_history", mock_get_history)
     monkeypatch.setattr(main, "market_ok", lambda: True)
+    monkeypatch.setattr(main, "regime_ok", lambda: True)
     monkeypatch.setattr(main, "sector_ok", lambda sym: True)
     monkeypatch.setattr(main, "index_return_50", lambda: 0.0)
+    monkeypatch.setattr(main, "get_next_earnings", lambda sym: "2026-12-01")
 
     # Guard requests.get against unexpected external calls
     def fake_get(url: str, *args: Any, **kwargs: Any):

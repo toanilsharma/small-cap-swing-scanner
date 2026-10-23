@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-10-22T21:11:20.311731+05:30",
+  "updated_at": "2026-10-23T14:57:59.558297+05:30",
   "market_ok": false,
   "signals": [],
   "watchlist": [
@@ -9,15 +9,15 @@
       "SectorBullish": "no",
       "Trend": "YES",
       "Coiling": "no",
-      "DistToBreakout%": -0.13,
-      "Close": 2223.0,
+      "DistToBreakout%": 0.28,
+      "Close": 2234.9,
       "VolDryup": "no",
       "RsiInRange": "no",
-      "RSI14": 65.2,
-      "ATR14": 50.86,
-      "score": 45,
+      "RSI14": 66.9,
+      "ATR14": 49.65,
+      "score": 44,
       "grade": "C",
-      "Score": 45,
+      "Score": 44,
       "Grade": "C"
     }
   ],

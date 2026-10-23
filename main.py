@@ -39,11 +39,11 @@ load_dotenv()
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
-CAPITAL = 100000
+CAPITAL = 200000
 RISK_PCT = 0.01
 SEND_NO_SIGNAL_MESSAGE = True
 SEND_WATCHLIST = True
-ATR_STOP_MULTIPLIER = 2.0
+ATR_STOP_MULTIPLIER = 2.5
 TARGET_R_MULTIPLE = 2.0
 MAX_STOP_LOSS_PCT = 0.09
 VOLUME_SPIKE_MULTIPLIER = 2.0
@@ -56,10 +56,10 @@ BASKET_DRAWDOWN_GUARD_PCT = -0.07
 
 # Position-aware liquidity
 ADV20_MIN_RUPEES = 50000000  # 5 Crores hard sanity floor
-MAX_POSITION_ADV_PCT = 0.015  # 1.5% size-aware cap of ADV20
+MAX_POSITION_ADV_PCT = 0.01  # 1.0% size-aware cap of ADV20
 
 # Gap / circuit survival sizing
-WORST_CASE_GAP_PCT = 0.19
+WORST_CASE_GAP_PCT = 0.20
 MAX_GAP_LOSS_PCT = 0.025
 DEFAULT_CIRCUIT_BAND = 0.10
 CIRCUIT_PROXIMITY_PCT = 0.02
@@ -68,7 +68,7 @@ CIRCUIT_PROXIMITY_PCT = 0.02
 EARNINGS_BLACKOUT_DAYS = 5
 
 # Portfolio heat & drawdown limits (Elder circuit-breaker)
-MAX_CONCURRENT_SMALLCAP = 4
+MAX_CONCURRENT_SMALLCAP = 3
 MAX_TOTAL_HEAT_PCT = 0.05
 DAILY_STOP_PCT = 0.02
 MONTHLY_STOP_PCT = 0.06
@@ -1268,12 +1268,12 @@ def scan_symbol(symbol: str) -> Optional[Dict[str, Any]]:
 # =====================================================================
 DISCIPLINE_CARD = (
     "Small-Cap Survival & Risk Rules:\n"
-    "• Max 4 concurrent positions | 5% max portfolio heat\n"
+    "• Max 3 concurrent positions | 5% max portfolio heat\n"
     "• 2% daily loss limit | 6% monthly drawdown stop (Elder circuit-breaker)\n"
-    "• Worst-case 2-circuit gap sizing enforced (max 2.5% loss on 19% gap)\n"
-    "• Position notional capped at <=1.5% of 20-day ADV (min ₹5 Cr ADV)\n"
+    "• Worst-case 2-circuit gap sizing enforced (max 2.5% loss on 20% gap)\n"
+    "• Position notional capped at <=1.0% of 20-day ADV (min ₹5 Cr ADV)\n"
     "• Fail-closed earnings blackout (5-day window) & circuit proximity skip\n"
-    "• 2.0x ATR stop with 9% max stop-loss floor"
+    "• 2.5x ATR stop with 9% max stop-loss floor"
 )
 
 

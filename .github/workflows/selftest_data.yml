@@ -1,0 +1,84 @@
+name: CI Self-Test Data Pipe
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  selftest:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Self-test state files and allowlist alignment
+        run: |
+          python - << 'EOF'
+          import json
+          import os
+          import re
+          import sys
+
+          # 1. Assert scan_results.json exists and json.load() parses
+          assert os.path.exists("scan_results.json"), "scan_results.json does not exist!"
+          with open("scan_results.json", "r", encoding="utf-8") as f:
+              scan_data = json.load(f)
+          assert isinstance(scan_data, dict), "scan_results.json must contain a JSON object!"
+          print(f"[OK] scan_results.json exists and parsed successfully ({len(scan_data.get('signals', []))} signals).")
+
+          # 2. Extract ALLOWLIST from netlify/functions/data.js
+          assert os.path.exists("netlify/functions/data.js"), "netlify/functions/data.js missing!"
+          with open("netlify/functions/data.js", "r", encoding="utf-8") as f:
+              data_js = f.read()
+
+          match = re.search(r"EXACT_ALLOWLIST\s*=\s*new\s+Set\(\[\s*([\s\S]*?)\s*\]\)", data_js)
+          assert match, "Could not find EXACT_ALLOWLIST in netlify/functions/data.js"
+          allowlist_files = set(re.findall(r'["\']([^"\']+\.json)["\']', match.group(1)))
+          print(f"data.js ALLOWLIST: {allowlist_files}")
+
+          # 3. Extract state filenames that workflows commit
+          workflow_dir = ".github/workflows"
+          workflow_state_files = set()
+          for wf in os.listdir(workflow_dir):
+              if wf.endswith(".yml") or wf.endswith(".yaml"):
+                  with open(os.path.join(workflow_dir, wf), "r", encoding="utf-8") as fh:
+                      content = fh.read()
+                      for m in re.finditer(r"for\s+f\s+in\s+([\w\s\.-]+);", content):
+                          for fname in m.group(1).split():
+                              if fname.endswith(".json"):
+                                  workflow_state_files.add(fname)
+
+          print(f"Workflow state files committed: {workflow_state_files}")
+
+          # State filenames referenced in data.js ALLOWLIST must match dashboard state filenames committed by workflows
+          expected_allowlist = {"scan_results.json", "trades.json", "open_positions.json"}
+          assert allowlist_files == expected_allowlist, (
+              f"ALLOWLIST drift! Expected {expected_allowlist}, got {allowlist_files}"
+          )
+          assert allowlist_files.issubset(workflow_state_files), (
+              f"Drift between data.js ALLOWLIST and workflow commits! "
+              f"Files in allowlist but not committed: {allowlist_files - workflow_state_files}"
+          )
+          committed_dashboard_files = {f for f in workflow_state_files if f in expected_allowlist}
+          assert allowlist_files == committed_dashboard_files, (
+              f"Dashboard state files drift: allowlist {allowlist_files} != committed {committed_dashboard_files}"
+          )
+          print("[OK] data.js ALLOWLIST perfectly matches committed dashboard state files.")
+          EOF
+
+      - name: Check anonymous raw URL (expected 404 for private repository)
+        run: |
+          RAW_URL="https://raw.githubusercontent.com/toanilsharma/small-cap-swing-scanner/main/scan_results.json"
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$RAW_URL" || echo "000")
+          echo "Anonymous raw URL status: $HTTP_STATUS (expected 404 for private repository lock)"
+          exit 0

@@ -9,12 +9,12 @@ const REPO_SLUG  = "smallcap-swing-scanner";
 const PASSWORD_HASH = "ad15418e84fe6e94ec8dd2c22e7f952fc90457256ffbc0f59dcffdef0509366d";
 
 // =====================================================================
-// GITHUB RAW ENDPOINTS
+// DATA PROXY ENDPOINTS (Zero client secrets)
 // =====================================================================
-const REPO_BASE = `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_SLUG}/main`;
-const SCAN_RESULTS_URL = `${REPO_BASE}/scan_results.json`;
-const OPEN_POSITIONS_URL = `${REPO_BASE}/open_positions.json`;
-const TRADES_URL = `${REPO_BASE}/trades.json`;
+const DATA_PROXY_BASE = "/.netlify/functions/data";
+const SCAN_RESULTS_URL = `${DATA_PROXY_BASE}?file=scan_results.json`;
+const OPEN_POSITIONS_URL = `${DATA_PROXY_BASE}?file=open_positions.json`;
+const TRADES_URL = `${DATA_PROXY_BASE}?file=trades.json`;
 
 let equityChartInstance = null;
 let _liveScanData = null;
@@ -427,12 +427,97 @@ function formatDateTime(isoStr) {
   }
 }
 
-// Fetch helper with cache-busting
+// Global error banner and cached-chip state managers
+function showDataLinkError(statusCode) {
+  const codeStr = statusCode || "Network Error";
+  const banner = document.getElementById("dataLinkErrorBanner");
+  if (banner) {
+    banner.innerHTML = `<span>⚠️</span><span>Data link error (HTTP ${codeStr})</span>`;
+    banner.style.display = "flex";
+  }
+
+  // Stop any "Loading..." state in header and tables
+  const lastUpdatedEl = document.getElementById("lastUpdatedText");
+  if (lastUpdatedEl && lastUpdatedEl.textContent.includes("Loading")) {
+    lastUpdatedEl.textContent = `Updated: Data link error (HTTP ${codeStr})`;
+  }
+
+  const nearBuyTable = document.getElementById("nearBuyTableBody");
+  if (nearBuyTable && nearBuyTable.innerHTML.includes("Loading")) {
+    nearBuyTable.innerHTML = `<tr><td colspan="9" class="empty-state" style="color: #ef4444;">Data link error (HTTP ${codeStr}) — unable to load scan results</td></tr>`;
+  }
+  const posTable = document.getElementById("positionsTableBody");
+  if (posTable && posTable.innerHTML.includes("Loading")) {
+    posTable.innerHTML = `<tr><td colspan="12" class="empty-state" style="color: #ef4444;">Data link error (HTTP ${codeStr}) — unable to load positions</td></tr>`;
+  }
+  const histTable = document.getElementById("historyTableBody");
+  if (histTable && histTable.innerHTML.includes("Loading")) {
+    histTable.innerHTML = `<tr><td colspan="12" class="empty-state" style="color: #ef4444;">Data link error (HTTP ${codeStr}) — unable to load trade history</td></tr>`;
+  }
+
+  const refreshBtn = document.getElementById("refreshBtn");
+  if (refreshBtn) {
+    refreshBtn.disabled = false;
+    refreshBtn.textContent = "🔄 Refresh";
+  }
+}
+
+function hideDataLinkError() {
+  const banner = document.getElementById("dataLinkErrorBanner");
+  if (banner) {
+    banner.style.display = "none";
+  }
+  const chip = document.getElementById("cachedCopyChip");
+  if (chip) {
+    chip.style.display = "none";
+  }
+}
+
+function showCachedCopyChip() {
+  const chip = document.getElementById("cachedCopyChip");
+  if (chip) {
+    chip.style.display = "inline-flex";
+  }
+}
+
+// Fetch helper routing all state requests through Netlify proxy with x-dash-key header
 async function fetchJson(url) {
-  const cacheBuster = `?t=${Date.now()}`;
-  const response = await fetch(url + cacheBuster);
+  let targetUrl = url;
+  if (!targetUrl.includes("/.netlify/functions/data")) {
+    if (targetUrl.endsWith("scan_results.json")) {
+      targetUrl = SCAN_RESULTS_URL;
+    } else if (targetUrl.endsWith("open_positions.json")) {
+      targetUrl = OPEN_POSITIONS_URL;
+    } else if (targetUrl.endsWith("trades.json")) {
+      targetUrl = TRADES_URL;
+    } else if (targetUrl.includes("/archive/") || targetUrl.startsWith("archive/")) {
+      const match = targetUrl.match(/archive\/[A-Za-z0-9_.-]+/);
+      if (match) targetUrl = `${DATA_PROXY_BASE}?file=${match[0]}`;
+    }
+  }
+
+  const delim = targetUrl.includes("?") ? "&" : "?";
+  const cacheBuster = `${delim}t=${Date.now()}`;
+  const dashKey = localStorage.getItem("dash_key_hash") || (typeof PASSWORD_HASH !== "undefined" ? PASSWORD_HASH : "");
+
+  const headers = {};
+  if (targetUrl.includes("/.netlify/functions/data")) {
+    headers["x-dash-key"] = dashKey;
+  }
+
+  let response;
+  try {
+    response = await fetch(targetUrl + cacheBuster, { headers });
+  } catch (netErr) {
+    const err = new Error("Network error connecting to data proxy");
+    err.status = "Network Error";
+    throw err;
+  }
+
   if (!response.ok) {
-    throw new Error(`HTTP ${response.status} fetching ${url}`);
+    const err = new Error(`HTTP ${response.status} fetching ${targetUrl}`);
+    err.status = response.status;
+    throw err;
   }
   return await response.json();
 }
@@ -2598,33 +2683,79 @@ async function loadAllData() {
     refreshBtn.textContent = "⏳ Updating...";
   }
 
-  try {
-    const [scanData, openPositions, trades] = await Promise.all([
-      fetchJson(SCAN_RESULTS_URL).catch(e => { console.warn("Scan results fetch error:", e); return null; }),
-      fetchJson(OPEN_POSITIONS_URL).catch(e => { console.warn("Open positions fetch error:", e); return []; }),
-      fetchJson(TRADES_URL).catch(e => { console.warn("Trades fetch error:", e); return []; }),
-    ]);
+  let scanData = null;
+  let openPositions = null;
+  let trades = null;
+  let hasError = false;
+  let firstErrorCode = null;
 
+  try {
+    // Attempt to fetch all three core datasets via secure proxy
+    const results = await Promise.all([
+      fetchJson(SCAN_RESULTS_URL),
+      fetchJson(OPEN_POSITIONS_URL),
+      fetchJson(TRADES_URL),
+    ]);
+    scanData = results[0];
+    openPositions = results[1] || [];
+    trades = results[2] || [];
+
+    // Cache successful payloads in localStorage
+    if (scanData) localStorage.setItem("cached_scan_data", JSON.stringify(scanData));
+    if (openPositions) localStorage.setItem("cached_open_positions", JSON.stringify(openPositions));
+    if (trades) localStorage.setItem("cached_trades", JSON.stringify(trades));
+
+    hideDataLinkError();
+  } catch (err) {
+    console.error("Global dashboard data load error:", err);
+    hasError = true;
+    firstErrorCode = err.status || (err.message && err.message.match(/HTTP (\d+)/) ? err.message.match(/HTTP (\d+)/)[1] : "502");
+    showDataLinkError(firstErrorCode);
+
+    // Fall back to cached copy if available in localStorage
+    const rawScan = localStorage.getItem("cached_scan_data");
+    const rawPos = localStorage.getItem("cached_open_positions");
+    const rawTrades = localStorage.getItem("cached_trades");
+
+    if (rawScan || rawPos || rawTrades) {
+      try {
+        scanData = rawScan ? JSON.parse(rawScan) : null;
+        openPositions = rawPos ? JSON.parse(rawPos) : [];
+        trades = rawTrades ? JSON.parse(rawTrades) : [];
+        showCachedCopyChip();
+      } catch (cacheParseErr) {
+        console.warn("Failed to parse cached dashboard copy:", cacheParseErr);
+      }
+    }
+  }
+
+  try {
     _liveScanData = scanData;
-    _cachedOpenPositions = openPositions;
-    _cachedTradesData = trades;
+    _cachedOpenPositions = openPositions || [];
+    _cachedTradesData = trades || [];
 
     if (scanData) {
       archiveScanData(scanData);
     }
 
-    if (!_isViewingArchive) {
-      renderNearBuy(scanData, openPositions);
+    if (scanData || (openPositions && openPositions.length > 0) || (trades && trades.length > 0)) {
+      if (!_isViewingArchive) {
+        renderNearBuy(scanData, _cachedOpenPositions);
+      }
+      await renderOpenPositions(_cachedOpenPositions);
+      renderHistory(_cachedTradesData);
+      renderStats(_cachedTradesData);
     }
-    await renderOpenPositions(openPositions);
-    renderHistory(trades);
-    renderStats(trades);
-  } catch (err) {
-    console.error("Global dashboard data load error:", err);
+  } catch (renderErr) {
+    console.error("Error rendering dashboard data:", renderErr);
   } finally {
     if (refreshBtn) {
       refreshBtn.disabled = false;
       refreshBtn.textContent = "🔄 Refresh";
+    }
+    // Final check: if error occurred and no cached data was rendered, ensure Loading... is stopped
+    if (hasError && !scanData && (!openPositions || openPositions.length === 0)) {
+      showDataLinkError(firstErrorCode);
     }
   }
 }

@@ -21,6 +21,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (hashHex === PASSWORD_HASH) {
         localStorage.setItem("auth", "1");
+        localStorage.setItem("dash_key_hash", hashHex);
         window.location.href = "app.html";
       } else {
         errorMsg.textContent = "Wrong password. Please try again.";

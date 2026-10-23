@@ -1,4 +1,4 @@
-name: Daily Midcap Scan
+name: Daily Small-Cap Scan
 
 on:
   schedule:
@@ -16,6 +16,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
+          persist-credentials: true
           fetch-depth: 0
 
       - name: Set up Python
@@ -35,15 +36,27 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Set git identity
+      - name: Configure Git Identity
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Run scanner
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          SKIP_GIT_PUSH: "0"
+          SKIP_GIT_PUSH: "1"
         run: |
           python main.py
+
+      - name: Commit and push state
+        run: |
+          staged=0
+          for f in trades.json open_positions.json alert_settings.json tg_offset.txt scan_results.json deals.json events.json; do
+            if [ -f "$f" ]; then git add "$f" && staged=1; fi
+          done
+          if [ "$staged" -eq 0 ]; then echo "No state files present to stage; nothing to commit."; exit 0; fi
+          if git diff --cached --quiet; then echo "No changes to commit."; exit 0; fi
+          git commit -m "chore: sync state [skip ci]"
+          git pull --rebase origin main || echo "WARN: rebase skipped"
+          git push origin main || { sleep 3; git pull --rebase origin main || true; git push origin main; }

@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-10-23T14:57:59.558297+05:30",
+  "updated_at": "2026-10-23T19:51:21.080530+05:30",
   "market_ok": false,
   "signals": [],
   "watchlist": [
@@ -10,7 +10,7 @@
       "Trend": "YES",
       "Coiling": "no",
       "DistToBreakout%": 0.28,
-      "Close": 2234.9,
+      "Close": 2235.0,
       "VolDryup": "no",
       "RsiInRange": "no",
       "RSI14": 66.9,

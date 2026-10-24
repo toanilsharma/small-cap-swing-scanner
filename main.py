@@ -91,6 +91,8 @@ ALERT_SETTINGS_FILE = "alert_settings.json"
 SCAN_RESULTS_FILE = "scan_results.json"
 CIRCUITS_FILE = "circuits.json"
 EARNINGS_FILE = "earnings_dates.json"
+DEALS_FILE = "deals.json"
+EVENTS_FILE = "events.json"
 
 IST_TZ = datetime.timezone(datetime.timedelta(hours=5, minutes=30))
 
@@ -1335,6 +1337,301 @@ def check_earnings_blackout(symbol: str, current_date: datetime.date) -> Tuple[b
         return True, "UNKNOWN->blocked"
 
 
+# =====================================================================
+# INSTITUTIONAL FOOTPRINT & EVENT RADAR (INDIAN-MARKET MOATS)
+# =====================================================================
+def load_deals() -> Dict[str, Dict[str, Any]]:
+    """Safely load institutional deals from deals.json."""
+    if not os.path.exists(DEALS_FILE):
+        return {}
+    try:
+        with open(DEALS_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def is_deals_stale(deals: Optional[Dict[str, Any]] = None, current_date: Optional[datetime.date] = None) -> bool:
+    """
+    Returns True if deals data is missing or older than 3 calendar/trading days.
+    """
+    if deals is None:
+        deals = load_deals()
+    if not deals or not isinstance(deals, dict):
+        return True
+
+    if current_date is None:
+        current_date = datetime.date.today()
+
+    valid_dates = []
+    for d_str in deals.keys():
+        try:
+            valid_dates.append(datetime.date.fromisoformat(d_str))
+        except Exception:
+            pass
+
+    if not valid_dates:
+        return True
+
+    latest_date = max(valid_dates)
+    delta_days = (current_date - latest_date).days
+    return delta_days > 3
+
+
+def classify_inst_footprint(
+    symbol: str,
+    df: Optional[pd.DataFrame] = None,
+    deals: Optional[Dict[str, Any]] = None
+) -> str:
+    """
+    Classify institutional footprint for symbol into {accumulation, churn, unknown}.
+    - accumulation = rising delivery% vs 5d-avg with price flat/up OR an inst print in last 3 sessions;
+    - churn = vol >= 1.5x avg AND delivery% < 25% AND no print;
+    - else unknown.
+    Fail-open: missing data => 'unknown'.
+    """
+    if deals is None:
+        deals = load_deals()
+    if not deals or not isinstance(deals, dict):
+        return "unknown"
+
+    clean_sym = symbol.replace(".NS", "").upper()
+    sym_variants = [symbol, clean_sym, f"{clean_sym}.NS"]
+
+    sorted_dates = sorted(deals.keys())
+    if not sorted_dates:
+        return "unknown"
+
+    # 1. Check for institutional print in the last 3 available sessions
+    has_inst_print = False
+    last_3_dates = sorted_dates[-3:]
+    for d in last_3_dates:
+        day_deals = deals.get(d, {})
+        for s in sym_variants:
+            if s in day_deals:
+                entry = day_deals[s]
+                if entry.get("block_print") or entry.get("bulk_print") or bool(entry.get("inst_name")):
+                    has_inst_print = True
+                    break
+        if has_inst_print:
+            break
+
+    # 2. Check delivery% on latest session vs 5-day average
+    cur_deliv: Optional[float] = None
+    latest_date = sorted_dates[-1]
+    latest_day_deals = deals.get(latest_date, {})
+    for s in sym_variants:
+        if s in latest_day_deals and latest_day_deals[s].get("delivery_pct") is not None:
+            try:
+                cur_deliv = float(latest_day_deals[s]["delivery_pct"])
+                break
+            except Exception:
+                pass
+
+    rising_deliv = False
+    if cur_deliv is not None and len(sorted_dates) >= 2:
+        prev_dates = sorted_dates[:-1][-5:]
+        deliv_hist = []
+        for d in prev_dates:
+            d_deals = deals.get(d, {})
+            for s in sym_variants:
+                if s in d_deals and d_deals[s].get("delivery_pct") is not None:
+                    try:
+                        deliv_hist.append(float(d_deals[s]["delivery_pct"]))
+                        break
+                    except Exception:
+                        pass
+        if deliv_hist:
+            avg_5d = sum(deliv_hist) / len(deliv_hist)
+            rising_deliv = (cur_deliv > avg_5d)
+
+    # 3. Price flat/up and volume spike from df
+    price_flat_or_up = False
+    vol_spike = False
+    if df is not None and len(df) >= 2:
+        try:
+            c_last = float(df["Close"].iloc[-1])
+            c_prev = float(df["Close"].iloc[-2])
+            price_flat_or_up = (c_last >= c_prev - 1e-4)
+
+            last_vol = float(df["Volume"].iloc[-1])
+            if "VOL50" in df and not pd.isna(df["VOL50"].iloc[-1]):
+                v50 = float(df["VOL50"].iloc[-1])
+            else:
+                v50 = float(df["Volume"].rolling(50).mean().iloc[-1])
+            vol_spike = (last_vol >= 1.5 * v50) or bool(df.iloc[-1].get("VOL_SPIKE", False))
+        except Exception:
+            pass
+
+    # 4. Final classification
+    if (rising_deliv and price_flat_or_up) or has_inst_print:
+        return "accumulation"
+    elif vol_spike and (cur_deliv is not None and cur_deliv < 25.0) and not has_inst_print:
+        return "churn"
+    return "unknown"
+
+
+def load_events() -> Dict[str, List[Dict[str, Any]]]:
+    """Safely load scheduled corporate events from events.json."""
+    if not os.path.exists(EVENTS_FILE):
+        return {}
+    try:
+        with open(EVENTS_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def get_all_symbol_events(symbol: str, current_date: Optional[datetime.date] = None) -> List[Dict[str, Any]]:
+    """
+    Get all upcoming events for a symbol by merging events.json and earnings_dates.json.
+    Each event dict: {type, date, days_to_event, note}.
+    """
+    if current_date is None:
+        current_date = datetime.date.today()
+
+    events_map = load_events()
+    clean_sym = symbol.replace(".NS", "").upper()
+    sym_events = events_map.get(symbol, []) or events_map.get(clean_sym, []) or []
+
+    merged: List[Dict[str, Any]] = []
+
+    # 1. From events.json
+    for ev in sym_events:
+        d_str = ev.get("date")
+        if not d_str:
+            continue
+        try:
+            ev_date = datetime.date.fromisoformat(d_str)
+            days = (ev_date - current_date).days
+            if days >= 0:
+                merged.append({
+                    "type": str(ev.get("type", "OTHER")).upper(),
+                    "date": d_str,
+                    "days_to_event": days,
+                    "note": str(ev.get("note", "")),
+                })
+        except Exception:
+            continue
+
+    # 2. Auto-merge earnings from earnings_dates.json / get_next_earnings
+    earn_str = get_next_earnings(symbol)
+    if earn_str:
+        try:
+            earn_date = datetime.date.fromisoformat(earn_str)
+            days = (earn_date - current_date).days
+            if days >= 0 and not any(e["type"] == "EARNINGS" and e["date"] == earn_str for e in merged):
+                merged.append({
+                    "type": "EARNINGS",
+                    "date": earn_str,
+                    "days_to_event": days,
+                    "note": "Quarterly Financial Results",
+                })
+        except Exception:
+            pass
+
+    merged.sort(key=lambda x: (x["days_to_event"], x["date"]))
+    return merged
+
+
+def get_next_event(symbol: str, current_date: Optional[datetime.date] = None) -> Optional[Dict[str, Any]]:
+    """
+    Returns the nearest upcoming event for a symbol, or None if none scheduled.
+    """
+    all_events = get_all_symbol_events(symbol, current_date)
+    return all_events[0] if all_events else None
+
+
+def get_landmines(symbols: List[str], current_date: Optional[datetime.date] = None) -> List[Dict[str, Any]]:
+    """
+    Events within 7 days for any watchlist, on-deck, or open position symbol.
+    Sorted by days_to_event ascending.
+    """
+    if current_date is None:
+        current_date = datetime.date.today()
+
+    landmines: List[Dict[str, Any]] = []
+    seen = set()
+
+    for sym in symbols:
+        events = get_all_symbol_events(sym, current_date)
+        for ev in events:
+            if 0 <= ev["days_to_event"] <= 7:
+                key = (sym, ev["type"], ev["date"])
+                if key not in seen:
+                    seen.add(key)
+                    landmines.append({
+                        "symbol": sym,
+                        "type": ev["type"],
+                        "date": ev["date"],
+                        "days_to_event": ev["days_to_event"],
+                        "note": ev.get("note", ""),
+                    })
+
+    landmines.sort(key=lambda x: (x["days_to_event"], x["symbol"]))
+    return landmines
+
+
+def check_event_or_earnings_blackout(symbol: str, current_date: datetime.date) -> Tuple[bool, str]:
+    """
+    ENTRY gate: Generalizes the S2 earnings-blackout so ANY known gap-event
+    within EARNINGS_BLACKOUT_DAYS blocks a NEW entry.
+    Fail-closed when known & near; unknown earnings => blocked;
+    unknown general event (no entry in events.json) => allowed.
+    """
+    # 1. Earnings blackout check first (maintains S2 fail-closed on unknown earnings)
+    earn_blocked, earn_info = check_earnings_blackout(symbol, current_date)
+    if earn_blocked:
+        return True, earn_info
+
+    # 2. General corporate events from events.json (AGM, LOCKIN, RECORD, DIVIDEND, etc.)
+    events_map = load_events()
+    clean_sym = symbol.replace(".NS", "").upper()
+    sym_events = events_map.get(symbol, []) or events_map.get(clean_sym, []) or []
+
+    for ev in sym_events:
+        d_str = ev.get("date")
+        if not d_str:
+            continue
+        try:
+            ev_date = datetime.date.fromisoformat(d_str)
+            delta = (ev_date - current_date).days
+            if 0 <= delta <= EARNINGS_BLACKOUT_DAYS:
+                return True, f"{ev.get('type', 'EVENT')} on {d_str} ({delta}d)"
+        except Exception:
+            continue
+
+    return False, earn_info
+
+
+def check_open_positions_events(
+    open_positions: List[Dict[str, Any]],
+    current_date: Optional[datetime.date] = None
+) -> Tuple[List[Dict[str, Any]], List[str]]:
+    """
+    OPEN-position WARN only (never auto-exit):
+    days_to_event <= 3 => warn_event: True + warning message line.
+    NEVER touches stop/target/time-stop.
+    """
+    if current_date is None:
+        current_date = datetime.date.today()
+
+    warn_lines: List[str] = []
+    for pos in open_positions:
+        sym = pos.get("symbol", "")
+        next_ev = get_next_event(sym, current_date)
+        pos["next_event"] = next_ev
+        if next_ev and 0 <= next_ev["days_to_event"] <= 3:
+            pos["warn_event"] = True
+            warn_lines.append(
+                f"🔔 {sym} event ({next_ev['type']}) in {next_ev['days_to_event']} days - review hold"
+            )
+        else:
+            pos["warn_event"] = False
+
+    return open_positions, warn_lines
+
+
 def check_buy_limits(sym: str, entry_price: float, qty: int, stop: Optional[float]) -> Optional[str]:
     """
     Enforces risk and drawdown caps for /buy:
@@ -1504,10 +1801,10 @@ def scan_symbol(symbol: str) -> Optional[Dict[str, Any]]:
     if not sector_ok(symbol):
         return None
 
-    # 5) Earnings blackout check (fail-closed)
+    # 5) Earnings & Event blackout check (fail-closed)
     last_row = df.iloc[-1]
     curr_date = pd.to_datetime(last_row["Date"]).date() if "Date" in last_row else datetime.date.today()
-    is_blocked, next_earnings = check_earnings_blackout(symbol, curr_date)
+    is_blocked, next_earnings = check_event_or_earnings_blackout(symbol, curr_date)
     if is_blocked:
         return None
 
@@ -1604,6 +1901,9 @@ def scan_symbol(symbol: str) -> Optional[Dict[str, Any]]:
         "rs_rating": rs_val,
         "base_maturity": base_mat,
         "days_in_base": days_base,
+        "inst_footprint": classify_inst_footprint(symbol, df),
+        "next_event": get_next_event(symbol, curr_date),
+        "warn_event": bool(get_next_event(symbol, curr_date) and 0 <= get_next_event(symbol, curr_date)["days_to_event"] <= 3),
     }
 
 
@@ -1793,6 +2093,12 @@ def diagnose(symbol: str) -> Optional[Dict[str, Any]]:
         "rs_rating": calculate_rs_rating([symbol]).get(symbol),
         "base_maturity": calculate_base_maturity(df),
         "days_in_base": calculate_days_in_base(df),
+        "inst_footprint": classify_inst_footprint(symbol, df),
+        "next_event": get_next_event(symbol, pd.to_datetime(last_row["Date"]).date() if "Date" in last_row else datetime.date.today()),
+        "warn_event": bool(
+            get_next_event(symbol, pd.to_datetime(last_row["Date"]).date() if "Date" in last_row else datetime.date.today())
+            and 0 <= get_next_event(symbol, pd.to_datetime(last_row["Date"]).date() if "Date" in last_row else datetime.date.today())["days_to_event"] <= 3
+        ),
     }
 
 
@@ -1964,6 +2270,9 @@ def get_on_deck_candidates(symbols: Optional[List[str]] = None, history_map: Opt
                     atr14 = round(float(last_row["ATR14"]), 2) if ("ATR14" in last_row and not pd.isna(last_row["ATR14"])) else None
                     rsi14 = round(float(last_row["RSI14"]), 1) if ("RSI14" in last_row and not pd.isna(last_row["RSI14"])) else None
 
+                    c_date = pd.to_datetime(last_row["Date"]).date() if "Date" in last_row else datetime.date.today()
+                    n_ev = get_next_event(sym, c_date)
+
                     candidates.append({
                         "symbol": sym,
                         "close": c,
@@ -1972,6 +2281,9 @@ def get_on_deck_candidates(symbols: Optional[List[str]] = None, history_map: Opt
                         "missing_condition": missing,
                         "atr14": atr14,
                         "rsi14": rsi14,
+                        "inst_footprint": classify_inst_footprint(sym, df),
+                        "next_event": n_ev,
+                        "warn_event": bool(n_ev and 0 <= n_ev["days_to_event"] <= 3),
                     })
         except Exception:
             continue
@@ -2895,6 +3207,39 @@ if __name__ == "__main__":
             else:
                 send_telegram(wl_text, kind="proactive", msg_type="watchlist")
 
+        # 3. Build on-deck & leaders board
+        on_deck = get_on_deck_candidates()
+        leaders_board = get_leaders_board()
+
+        # 4. Check open positions for upcoming events & warning lines
+        open_positions = load_open_positions()
+        curr_scan_date = datetime.date.today()
+        updated_open_positions, open_event_warn_lines = check_open_positions_events(open_positions, curr_scan_date)
+        if updated_open_positions:
+            save_open_positions(updated_open_positions)
+
+        # 5. Institutional footprint EOD alert line
+        acc_syms = [s["Symbol"] for s in signals if s.get("inst_footprint") == "accumulation"]
+        acc_syms += [w["Symbol"] for w in watchlist_candidates if w.get("inst_footprint") == "accumulation" and w["Symbol"] not in acc_syms]
+        acc_syms += [o["symbol"] for o in on_deck if o.get("inst_footprint") == "accumulation" and o["symbol"] not in acc_syms]
+
+        inst_tg_line = ""
+        if acc_syms:
+            eg_syms = ", ".join(acc_syms[:3])
+            inst_tg_line = f"🏦 Institutional: {len(acc_syms)} accumulation among signals/on-deck (e.g. {eg_syms})"
+
+        if inst_tg_line:
+            if is_digest:
+                _DIGEST_MESSAGES.append(("scan", inst_tg_line))
+            else:
+                send_telegram(inst_tg_line, kind="proactive", msg_type="scan")
+
+        for w_line in open_event_warn_lines:
+            if is_digest:
+                _DIGEST_MESSAGES.append(("scan", w_line))
+            else:
+                send_telegram(w_line, kind="proactive", msg_type="scan")
+
         # In digest mode, combine valid parts into 1 message and send once
         if is_digest and _DIGEST_MESSAGES:
             enable_flags = settings.get("enable", {})
@@ -2908,14 +3253,29 @@ if __name__ == "__main__":
                 send_telegram(combined_digest, kind="proactive", msg_type="scan")
             _DIGEST_MESSAGES.clear()
 
-        # 3. Publish scan_results.json for web dashboard
+        # 6. Publish scan_results.json for web dashboard
         ist_tz = datetime.timezone(datetime.timedelta(hours=5, minutes=30))
         now_ist = datetime.datetime.now(ist_tz).isoformat()
 
         total_scanned = scanned_count if scanned_count > 0 else len(get_symbols())
         market_summary = compute_market_summary()
-        on_deck = get_on_deck_candidates()
-        leaders_board = get_leaders_board()
+
+        all_active_symbols = list(dict.fromkeys(
+            [s["Symbol"] for s in signals] +
+            [w["Symbol"] for w in watchlist_candidates] +
+            [o["symbol"] for o in on_deck] +
+            [p.get("symbol") for p in open_positions if p.get("symbol")]
+        ))
+        landmines = get_landmines(all_active_symbols, curr_scan_date)
+        deals = load_deals()
+        deals_stale = is_deals_stale(deals, curr_scan_date)
+
+        inst_summary = {
+            "accumulation_count": sum(1 for x in watchlist_candidates if x.get("inst_footprint") == "accumulation"),
+            "churn_count": sum(1 for x in watchlist_candidates if x.get("inst_footprint") == "churn"),
+            "unknown_count": sum(1 for x in watchlist_candidates if x.get("inst_footprint") == "unknown"),
+            "symbols_accumulating": acc_syms,
+        }
 
         scan_results = {
             "updated_at": now_ist,
@@ -2926,6 +3286,9 @@ if __name__ == "__main__":
             "market_summary": market_summary,
             "on_deck": on_deck,
             "leaders_board": leaders_board,
+            "inst_summary": inst_summary,
+            "deals_stale": deals_stale,
+            "landmines": landmines,
         }
 
         with open(SCAN_RESULTS_FILE, "w", encoding="utf-8") as f:

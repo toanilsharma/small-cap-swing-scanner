@@ -32,6 +32,7 @@
             <span id="istLiveChip" class="pulse-chip live-chip">IST Status</span>
             <span id="breadthChip" class="pulse-chip breadth-chip">Breadth: --</span>
             <span id="dataStaleChip" class="pulse-chip stale-chip" style="display: none;">DATA STALE (&gt;36h)</span>
+            <span id="dealsStaleChip" class="pulse-chip deals-stale-chip" style="display: none;" title="Bulk/block deals data could not be fetched; fallback to prior snapshot">DEALS STALE</span>
             <span id="cachedCopyChip" class="cached-copy-chip" style="display: none;">cached copy</span>
             <span id="lastUpdatedText" style="display: none;">Updated: Loading...</span>
           </div>
@@ -247,6 +248,26 @@
           </div>
         </div>
       </div>
+
+      <!-- ⚠️ THIS WEEK'S LANDMINES (Collapsible) -->
+      <div id="landminesSection" class="landmines-card" style="display: none;">
+        <button id="landminesToggleBtn" class="landmines-header-btn" aria-expanded="true" title="Click to collapse/expand Corporate Landmines">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 16px;">⚠️</span>
+            <span style="font-weight: 700;">This Week's Landmines (Next 7 Days)</span>
+            <span id="landminesCountBadge" class="badge badge-danger">0 Events</span>
+          </div>
+          <span id="landminesChevron" class="chevron">▼</span>
+        </button>
+        <div id="landminesContent" class="landmines-content" style="display: block;">
+          <p style="font-size: 12px; color: var(--text-dim); margin-bottom: 12px;">
+            Upcoming corporate actions (AGM, Lock-in expiries, Record dates, Earnings) across watchlist, on-deck, and open positions. High overnight gap-risk.
+          </p>
+          <div id="landminesGrid" class="landmines-grid">
+            <div class="empty-state">No corporate landmines scheduled in the next 7 days.</div>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- TAB 2: OPEN POSITIONS -->
@@ -353,6 +374,9 @@
 
       <!-- SECTOR CONCENTRATION ALERT BANNER (Item #6) -->
       <div id="openPositionsSectorAlert" class="positions-alert-banner" style="display: none;"></div>
+
+      <!-- EVENT RADAR DISCIPLINE CARD / ALERT BANNER -->
+      <div id="openPositionsEventAlert" class="positions-alert-banner positions-event-banner" style="display: none;"></div>
 
       <div class="table-scroll" tabindex="0">
         <table id="openPositionsTable">
@@ -1186,6 +1210,38 @@
                 <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Broad participation confirms underlying market strength. Breadth divergences warn of trend exhaustion.</span></div>
                 <div class="glossary-section-row"><span class="glossary-label">main.py Threshold:</span><span class="glossary-threshold">breadth_above_sma50 and breadth_above_sma200 percentages</span></div>
                 <div class="glossary-section-row"><span class="glossary-label">Example:</span><span class="glossary-example">68% &gt; SMA50 signals healthy broad-based participation across sectors.</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-instfootprint">
+                <div class="glossary-card-header"><span class="glossary-term">Institutional Footprint</span><span class="glossary-category">Indian Market Moat</span></div>
+                <p class="glossary-meaning">Tracks whether big money is quietly absorbing shares (accumulation), distributing on heavy volume with low delivery (churn), or neutral (unknown).</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Filters out trap volume. Institutional accumulation with rising delivery % confirms conviction before a swing markup.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">main.py Threshold:</span><span class="glossary-threshold">accumulation = rising delivery% vs 5d-avg with flat/up close OR inst print in last 3 sessions; churn = vol ≥1.5x avg &amp; delivery &lt;25% &amp; no print; else unknown</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Example:</span><span class="glossary-example">🏦 ACCUM badge displayed on high-conviction breakout setups.</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-eventradar">
+                <div class="glossary-card-header"><span class="glossary-term">Event Radar</span><span class="glossary-category">Indian Market Moat</span></div>
+                <p class="glossary-meaning">Corporate calendar radar tracking AGMs, IPO promoter lock-in expiries, record dates, dividend ex-dates, and quarterly earnings.</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Prevents catastrophic overnight gap risk. Automatically blocks new buy entries within 5 calendar days of binary events.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">main.py Threshold:</span><span class="glossary-threshold">ENTRY GATE blocks if days_to_event ≤5; OPEN POSITIONS warn if days_to_event ≤3 (stops/targets untouched).</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Example:</span><span class="glossary-example">🔔 LOCKIN in 2d: New entry blocked; existing open position displays review hold alert.</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-landmines">
+                <div class="glossary-card-header"><span class="glossary-term">This Week's Landmines</span><span class="glossary-category">Risk Management</span></div>
+                <p class="glossary-meaning">Consolidated 7-day chronological horizon of high-impact corporate binary events across all active watchlist, on-deck, and open positions.</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Ensures you are never blindsided by a major corporate action or promoter lock-in cliff.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">main.py Threshold:</span><span class="glossary-threshold">landmines = events within 7 days for any watchlist, on-deck, or open symbol, sorted by date asc.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Example:</span><span class="glossary-example">⚠️ Panel lists ABC (AGM in 2d) and XYZ (RECORD in 5d).</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-dealsstale">
+                <div class="glossary-card-header"><span class="glossary-term">Deals Stale Ribbon</span><span class="glossary-category">Data Integrity</span></div>
+                <p class="glossary-meaning">Safety ribbon indicating that the daily NSE bulk/block deal or bhavcopy delivery fetch encountered a network issue and the system is safely operating on cached deal history.</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Fail-open design: Scanner never crashes on missing NSE data, but transparently warns when institutional footprints are using older snapshots.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">main.py Threshold:</span><span class="glossary-threshold">deals_stale = true when bulk/block data fetch fails or snapshot is older than 3 days.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Example:</span><span class="glossary-example">Flashing amber DEALS STALE badge in header pulse row.</span></div>
               </div>
             </div>
           </article>

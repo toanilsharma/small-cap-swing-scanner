@@ -49,6 +49,10 @@ jobs:
         run: |
           python main.py
 
+      - name: Fetch and merge institutional deals & delivery data
+        run: |
+          python scripts/fetch_nse_deals.py || echo "WARN: Deals fetch failed safely"
+
       - name: Commit and push state
         run: |
           staged=0

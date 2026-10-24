@@ -20,6 +20,9 @@ EXPECTED_TOP_LEVEL_KEYS = {
     "market_summary",
     "on_deck",
     "leaders_board",
+    "inst_summary",
+    "deals_stale",
+    "landmines",
 }
 
 EXPECTED_MARKET_SUMMARY_KEYS = {
@@ -59,6 +62,9 @@ EXPECTED_SIGNAL_KEYS = {
     "rs_rating",
     "base_maturity",
     "days_in_base",
+    "inst_footprint",
+    "next_event",
+    "warn_event",
 }
 
 EXPECTED_WATCHLIST_KEYS = {
@@ -80,6 +86,22 @@ EXPECTED_WATCHLIST_KEYS = {
     "rs_rating",
     "base_maturity",
     "days_in_base",
+    "inst_footprint",
+    "next_event",
+    "warn_event",
+}
+
+EXPECTED_ON_DECK_KEYS = {
+    "symbol",
+    "close",
+    "breakout_level",
+    "dist_pct",
+    "missing_condition",
+    "atr14",
+    "rsi14",
+    "inst_footprint",
+    "next_event",
+    "warn_event",
 }
 
 
@@ -138,7 +160,45 @@ def test_schema_keys_exact_match(tmp_cwd: Any, monkeypatch: pytest.MonkeyPatch):
 
     # 5. On-deck & leaders board
     assert isinstance(data["on_deck"], list)
+    for od in data["on_deck"]:
+        actual_od_keys = set(od.keys())
+        assert actual_od_keys == EXPECTED_ON_DECK_KEYS, (
+            f"On-deck item schema drift in {od.get('symbol')}!\n"
+            f"Missing: {EXPECTED_ON_DECK_KEYS - actual_od_keys}\n"
+            f"Unexpected: {actual_od_keys - EXPECTED_ON_DECK_KEYS}"
+        )
     assert isinstance(data["leaders_board"], list)
+
+
+def test_inst_footprint_failopen_unknown(tmp_cwd: Any, monkeypatch: pytest.MonkeyPatch):
+    """
+    Fail-open guarantee: If deals.json is missing or corrupt,
+    classify_inst_footprint returns 'unknown' for all symbols,
+    the pipeline still writes scan_results.json, and no exception is raised.
+    """
+    import main
+    monkeypatch.setenv("QUIET", "1")
+    monkeypatch.setenv("SKIP_GIT_PUSH", "1")
+
+    # Ensure deals.json is absent
+    if os.path.exists("deals.json"):
+        os.remove("deals.json")
+
+    signals, watchlist, count, mkt_ok = execute_full_scan_pipeline()
+
+    assert os.path.exists("scan_results.json")
+    with open("scan_results.json", "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    assert data["deals_stale"] is True
+    assert "inst_summary" in data
+    assert data["inst_summary"]["unknown_count"] >= 0
+    for s in data["signals"]:
+        assert s["inst_footprint"] == "unknown"
+    for w in data["watchlist"]:
+        assert w["inst_footprint"] == "unknown"
+    for o in data["on_deck"]:
+        assert o["inst_footprint"] == "unknown"
 
 
 def test_rs_graceful_small_universe():

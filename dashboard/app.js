@@ -426,6 +426,30 @@ const TERMS = {
     long: "Measures the duration of the current contraction pattern. Institutional accumulation requires sufficient time (typically 3-10 weeks) to absorb overhead supply before initiating a markup.",
     where_used: "Setup Details, Help Guide",
     anchor: "glossary-daysinbase"
+  },
+  "Institutional Footprint": {
+    short: "Tracks big-money behavior: Accumulation (rising delivery % / prints), Churn (high vol, low delivery), or Unknown.",
+    long: "Monitors daily NSE bulk/block prints and bhavcopy delivery percentage. Identifies institutional accumulation before markups and warns of churn/distribution traps.",
+    where_used: "Watchlist Table (🏦 Badge), On Deck Cards, Help Guide",
+    anchor: "glossary-instfootprint"
+  },
+  "Event Radar": {
+    short: "Calendar radar tracking AGMs, IPO lock-in expiries, record dates, dividends, and quarterly earnings.",
+    long: "Protects against overnight binary gap-risk. Blocks new entries within 5 calendar days of known events and warns on open positions within 3 days without altering stops.",
+    where_used: "Watchlist Detail, Open Positions (🔔 Chip), Landmines Panel, Help Guide",
+    anchor: "glossary-eventradar"
+  },
+  "Landmines": {
+    short: "7-day chronological horizon of high-impact corporate binary events across all watchlist, on-deck, and open symbols.",
+    long: "Consolidated warning dashboard displaying upcoming corporate actions that could cause unpredictable gap-downs or liquidity freezes.",
+    where_used: "Near Buy (This Week's Landmines), Help Guide",
+    anchor: "glossary-landmines"
+  },
+  "Deals Stale": {
+    short: "Safety ribbon indicating that daily NSE bulk/block or delivery bhavcopy data is currently using a cached snapshot.",
+    long: "Fail-open safety mechanism ensuring the scanner functions seamlessly during NSE exchange connectivity outages while transparently alerting the trader.",
+    where_used: "Market Pulse Row, Help Guide",
+    anchor: "glossary-dealsstale"
   }
 };
 
@@ -681,6 +705,25 @@ function renderTodaysPlan(scanData, openPositions) {
     });
   }
 
+  // 3b. Institutional Moat highlights
+  if (currentScan && currentScan.inst_summary && currentScan.inst_summary.accumulation_count > 0) {
+    const accSyms = currentScan.inst_summary.symbols_accumulating || [];
+    if (accSyms.length > 0) {
+      bullets.push(`🏦 Institutional accumulation detected in ${accSyms.join(", ")} (rising delivery % / prints).`);
+    }
+  }
+
+  // 3c. Event Radar Warnings for open positions
+  if (Array.isArray(currentPositions)) {
+    currentPositions.forEach(pos => {
+      const sym = pos.symbol || pos.Symbol || "Position";
+      const ev = pos.next_event || (currentScan?.landmines?.find(l => l.symbol === sym));
+      if (pos.warn_event || (ev && ev.days_to_event != null && ev.days_to_event <= 3)) {
+        bullets.push(`🔔 ${sym} event (${ev?.type || 'EVENT'}) in ${ev?.days_to_event ?? '≤3'} days - review hold.`);
+      }
+    });
+  }
+
   // 4. Fallback if nothing applies
   if (topGradeItems.length === 0 && positionActions === 0) {
     bullets.push("No action needed. Review again after tomorrow's 4:15 PM scan.");
@@ -839,6 +882,13 @@ function renderMarketPulse(scanData) {
     }
     staleChip.style.display = isStale ? "inline-flex" : "none";
   }
+
+  // 7. DEALS STALE Ribbon / Chip
+  const dealsStaleChip = document.getElementById("dealsStaleChip");
+  if (dealsStaleChip) {
+    const isDealsStale = Boolean(scanData && scanData.deals_stale);
+    dealsStaleChip.style.display = isDealsStale ? "inline-flex" : "none";
+  }
 }
 
 function renderLeadersBoard(leaders) {
@@ -915,12 +965,33 @@ function renderOnDeck(onDeckList) {
     const atr = item.atr14 != null ? `₹${Number(item.atr14).toFixed(2)}` : "--";
     const rsi = item.rsi14 != null ? Number(item.rsi14).toFixed(1) : "--";
 
+    // Institutional Footprint
+    const instFp = item.inst_footprint || "unknown";
+    let instBadge = "";
+    if (instFp === "accumulation") {
+      instBadge = `<span class="inst-pill inst-pill-acc" title="Institutional Accumulation">🏦 ACCUM</span>`;
+    } else if (instFp === "churn") {
+      instBadge = `<span class="inst-pill inst-pill-churn" title="Institutional Churn">⚠️ CHURN</span>`;
+    } else {
+      instBadge = `<span class="inst-pill inst-pill-unk" title="Institutional Footprint: Unknown">⚪ UNK</span>`;
+    }
+
+    // Event Radar Chip
+    let eventChip = "";
+    if (item.next_event && item.next_event.days_to_event != null && item.next_event.days_to_event <= 7) {
+      const d = item.next_event.days_to_event;
+      const t = escapeHtml(item.next_event.type || "EVENT");
+      eventChip = `<span class="badge badge-warning warn-event-chip" style="font-size: 10px;">🔔 ${t} ${d}d</span>`;
+    }
+
     return `
       <div class="on-deck-card" data-symbol="${sym}">
         <div class="on-deck-card-header">
-          <div style="display: flex; align-items: center; gap: 8px;">
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
             <strong class="on-deck-symbol">${sym}</strong>
             <span class="badge badge-warning" style="font-size: 11px; font-weight: 700;">${dist}% to pivot</span>
+            ${instBadge}
+            ${eventChip}
           </div>
           <span class="badge badge-neutral" style="font-size: 11px;" title="Condition required to trigger buy signal">Awaiting: ${missing}</span>
         </div>
@@ -1040,6 +1111,64 @@ function initCollapsibleSections() {
       if (onDeckChevron) onDeckChevron.textContent = isExpanded ? "▶" : "▼";
     });
   }
+
+  const landminesBtn = document.getElementById("landminesToggleBtn");
+  const landminesContent = document.getElementById("landminesContent");
+  const landminesChevron = document.getElementById("landminesChevron");
+  if (landminesBtn && landminesContent) {
+    landminesBtn.addEventListener("click", () => {
+      const isExpanded = landminesBtn.getAttribute("aria-expanded") === "true";
+      landminesBtn.setAttribute("aria-expanded", !isExpanded);
+      landminesContent.style.display = isExpanded ? "none" : "block";
+      if (landminesChevron) landminesChevron.textContent = isExpanded ? "▶" : "▼";
+    });
+  }
+}
+
+function renderLandmines(landmines) {
+  const section = document.getElementById("landminesSection");
+  const grid = document.getElementById("landminesGrid");
+  const countBadge = document.getElementById("landminesCountBadge");
+  if (!section || !grid) return;
+
+  const list = landmines || [];
+  if (countBadge) {
+    countBadge.textContent = `${list.length} Event${list.length === 1 ? '' : 's'}`;
+    countBadge.className = list.length > 0 ? "badge badge-danger" : "badge badge-neutral";
+  }
+
+  section.style.display = "block";
+
+  if (list.length === 0) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column: 1 / -1; padding: 16px; text-align: center; color: var(--text-dim);">🛡️ Clear radar: No corporate actions (AGM/Lock-in/Record/Earnings) scheduled in the next 7 days for active watchlist or open positions.</div>`;
+    return;
+  }
+
+  grid.innerHTML = list.map(item => {
+    const sym = escapeHtml(item.symbol || "");
+    const type = escapeHtml(item.type || "EVENT");
+    const date = escapeHtml(item.date || "");
+    const days = item.days_to_event != null ? Number(item.days_to_event) : "--";
+    const note = escapeHtml(item.note || "");
+    const daysLabel = days === 0 ? "TODAY" : `${days}d away`;
+
+    return `
+      <div class="landmine-item" data-symbol="${sym}">
+        <div class="landmine-item-header">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <strong style="font-size: 14px; color: #fff;">${sym}</strong>
+            <span class="landmine-type-badge">${type}</span>
+          </div>
+          <span class="landmine-days-badge">${daysLabel}</span>
+        </div>
+        <div style="font-size: 12px; color: var(--text-dim); display: flex; justify-content: space-between;">
+          <span>Event Date: <strong>${date}</strong></span>
+          <span style="color: var(--warning);">High Gap-Risk</span>
+        </div>
+        ${note ? `<div style="font-size: 11.5px; color: var(--text-muted); line-height: 1.3;">${note}</div>` : ""}
+      </div>
+    `;
+  }).join("");
 }
 
 // 1. Render Tab: Near Buy (Watchlist & Active Signals)
@@ -1109,6 +1238,9 @@ function renderNearBuy(scanData, openPositions) {
 
   // Render On Deck candidates (SC-3)
   renderOnDeck(scanData.on_deck || []);
+
+  // Render Landmines Panel (SC-4)
+  renderLandmines(scanData.landmines || []);
 }
 
 // Module state for Watchlist Filter & Sort (Phase 1)
@@ -1345,6 +1477,26 @@ function applyWatchlistFiltering(watchlist, scanData) {
       rsBadge = `<span class="rs-pill rs-pill-gray term-lookup" data-term="RS Rating" title="Relative Strength Rating not available">RS n/a</span>`;
     }
 
+    // Institutional Footprint (A)
+    const instFp = item.inst_footprint || "unknown";
+    let instBadge = "";
+    if (instFp === "accumulation") {
+      instBadge = `<span class="inst-pill inst-pill-acc term-lookup" data-term="Institutional Footprint" title="Institutional Accumulation: Rising delivery % or recent block print">🏦 ACCUM</span>`;
+    } else if (instFp === "churn") {
+      instBadge = `<span class="inst-pill inst-pill-churn term-lookup" data-term="Institutional Footprint" title="Institutional Churn: High volume (≥1.5x) & low delivery (<25%)">⚠️ CHURN</span>`;
+    } else {
+      instBadge = `<span class="inst-pill inst-pill-unk term-lookup" data-term="Institutional Footprint" title="Institutional Footprint: Unknown / Insufficient deal prints">⚪ UNK</span>`;
+    }
+
+    // Event Radar Chip (B)
+    let eventChip = "";
+    if (item.next_event && item.next_event.days_to_event != null && item.next_event.days_to_event <= 7) {
+      const d = item.next_event.days_to_event;
+      const t = escapeHtml(item.next_event.type || "EVENT");
+      const isBlocked = d <= 5;
+      eventChip = `<span class="badge ${isBlocked ? 'badge-danger' : 'badge-warning'} warn-event-chip" style="font-size: 10px;" title="${isBlocked ? 'ENTRY GATE: Event within 5d blackout window' : 'Upcoming Event'}: ${t} in ${d}d">🔔 ${t} ${d}d</span>`;
+    }
+
     return `
       <tr class="watchlist-row ${rowClass}" data-symbol="${item.Symbol}" title="Click to view 6-month chart & checklist">
         <td data-label="Symbol">
@@ -1354,7 +1506,7 @@ function applyWatchlistFiltering(watchlist, scanData) {
           </div>
         </td>
         <td data-label="Score">${scoreBadge}</td>
-        <td data-label="Grade">${gradeBadge} ${rsBadge}</td>
+        <td data-label="Grade"><div style="display: flex; align-items: center; gap: 4px; flex-wrap: wrap;">${gradeBadge} ${rsBadge} ${instBadge} ${eventChip}</div></td>
         <td data-label="Close">${formatINR(item.Close)}</td>
         <td data-label="Dist to Breakout"><strong>${dist.toFixed(2)}%</strong> away</td>
         <td data-label="Coiling">${coilingBadge}</td>
@@ -1917,6 +2069,20 @@ async function toggleWatchlistDetail(row, item, scanData) {
               <span class="detail-hint">(Click row to collapse)</span>
             </div>
             <div id="earnings-warn-${symbol}"></div>
+          </div>
+
+          <!-- Event Radar Timeline Strip (SC-4) -->
+          <div class="event-timeline-strip" id="event-radar-${symbol}">
+            <div class="event-timeline-header">
+              <span>📡 <strong>Event Radar</strong></span>
+              <span class="badge ${item.next_event && item.next_event.days_to_event <= 5 ? 'badge-danger' : (item.next_event ? 'badge-warning' : 'badge-success')}">
+                ${item.next_event ? `${item.next_event.type} in ${item.next_event.days_to_event}d` : 'Clear Horizon'}
+              </span>
+            </div>
+            <div style="font-size: 12px; color: var(--text-dim); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+              <span>${item.next_event ? (item.next_event.note || `Scheduled ${item.next_event.type} on ${item.next_event.date}`) : 'No imminent corporate actions (AGM/Lock-in/Record/Earnings) detected within 30 days.'}</span>
+              ${item.next_event && item.next_event.days_to_event <= 5 ? '<span style="color: #f87171; font-weight: 700;">⚠️ ENTRY GATE ACTIVE: New buy signals blocked within 5d blackout</span>' : ''}
+            </div>
           </div>
 
           <!-- Trade Execution Blueprint (Item #4) -->
@@ -2524,9 +2690,18 @@ async function renderOpenPositions(positions) {
     const pnlSign = unrealized >= 0 ? "+" : "";
     const pnlClass = unrealized > 0 ? "style='color: var(--success); font-weight:600;'" : unrealized < 0 ? "style='color: var(--danger); font-weight:600;'" : "";
 
+    // Event Radar Chip on Open Position (SC-4)
+    let posEventChip = "";
+    const posNextEv = pos.next_event || (_cachedScanData?.landmines?.find(l => l.symbol === pos.symbol));
+    if (pos.warn_event || (posNextEv && posNextEv.days_to_event != null && posNextEv.days_to_event <= 3)) {
+      const evType = escapeHtml(posNextEv?.type || "EVENT");
+      const evDays = posNextEv?.days_to_event != null ? posNextEv.days_to_event : "≤3";
+      posEventChip = `<span class="badge badge-warning warn-event-chip" style="margin-left: 6px; font-size: 10px;" title="🔔 Imminent Event: ${evType} in ${evDays}d - review hold">🔔 ${evType} ${evDays}d</span>`;
+    }
+
     rows.push(`
       <tr class="${rowClass}">
-        <td data-label="Symbol"><strong>${pos.symbol}</strong></td>
+        <td data-label="Symbol"><strong>${pos.symbol}</strong>${posEventChip}</td>
         <td data-label="Entry Date">${formatDate(pos.entry_date)}</td>
         <td data-label="Entry Price">${formatINR(entry)}</td>
         <td data-label="Qty">${qty}</td>
@@ -2611,6 +2786,35 @@ async function renderOpenPositions(positions) {
       sectorAlert.style.display = "flex";
     } else {
       sectorAlert.style.display = "none";
+    }
+  }
+
+  // Event Radar Imminent Warning / Discipline Card (SC-4)
+  const eventAlert = document.getElementById("openPositionsEventAlert");
+  if (eventAlert) {
+    const imminentPositions = positions.filter(pos => {
+      if (pos.warn_event) return true;
+      if (pos.next_event && pos.next_event.days_to_event != null && pos.next_event.days_to_event <= 3) return true;
+      if (_cachedScanData && _cachedScanData.landmines) {
+        const lm = _cachedScanData.landmines.find(l => l.symbol === pos.symbol && l.days_to_event <= 3);
+        if (lm) return true;
+      }
+      return false;
+    });
+
+    if (imminentPositions.length > 0) {
+      eventAlert.innerHTML = `
+        <span class="alert-icon" style="font-size: 18px;">🔔</span>
+        <div class="alert-text">
+          <strong>⚠️ Discipline Event Radar Warning:</strong> ${imminentPositions.map(p => {
+            const ev = p.next_event || (_cachedScanData?.landmines?.find(l => l.symbol === p.symbol)) || { type: "EVENT", days_to_event: "≤3" };
+            return `<strong>${escapeHtml(p.symbol)}</strong> (${escapeHtml(ev.type)} in ${ev.days_to_event}d)`;
+          }).join(", ")}. Review hold before binary event (Stop-loss &amp; 2R Target remain untouched).
+        </div>
+      `;
+      eventAlert.style.display = "flex";
+    } else {
+      eventAlert.style.display = "none";
     }
   }
 

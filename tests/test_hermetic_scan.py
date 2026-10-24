@@ -57,6 +57,26 @@ def execute_full_scan_pipeline() -> Tuple[List[Dict[str, Any]], List[Dict[str, A
     on_deck = main.get_on_deck_candidates()
     leaders_board = main.get_leaders_board()
 
+    curr_scan_date = datetime.date.today()
+    all_active_symbols = list(dict.fromkeys(
+        [s["Symbol"] for s in signals] +
+        [w["Symbol"] for w in watchlist] +
+        [o["symbol"] for o in on_deck]
+    ))
+    landmines = main.get_landmines(all_active_symbols, curr_scan_date)
+    deals = main.load_deals()
+    deals_stale = main.is_deals_stale(deals, curr_scan_date)
+    acc_syms = [s["Symbol"] for s in signals if s.get("inst_footprint") == "accumulation"]
+    acc_syms += [w["Symbol"] for w in watchlist if w.get("inst_footprint") == "accumulation" and w["Symbol"] not in acc_syms]
+    acc_syms += [o["symbol"] for o in on_deck if o.get("inst_footprint") == "accumulation" and o["symbol"] not in acc_syms]
+
+    inst_summary = {
+        "accumulation_count": sum(1 for x in watchlist if x.get("inst_footprint") == "accumulation"),
+        "churn_count": sum(1 for x in watchlist if x.get("inst_footprint") == "churn"),
+        "unknown_count": sum(1 for x in watchlist if x.get("inst_footprint") == "unknown"),
+        "symbols_accumulating": acc_syms,
+    }
+
     scan_data = {
         "updated_at": now_str,
         "market_ok": is_mkt_ok,
@@ -66,6 +86,9 @@ def execute_full_scan_pipeline() -> Tuple[List[Dict[str, Any]], List[Dict[str, A
         "market_summary": market_summary,
         "on_deck": on_deck,
         "leaders_board": leaders_board,
+        "inst_summary": inst_summary,
+        "deals_stale": deals_stale,
+        "landmines": landmines,
     }
     with open(main.SCAN_RESULTS_FILE, "w", encoding="utf-8") as f:
         json.dump(scan_data, f, indent=2, ensure_ascii=False)
@@ -105,6 +128,9 @@ def test_hermetic_scan_unmuted(tmp_cwd: Any, spy_posts: list, pin_ist_time: Any,
         "market_summary",
         "on_deck",
         "leaders_board",
+        "inst_summary",
+        "deals_stale",
+        "landmines",
     }
     assert data["market_ok"] is True
     assert data["scanned_count"] == 2

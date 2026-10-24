@@ -193,3 +193,86 @@ def test_monthly_stop_blocks(tmp_cwd: Any):
     reply = main.handle_telegram_command("/buy ATTEMPT 100 10 91")
     assert "BUY REJECTED" in reply, "Monthly loss >= 6% must block /buy"
     assert "Monthly drawdown limit" in reply
+
+
+def test_event_entry_blocks(monkeypatch: pytest.MonkeyPatch, tmp_cwd: Any):
+    """
+    Event Radar entry gate:
+    A synthetic corporate gap-event (e.g. LOCKIN, AGM) scheduled within EARNINGS_BLACKOUT_DAYS (e.g. 2 days)
+    must BLOCK entry, mirroring the fail-closed earnings blackout behavior.
+    """
+    df = _create_synthetic_symbol_df(entry=100.0, atr=4.0)
+    today = datetime.date.today()
+    df["Date"] = pd.date_range(end=today, periods=len(df), freq="D")
+    lockin_date = (today + datetime.timedelta(days=2)).isoformat()
+    safe_earnings_date = (today + datetime.timedelta(days=45)).isoformat()
+
+    monkeypatch.setattr(main, "get_history", lambda sym: df)
+    monkeypatch.setattr(main, "add_indicators", lambda d: d)
+    monkeypatch.setattr(main, "sector_ok", lambda sym: True)
+    monkeypatch.setattr(main, "index_return_50", lambda: 0.0)
+    monkeypatch.setattr(main, "get_next_earnings", lambda sym: safe_earnings_date)
+
+    events_data = {
+        "LOCKIN_SYM.NS": [
+            {"type": "LOCKIN", "date": lockin_date, "note": "Promoter lock-in expiry"}
+        ]
+    }
+    with open("events.json", "w", encoding="utf-8") as f:
+        json.dump(events_data, f)
+
+    is_blocked, reason = main.check_event_or_earnings_blackout("LOCKIN_SYM.NS", today)
+    assert is_blocked is True, "Imminent LOCKIN 2d out must block entry"
+    assert "LOCKIN" in reason
+
+    sig = main.scan_symbol("LOCKIN_SYM.NS")
+    assert sig is None, "Signal must be blocked when gap-event is within blackout window"
+
+
+def test_event_open_warns_not_exits(tmp_cwd: Any):
+    """
+    Event Radar open-position warning:
+    When an open position has an imminent event (days_to_event <= 3),
+    warn_event must be set to True and a warning message generated,
+    BUT the position remains open with its original stop and target (NEVER force-closed).
+    """
+    today = datetime.date.today()
+    agm_date = (today + datetime.timedelta(days=2)).isoformat()
+
+    events_data = {
+        "HELD.NS": [
+            {"type": "AGM", "date": agm_date, "note": "Annual General Meeting"}
+        ]
+    }
+    with open("events.json", "w", encoding="utf-8") as f:
+        json.dump(events_data, f)
+
+    open_positions = [
+        {
+            "symbol": "HELD.NS",
+            "entry_date": (today - datetime.timedelta(days=10)).isoformat(),
+            "entry_price": 150.0,
+            "qty": 50,
+            "stop": 139.5,
+            "target": 171.0,
+        }
+    ]
+
+    updated_positions, warn_lines = main.check_open_positions_events(open_positions, today)
+
+    assert len(updated_positions) == 1
+    pos = updated_positions[0]
+    assert pos["warn_event"] is True
+    assert pos["next_event"] is not None
+    assert pos["next_event"]["type"] == "AGM"
+    assert pos["next_event"]["days_to_event"] == 2
+
+    # CRITICAL: Verify trade math/stops are NOT modified and position is NOT closed
+    assert pos["stop"] == 139.5, "Original stop price must be preserved"
+    assert pos["target"] == 171.0, "Original target price must be preserved"
+    assert pos["qty"] == 50, "Position quantity must remain intact"
+
+    # Verify EOD warning line
+    assert len(warn_lines) == 1
+    assert "🔔 HELD.NS event (AGM) in 2 days" in warn_lines[0]
+

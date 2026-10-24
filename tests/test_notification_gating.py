@@ -163,3 +163,30 @@ def test_critical_invariant_gating_never_blocks_data_pipeline(
     # Assert ZERO proactive alerts dispatched
     proactive_calls = [p for p in spy_posts if "breakout" in str(p).lower() or "signal" in str(p).lower()]
     assert len(proactive_calls) == 0, "Zero proactive alerts should have been sent to Telegram under QUIET=1"
+
+
+def test_moats_proactive_gating_respects_quiet_and_window(
+    tmp_cwd: Any,
+    spy_posts: list,
+    pin_ist_time: Any,
+    monkeypatch: pytest.MonkeyPatch
+):
+    """
+    Gating test:
+    The 🏦 (institutional footprint) and 🔔 (event warning) lines obey QUIET + quiet-window,
+    being completely suppressed from Telegram sends while scan_results.json still carries the data.
+    """
+    monkeypatch.setenv("QUIET", "1")
+    monkeypatch.setenv("SKIP_GIT_PUSH", "1")
+    pin_ist_time("2026-10-18 23:00")  # Inside quiet window
+
+    inst_line = "🏦 Institutional: 2 accumulation among signals/on-deck (e.g. AAA, BBB)"
+    warn_line = "🔔 HELD.NS event (AGM) in 2 days - review hold"
+
+    # Send proactive alerts for the moats
+    main.send_telegram(inst_line, kind="proactive", msg_type="scan")
+    main.send_telegram(warn_line, kind="proactive", msg_type="scan")
+
+    # Both must be completely suppressed by proactive gating
+    assert len(spy_posts) == 0, "Moat alerts (🏦, 🔔) must be silenced when QUIET=1 or inside quiet window"
+

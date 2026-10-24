@@ -3395,4 +3395,293 @@ th .term-lookup {
   margin-left: 8px;
 }
 
+/* =====================================================================
+   SC-3: MARKET PULSE, LEADERS STRIP, ON DECK & RS PILLS
+   ===================================================================== */
+
+/* Market Pulse Row in Header */
+.market-pulse-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-top: 6px;
+  font-size: 13px;
+}
+
+.pulse-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  color: var(--text-main);
+  white-space: nowrap;
+  font-weight: 500;
+  font-size: 12px;
+}
+
+.pulse-chip.live-chip {
+  font-weight: 600;
+}
+.pulse-chip.live-chip.open {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.4);
+  color: #34d399;
+}
+.pulse-chip.live-chip.closed {
+  background: rgba(148, 163, 184, 0.12);
+  border-color: rgba(148, 163, 184, 0.3);
+  color: #cbd5e1;
+}
+
+.pulse-chip.stale-chip {
+  background: rgba(245, 158, 11, 0.2);
+  border-color: rgba(245, 158, 11, 0.5);
+  color: #fbbf24;
+  font-weight: 600;
+}
+
+.pulse-chip.breadth-chip {
+  color: var(--text-muted);
+}
+
+/* RS Rating Pills */
+.rs-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+}
+
+.rs-pill-green {
+  background: rgba(16, 185, 129, 0.2) !important;
+  color: #34d399 !important;
+  border: 1px solid rgba(16, 185, 129, 0.4) !important;
+  font-weight: 700;
+}
+
+.rs-pill-blue {
+  background: rgba(56, 189, 248, 0.2) !important;
+  color: #38bdf8 !important;
+  border: 1px solid rgba(56, 189, 248, 0.4) !important;
+  font-weight: 700;
+}
+
+.rs-pill-gray {
+  background: rgba(148, 163, 184, 0.15) !important;
+  color: #94a3b8 !important;
+  border: 1px solid rgba(148, 163, 184, 0.3) !important;
+}
+
+/* Leaders Board Strip (Collapsible) */
+.leaders-strip-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.leaders-toggle-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: transparent;
+  border: none;
+  color: var(--text-main);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  min-height: 44px;
+}
+
+.leaders-toggle-btn:hover {
+  background: var(--bg-card-hover);
+}
+
+.leaders-toggle-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.leaders-chips-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.leader-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  min-height: 44px;
+}
+
+.leader-chip:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.leader-chip strong {
+  color: #fff;
+}
+
+.leader-chip-price {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+/* On Deck (Near Misses) Section */
+.on-deck-section {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-top: 24px;
+  margin-bottom: 24px;
+}
+
+.on-deck-toggle-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  background: transparent;
+  border: none;
+  color: var(--text-main);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  min-height: 44px;
+}
+
+.on-deck-toggle-btn:hover {
+  background: var(--bg-card-hover);
+}
+
+.on-deck-toggle-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.on-deck-content-collapse {
+  padding: 12px 18px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.on-deck-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+.on-deck-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: border-color 0.2s ease;
+}
+
+.on-deck-card:hover {
+  border-color: var(--border-light);
+}
+
+.on-deck-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.on-deck-symbol {
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.on-deck-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.on-deck-metrics {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.on-deck-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.on-deck-chart-btn {
+  min-height: 44px;
+  width: 100%;
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.on-deck-sparkline-canvas {
+  width: 100%;
+  height: 140px;
+  margin-top: 8px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.25);
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .market-pulse-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  .on-deck-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 

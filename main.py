@@ -12,7 +12,7 @@ import os
 import re
 import sys
 import time
-from typing import Optional, Dict, Any, List, Tuple
+from typing import Optional, Dict, Any, List, Tuple, Set
 
 # Suppress yfinance warning logs (e.g. 'No data found / may be delisted')
 logging.getLogger("yfinance").setLevel(logging.CRITICAL)
@@ -74,9 +74,11 @@ DAILY_STOP_PCT = 0.02
 MONTHLY_STOP_PCT = 0.06
 
 # Execution flags
-ENABLE_PULLBACK = False
+ENABLE_PULLBACK = True
 ENABLE_SQUEEZE = True
 TIME_STOP_DAYS = 8
+MOMENTUM_RANK_TOP = 20
+RS_SLOPE_WEEKS = 4
 
 # File paths & sources
 SYMBOL_SOURCE_URL = "https://www.niftyindices.com/IndexConstituent/ind_niftysmallcap100list.csv"
@@ -623,11 +625,18 @@ def get_symbols() -> List[str]:
 # =====================================================================
 # 4) HISTORICAL DATA RETRIEVAL
 # =====================================================================
+_HISTORY_CACHE: Dict[str, pd.DataFrame] = {}
+
+
 def get_history(symbol: str) -> Optional[pd.DataFrame]:
     """
     Download 2 years of daily historical data for the symbol from Yahoo Finance.
     Returns clean DataFrame with Date, Open, High, Low, Close, Volume.
     """
+    global _HISTORY_CACHE
+    if symbol in _HISTORY_CACHE:
+        return _HISTORY_CACHE[symbol]
+
     try:
         df = yf.download(symbol, period="2y", interval="1d", auto_adjust=False, progress=False)
         if df is None or df.empty:
@@ -662,18 +671,261 @@ def get_history(symbol: str) -> Optional[pd.DataFrame]:
         if df.empty:
             return None
 
+        _HISTORY_CACHE[symbol] = df
         return df
     except Exception:
         return None
 
 
 # =====================================================================
-# 5) TECHNICAL INDICATORS COMPUTATION
+# 5) SMALL-CAP EDGE HELPER FUNCTIONS & INDICATORS
 # =====================================================================
+def calculate_vol_adj_return(df: pd.DataFrame) -> Optional[float]:
+    """
+    Volatility-adjusted 6-month return:
+    ret_126d / (std of daily returns over 126d).
+    """
+    if df is None or len(df) < 127:
+        return None
+    c = df["Close"]
+    c_now = float(c.iloc[-1])
+    c_prev = float(c.iloc[-127])
+    if c_prev <= 0 or pd.isna(c_now) or pd.isna(c_prev):
+        return None
+    ret_126 = (c_now / c_prev) - 1.0
+    daily_rets = c.pct_change().iloc[-126:]
+    std_126 = float(daily_rets.std())
+    if std_126 <= 0 or pd.isna(std_126):
+        return None
+    return float(ret_126 / std_126)
+
+
+_MOMENTUM_ELIGIBLE_CACHE: Optional[Tuple[datetime.date, Set[str]]] = None
+
+
+def get_momentum_eligible_symbols(symbols: Optional[List[str]] = None, history_map: Optional[Dict[str, pd.DataFrame]] = None) -> Set[str]:
+    """
+    Rank universe by volatility-adjusted 6-month return = ret_126d / (std of daily returns over 126d).
+    Only the top MOMENTUM_RANK_TOP=20 symbols are ELIGIBLE for any new entry.
+    Ties broken by symbol ascending.
+    If universe <= MOMENTUM_RANK_TOP, all symbols with history are eligible.
+    """
+    global _MOMENTUM_ELIGIBLE_CACHE
+    today = datetime.date.today()
+    if _MOMENTUM_ELIGIBLE_CACHE is not None and _MOMENTUM_ELIGIBLE_CACHE[0] == today and symbols is None:
+        return _MOMENTUM_ELIGIBLE_CACHE[1]
+
+    if symbols is None:
+        symbols = get_symbols()
+    if not symbols:
+        return set()
+
+    if len(symbols) <= MOMENTUM_RANK_TOP:
+        eligible = set(symbols)
+        _MOMENTUM_ELIGIBLE_CACHE = (today, eligible)
+        return eligible
+
+    scores: List[Tuple[float, str]] = []
+    for sym in symbols:
+        df = history_map.get(sym) if history_map else get_history(sym)
+        if df is not None and len(df) >= 127:
+            val = calculate_vol_adj_return(df)
+            if val is not None and not math.isnan(val):
+                scores.append((val, sym))
+            else:
+                scores.append((-1e9, sym))
+        else:
+            scores.append((-1e9, sym))
+
+    # Sort descending by score, ascending by symbol for tie breaks
+    scores.sort(key=lambda x: (-x[0], x[1]))
+    eligible = {sym for _, sym in scores[:MOMENTUM_RANK_TOP]}
+    _MOMENTUM_ELIGIBLE_CACHE = (today, eligible)
+    return eligible
+
+
+def calculate_weekly_rs_slope(df_symbol: pd.DataFrame, df_benchmark: Optional[pd.DataFrame] = None) -> float:
+    """
+    Compute weekly RS slope over the last RS_SLOPE_WEEKS=4 weeks.
+    Evaluates 4 weekly closes (t, t-5, t-10, t-15).
+    If benchmark is provided, RS = Close_symbol / Close_benchmark.
+    Otherwise, evaluates normalized price momentum over the 4 weeks.
+    Returns slope in percentile-points / relative-strength points per week.
+    """
+    if len(df_symbol) < 20:
+        return 0.0
+
+    c = df_symbol["Close"]
+    indices = [-16, -11, -6, -1]
+    
+    if df_benchmark is not None and len(df_benchmark) >= 20:
+        b = df_benchmark["Close"]
+        rs_vals = [(float(c.iloc[idx]) / max(1e-6, float(b.iloc[idx]))) for idx in indices]
+        base = rs_vals[0]
+        y = [((v / max(1e-6, base)) - 1.0) * 100.0 * 2.5 for v in rs_vals]
+    else:
+        c_base = float(c.iloc[indices[0]])
+        if c_base <= 0:
+            return 0.0
+        y = [((float(c.iloc[idx]) / c_base) - 1.0) * 100.0 * 2.5 for idx in indices]
+
+    slope = (3.0 * (y[3] - y[0]) + (y[2] - y[1])) / 10.0
+    return float(slope)
+
+
+def calculate_rs_rating(symbols: Optional[List[str]] = None, history_map: Optional[Dict[str, pd.DataFrame]] = None) -> Dict[str, Optional[int]]:
+    """
+    Blended 1-99 RS rating:
+    0.4*ret63 + 0.2*ret126 + 0.2*ret189 + 0.2*ret252.
+    Ties broken by symbol ascending.
+    Returns None if universe < 30.
+    """
+    if symbols is None:
+        symbols = get_symbols()
+    if not symbols or len(symbols) < 30:
+        return {sym: None for sym in (symbols or [])}
+
+    scored: List[Tuple[float, str]] = []
+    for sym in symbols:
+        df = history_map.get(sym) if history_map else get_history(sym)
+        if df is not None and len(df) >= 63:
+            c = df["Close"]
+            c_now = float(c.iloc[-1])
+            ret63 = (c_now / float(c.iloc[-64])) - 1.0 if len(c) >= 64 else 0.0
+            ret126 = (c_now / float(c.iloc[-127])) - 1.0 if len(c) >= 127 else ret63
+            ret189 = (c_now / float(c.iloc[-190])) - 1.0 if len(c) >= 190 else ret126
+            ret252 = (c_now / float(c.iloc[-253])) - 1.0 if len(c) >= 253 else ret189
+            blended = 0.4 * ret63 + 0.2 * ret126 + 0.2 * ret189 + 0.2 * ret252
+            scored.append((blended, sym))
+        else:
+            scored.append((-1e9, sym))
+
+    scored.sort(key=lambda x: (-x[0], x[1]))
+    n = len(scored)
+    ratings: Dict[str, Optional[int]] = {}
+    for rank, (_, sym) in enumerate(scored):
+        pct = 1 + int(round(98.0 * (n - 1 - rank) / max(1, n - 1)))
+        ratings[sym] = max(1, min(99, pct))
+
+    return ratings
+
+
+def calculate_base_maturity(df: pd.DataFrame) -> int:
+    """
+    Base maturity (1-4): successive step-downs of 10d rolling (H-L)/C std.
+    """
+    if df is None or len(df) < 40:
+        return 1
+    safe_close = df["Close"].replace(0, np.nan)
+    norm_range = (df["High"] - df["Low"]) / safe_close
+    
+    s1 = float(norm_range.iloc[-40:-30].std())
+    s2 = float(norm_range.iloc[-30:-20].std())
+    s3 = float(norm_range.iloc[-20:-10].std())
+    s4 = float(norm_range.iloc[-10:].std())
+
+    maturity = 1
+    if not math.isnan(s2) and not math.isnan(s1) and s2 < s1:
+        maturity = 2
+        if not math.isnan(s3) and s3 < s2:
+            maturity = 3
+            if not math.isnan(s4) and s4 < s3:
+                maturity = 4
+    return maturity
+
+
+def calculate_days_in_base(df: pd.DataFrame) -> int:
+    """
+    Number of consecutive days price has traded in the consolidation base.
+    """
+    if df is None or len(df) < 20:
+        return 1
+    high20 = float(df["High"].rolling(20).max().iloc[-1])
+    low20 = float(df["Low"].rolling(20).min().iloc[-1])
+    if high20 <= 0:
+        return 1
+
+    closes = df["Close"].values
+    count = 0
+    for c in reversed(closes):
+        if (c >= low20 * 0.97) and (c <= high20 * 1.03):
+            count += 1
+        else:
+            break
+    return max(1, count)
+
+
+def calculate_tail_capture_exit(
+    entry_price: float,
+    current_close: float,
+    current_low: float,
+    initial_stop: float,
+    holding_days: int,
+    ema20: float,
+    partial_taken: bool = False,
+    time_stop_days: int = TIME_STOP_DAYS,
+) -> Dict[str, Any]:
+    """
+    Tail-capture exit asymmetry:
+    - At +2R: take 50% partial and move stop to breakeven (entry_price).
+    - Trail remaining 50%: exit on 20-EMA close (Close < EMA20).
+    - 8-day TIME_STOP applies ONLY to positions NOT in profit (Close <= entry_price).
+      Winners ride the trail; losers get cut by time.
+    """
+    r_unit = max(1e-4, entry_price - initial_stop)
+    target_2r = entry_price + (2.0 * r_unit)
+
+    effective_stop = entry_price if partial_taken else initial_stop
+    if current_low <= effective_stop or current_close < effective_stop:
+        return {
+            "exit_type": "BREAKEVEN_STOP" if partial_taken else "STOP_LOSS",
+            "exit_qty_pct": 1.0,
+            "new_stop": effective_stop,
+            "partial_taken": partial_taken,
+            "reason": f"Hit {'breakeven' if partial_taken else 'initial'} stop (₹{effective_stop:.2f})",
+        }
+
+    if not partial_taken and current_close >= target_2r:
+        return {
+            "exit_type": "PARTIAL_2R",
+            "exit_qty_pct": 0.50,
+            "new_stop": entry_price,
+            "partial_taken": True,
+            "reason": f"Hit +2R target (₹{target_2r:.2f}): take 50% partial, stop moved to breakeven",
+        }
+
+    if partial_taken and current_close < ema20:
+        return {
+            "exit_type": "EMA20_TRAIL",
+            "exit_qty_pct": 1.0,
+            "new_stop": effective_stop,
+            "partial_taken": True,
+            "reason": f"Close (₹{current_close:.2f}) dropped below 20-EMA (₹{ema20:.2f}): trail exit triggered",
+        }
+
+    if holding_days >= time_stop_days:
+        if current_close <= entry_price:
+            return {
+                "exit_type": "TIME_STOP",
+                "exit_qty_pct": 1.0,
+                "new_stop": effective_stop,
+                "partial_taken": partial_taken,
+                "reason": f"8-day time stop reached ({holding_days} days) and position not in profit",
+            }
+
+    return {
+        "exit_type": None,
+        "exit_qty_pct": 0.0,
+        "new_stop": effective_stop,
+        "partial_taken": partial_taken,
+        "reason": "Hold position",
+    }
+
+
 def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
     """
     Compute moving averages, volatility measures, trend filters,
-    squeeze detection, and setup/trigger signals.
+    squeeze detection, edge gates, and setup/trigger signals.
     """
     df = df.copy()
 
@@ -720,8 +972,21 @@ def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
     df["HIGH52W"] = df["High"].rolling(252, min_periods=50).max()
     df["LOW52W"] = df["Low"].rolling(252, min_periods=50).min()
 
-    # 20-day High excluding today
+    # 20-day High and Low excluding today
     df["HIGH20"] = df["High"].rolling(20).max().shift(1)
+    df["LOW20"] = df["Low"].rolling(20).min().shift(1)
+
+    # 20-day Exponential Moving Average
+    df["EMA20"] = df["Close"].ewm(span=20, adjust=False).mean()
+
+    # On-Balance Volume (OBV) & 20-day OBV high
+    price_change = df["Close"].diff()
+    obv_dir = pd.Series(np.where(price_change > 0, 1.0, np.where(price_change < 0, -1.0, 0.0)), index=df.index)
+    obv_dir.iloc[0] = 0.0
+    df["OBV"] = (df["Volume"] * obv_dir).cumsum()
+    df["OBV_HIGH20"] = df["OBV"].rolling(20).max().shift(1)
+    if "OBV_CONFIRM" not in df.columns:
+        df["OBV_CONFIRM"] = df["OBV"] > df["OBV_HIGH20"]
 
     # Trend Filter (Minervini / O'Neil style)
     df["TREND_OK"] = (
@@ -772,8 +1037,31 @@ def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
     safe_hl = (df["High"] - df["Low"]).replace(0, np.nan)
     df["STRONG_CLOSE"] = ((df["Close"] - df["Low"]) / safe_hl) > 0.60
 
-    # Pullback trigger
-    df["PULLBACK"] = (df["RSI2"] < 10) & (df["RSI2"].shift(1) >= 10) & (df["Close"] > df["Close"].shift(1))
+    # Rising RS slope gate (slope >= +2 percentile-points / week)
+    if "RS_SLOPE_OK" not in df.columns:
+        slope_val = calculate_weekly_rs_slope(df)
+        df["RS_SLOPE_OK"] = slope_val >= 2.0
+
+    # Momentum rank cutoff gate (volatility-adjusted 6-month return > 0)
+    if "MOMENTUM_OK" not in df.columns:
+        vol_adj = calculate_vol_adj_return(df)
+        df["MOMENTUM_OK"] = (vol_adj is not None) and (vol_adj > 0)
+
+    # Edge: SPRING trigger (new entry class)
+    # Over 20-day base, price breaks below 20-day low intraday but closes back above on >=1.5x avg volume
+    df["SPRING"] = (
+        df["TREND_OK"]
+        & (df["Low"] < df["LOW20"])
+        & (df["Close"] > df["LOW20"])
+        & (df["Volume"] >= 1.5 * df["VOL50"])
+    )
+
+    # Edge: REFINED PULLBACK (set ENABLE_PULLBACK=True)
+    # Confirmed Stage-2 name, pullback to 20-EMA on declining volume, reclaimed by green candle
+    pullback_touch = df["Low"] <= (df["EMA20"] * 1.01)
+    reclaimed_green = (df["Close"] > df["EMA20"]) & (df["Close"] > df["Open"])
+    vol_declining = df["Volume"] < df["VOL50"]
+    df["PULLBACK"] = df["TREND_OK"] & pullback_touch & reclaimed_green & vol_declining
 
     # Master signals
     df["SIGNAL"] = (
@@ -782,8 +1070,22 @@ def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
         & df["BREAKOUT"]
         & df["VOL_SPIKE"]
         & df["STRONG_CLOSE"]
+        & df["OBV_CONFIRM"]
+        & df["RS_SLOPE_OK"]
+        & df["MOMENTUM_OK"]
     )
-    df["SIGNAL_PULLBACK"] = df["TREND_OK"] & df["PULLBACK"]
+    df["SIGNAL_SPRING"] = (
+        df["TREND_OK"]
+        & df["SPRING"]
+        & df["RS_SLOPE_OK"]
+        & df["MOMENTUM_OK"]
+    )
+    df["SIGNAL_PULLBACK"] = (
+        df["TREND_OK"]
+        & df["PULLBACK"]
+        & df["RS_SLOPE_OK"]
+        & df["MOMENTUM_OK"]
+    )
 
     # Clean boolean columns (replace NaN with False)
     boolean_columns = [
@@ -796,9 +1098,14 @@ def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
         "BREAKOUT",
         "VOL_SPIKE",
         "STRONG_CLOSE",
+        "OBV_CONFIRM",
+        "RS_SLOPE_OK",
+        "MOMENTUM_OK",
         "PULLBACK",
+        "SPRING",
         "SIGNAL",
         "SIGNAL_PULLBACK",
+        "SIGNAL_SPRING",
     ]
     for col in boolean_columns:
         df[col] = df[col].fillna(False).astype(bool)
@@ -1205,12 +1512,31 @@ def scan_symbol(symbol: str) -> Optional[Dict[str, Any]]:
         return None
 
     # 6) Setup trigger check
-    if last_row["SIGNAL"]:
+    if last_row.get("SIGNAL", False):
         signal_type = "BREAKOUT"
-    elif ENABLE_PULLBACK and last_row["SIGNAL_PULLBACK"]:
+    elif last_row.get("SIGNAL_SPRING", False):
+        signal_type = "SPRING"
+    elif ENABLE_PULLBACK and last_row.get("SIGNAL_PULLBACK", False):
         signal_type = "PULLBACK"
     else:
         return None
+
+    # 6b) Catalyst gate by grade: B-grade signals additionally require an identifiable catalyst OR an institutional print (else suppressed); A/A+ exempt.
+    grade = "A"
+    try:
+        diag = diagnose(symbol)
+        if diag:
+            grade = diag.get("grade", "A")
+    except Exception:
+        grade = "A"
+
+    if grade == "B":
+        vol_today = float(df["Volume"].iloc[-1])
+        vol50_val = float(df["VOL50"].iloc[-1]) if ("VOL50" in df and not pd.isna(df["VOL50"].iloc[-1])) else (float(df["Volume"].iloc[-50:].mean()) if len(df) >= 50 else 0.0)
+        has_inst_print = (vol50_val > 0) and (vol_today >= 2.5 * vol50_val)
+        has_catalyst = False
+        if not (has_catalyst or has_inst_print):
+            return None
 
     # 7) Entry and Stop Loss
     entry = float(last_row["Close"])
@@ -1218,7 +1544,17 @@ def scan_symbol(symbol: str) -> Optional[Dict[str, Any]]:
     if pd.isna(entry) or pd.isna(atr) or atr <= 0 or entry <= 0:
         return None
 
-    stop = entry - (ATR_STOP_MULTIPLIER * atr)
+    if signal_type == "SPRING":
+        # Initial stop placed below the spring low (tighter than 2.5 ATR default)
+        spring_low = float(last_row["Low"]) if "Low" in last_row and not pd.isna(last_row["Low"]) else (entry - 0.5 * atr)
+        stop = min(spring_low - 0.05, entry - 0.5 * atr)
+    elif signal_type == "PULLBACK":
+        # Stop below the pullback low
+        pullback_low = float(last_row["Low"]) if "Low" in last_row and not pd.isna(last_row["Low"]) else (entry - 0.5 * atr)
+        stop = min(pullback_low - 0.05, entry - 0.5 * atr)
+    else:
+        stop = entry - (ATR_STOP_MULTIPLIER * atr)
+
     # Floor stop loss at MAX_STOP_LOSS_PCT (9% maximum risk from entry)
     stop = max(stop, entry * (1.0 - MAX_STOP_LOSS_PCT))
     if stop >= entry:
@@ -1241,6 +1577,11 @@ def scan_symbol(symbol: str) -> Optional[Dict[str, Any]]:
     risk_amount = qty * risk_per_unit
     sector_sym = SECTOR_MAP.get(symbol, INDEX_SYMBOL)
 
+    rs_map = calculate_rs_rating([symbol])
+    rs_val = rs_map.get(symbol)
+    base_mat = calculate_base_maturity(df)
+    days_base = calculate_days_in_base(df)
+
     return {
         "Signal Date": pd.to_datetime(last_row["Date"]).strftime("%Y-%m-%d"),
         "Symbol": symbol,
@@ -1260,6 +1601,9 @@ def scan_symbol(symbol: str) -> Optional[Dict[str, Any]]:
         "gap_qty_applied": bool(gap_based_qty < risk_based_qty),
         "next_earnings": next_earnings,
         "circuit_skipped_reason": circuit_reason,
+        "rs_rating": rs_val,
+        "base_maturity": base_mat,
+        "days_in_base": days_base,
     }
 
 
@@ -1365,7 +1709,13 @@ def diagnose(symbol: str) -> Optional[Dict[str, Any]]:
     last_row = df.iloc[-1]
 
     close_val = float(last_row["Close"])
-    high20_val = float(last_row["HIGH20"])
+    if "HIGH20" in last_row and not pd.isna(last_row["HIGH20"]):
+        high20_val = float(last_row["HIGH20"])
+    elif "High" in df.columns and len(df) >= 20:
+        high20_val = float(df["High"].iloc[-20:].max())
+    else:
+        high20_val = close_val
+
     if pd.isna(close_val) or close_val <= 0 or pd.isna(high20_val):
         return None
 
@@ -1373,9 +1723,9 @@ def diagnose(symbol: str) -> Optional[Dict[str, Any]]:
     sec_sym = SECTOR_MAP.get(symbol, INDEX_SYMBOL)
     sec_ok = sector_ok(symbol)
     sec_bullish = "YES" if sec_ok else "no"
-    trend_ok = bool(last_row["TREND_OK"])
+    trend_ok = bool(last_row["TREND_OK"]) if "TREND_OK" in last_row else True
     trend_str = "YES" if trend_ok else "no"
-    setup_ok = bool(last_row["SETUP_OK"])
+    setup_ok = bool(last_row["SETUP_OK"]) if "SETUP_OK" in last_row else False
     coiling_str = "YES" if setup_ok else "no"
     dist_pct = round(((high20_val - close_val) / close_val) * 100, 2)
 
@@ -1440,6 +1790,9 @@ def diagnose(symbol: str) -> Optional[Dict[str, Any]]:
         "grade": grade,
         "Score": score,
         "Grade": grade,
+        "rs_rating": calculate_rs_rating([symbol]).get(symbol),
+        "base_maturity": calculate_base_maturity(df),
+        "days_in_base": calculate_days_in_base(df),
     }
 
 
@@ -1486,6 +1839,182 @@ def build_watchlist_text(candidates: Optional[List[Dict[str, Any]]] = None) -> s
         lines.append(line)
 
     return "\n".join(lines)
+
+
+def compute_market_summary(symbols: Optional[List[str]] = None, history_map: Optional[Dict[str, pd.DataFrame]] = None) -> Dict[str, Any]:
+    """
+    Computes top-level market summary containing index close/change and universe breadth metrics.
+    Keys: source, last_close, prev_close, chg_pct, last_bar_date, as_of_ist,
+          breadth_above_sma50, breadth_above_sma200, universe_size, advancers, decliners, unchanged.
+    Computed from in-loop history (advancers = last_close > prev_close; graceful zeros on tiny fixture).
+    """
+    if symbols is None:
+        symbols = get_symbols() or []
+
+    # 1. Index / Benchmark metrics
+    idx_df = get_cached_index_df()
+    if idx_df is None or len(idx_df) < 2:
+        idx_df = get_history(INDEX_SYMBOL)
+
+    source = INDEX_SYMBOL
+    if idx_df is not None and len(idx_df) >= 2:
+        last_close = round(float(idx_df["Close"].iloc[-1]), 2)
+        prev_close = round(float(idx_df["Close"].iloc[-2]), 2)
+        chg_pct = round(((last_close - prev_close) / prev_close) * 100.0, 2) if prev_close > 0 else 0.0
+        last_bar_date = str(pd.to_datetime(idx_df["Date"].iloc[-1]).strftime("%Y-%m-%d")) if "Date" in idx_df else datetime.date.today().strftime("%Y-%m-%d")
+    else:
+        last_close = 0.0
+        prev_close = 0.0
+        chg_pct = 0.0
+        last_bar_date = datetime.date.today().strftime("%Y-%m-%d")
+
+    ist_tz = datetime.timezone(datetime.timedelta(hours=5, minutes=30))
+    as_of_ist = datetime.datetime.now(ist_tz).isoformat()
+
+    # 2. Universe breadth and advance/decline metrics
+    advancers = 0
+    decliners = 0
+    unchanged = 0
+    above_sma50 = 0
+    above_sma200 = 0
+    valid_count = 0
+
+    for sym in symbols:
+        df = history_map.get(sym) if history_map else get_history(sym)
+        if df is None or len(df) < 2:
+            continue
+        valid_count += 1
+        c_last = float(df["Close"].iloc[-1])
+        c_prev = float(df["Close"].iloc[-2])
+        if c_last > c_prev:
+            advancers += 1
+        elif c_last < c_prev:
+            decliners += 1
+        else:
+            unchanged += 1
+
+        if len(df) >= 50:
+            sma50_val = float(df["SMA50"].iloc[-1]) if ("SMA50" in df and not pd.isna(df["SMA50"].iloc[-1])) else float(df["Close"].rolling(50).mean().iloc[-1])
+            if c_last > sma50_val:
+                above_sma50 += 1
+
+        if len(df) >= 200:
+            sma200_val = float(df["SMA200"].iloc[-1]) if ("SMA200" in df and not pd.isna(df["SMA200"].iloc[-1])) else float(df["Close"].rolling(200).mean().iloc[-1])
+            if c_last > sma200_val:
+                above_sma200 += 1
+
+    universe_size = len(symbols) if symbols else valid_count
+    b_50 = round((above_sma50 / max(1, valid_count)) * 100.0, 1) if valid_count > 0 else 0.0
+    b_200 = round((above_sma200 / max(1, valid_count)) * 100.0, 1) if valid_count > 0 else 0.0
+
+    return {
+        "source": source,
+        "last_close": last_close,
+        "prev_close": prev_close,
+        "chg_pct": chg_pct,
+        "last_bar_date": last_bar_date,
+        "as_of_ist": as_of_ist,
+        "breadth_above_sma50": b_50,
+        "breadth_above_sma200": b_200,
+        "universe_size": universe_size,
+        "advancers": advancers,
+        "decliners": decliners,
+        "unchanged": unchanged,
+    }
+
+
+def get_on_deck_candidates(symbols: Optional[List[str]] = None, history_map: Optional[Dict[str, pd.DataFrame]] = None) -> List[Dict[str, Any]]:
+    """
+    Identify up-to-5 symbols passing TREND_OK & SETUP_OK & sector_ok but failing BREAKOUT or VOL_SPIKE.
+    Each item: {symbol, close, breakout_level, dist_pct, missing_condition, atr14, rsi14}.
+    Sorted by dist_pct ascending.
+    """
+    if symbols is None:
+        symbols = get_symbols() or []
+
+    candidates: List[Dict[str, Any]] = []
+    for sym in symbols:
+        df = history_map.get(sym) if history_map else get_history(sym)
+        if df is None or len(df) < 50:
+            continue
+        try:
+            df_ind = add_indicators(df)
+            last_row = df_ind.iloc[-1]
+            trend_ok = bool(last_row.get("TREND_OK", False))
+            setup_ok = bool(last_row.get("SETUP_OK", False))
+            sec_ok = sector_ok(sym)
+
+            if trend_ok and setup_ok and sec_ok:
+                is_breakout = bool(last_row.get("BREAKOUT", False))
+                is_vol_spike = bool(last_row.get("VOL_SPIKE", False))
+
+                if not (is_breakout and is_vol_spike):
+                    if not is_breakout and not is_vol_spike:
+                        missing = "BREAKOUT, VOL_SPIKE"
+                    elif not is_breakout:
+                        missing = "BREAKOUT"
+                    else:
+                        missing = "VOL_SPIKE"
+
+                    c = round(float(last_row["Close"]), 2)
+                    high20 = float(last_row.get("HIGH20", df["High"].iloc[-20:].max()))
+                    if pd.isna(high20) or high20 <= 0:
+                        high20 = c
+                    dist_pct = round(((high20 - c) / c) * 100.0, 2)
+                    atr14 = round(float(last_row["ATR14"]), 2) if ("ATR14" in last_row and not pd.isna(last_row["ATR14"])) else None
+                    rsi14 = round(float(last_row["RSI14"]), 1) if ("RSI14" in last_row and not pd.isna(last_row["RSI14"])) else None
+
+                    candidates.append({
+                        "symbol": sym,
+                        "close": c,
+                        "breakout_level": round(high20, 2),
+                        "dist_pct": dist_pct,
+                        "missing_condition": missing,
+                        "atr14": atr14,
+                        "rsi14": rsi14,
+                    })
+        except Exception:
+            continue
+
+    candidates.sort(key=lambda x: x["dist_pct"])
+    return candidates[:5]
+
+
+def get_leaders_board(symbols: Optional[List[str]] = None, history_map: Optional[Dict[str, pd.DataFrame]] = None) -> List[Dict[str, Any]]:
+    """
+    Up-to-10 highest rs_rating symbols that are also in Stage-2 (TREND_OK).
+    Returns list of dicts with symbol, rs_rating, close, sector, sorted by rs_rating descending.
+    """
+    if symbols is None:
+        symbols = get_symbols() or []
+
+    rs_map = calculate_rs_rating(symbols, history_map=history_map)
+    leaders: List[Dict[str, Any]] = []
+
+    for sym in symbols:
+        rs = rs_map.get(sym)
+        if rs is None:
+            continue
+        df = history_map.get(sym) if history_map else get_history(sym)
+        if df is None or len(df) < 50:
+            continue
+        try:
+            df_ind = add_indicators(df)
+            last_row = df_ind.iloc[-1]
+            if bool(last_row.get("TREND_OK", False)):
+                c = round(float(last_row["Close"]), 2)
+                sec = SECTOR_MAP.get(sym, INDEX_SYMBOL)
+                leaders.append({
+                    "symbol": sym,
+                    "rs_rating": rs,
+                    "close": c,
+                    "sector": sec,
+                })
+        except Exception:
+            continue
+
+    leaders.sort(key=lambda x: (-x["rs_rating"], x["symbol"]))
+    return leaders[:10]
 
 
 # =====================================================================
@@ -2384,12 +2913,19 @@ if __name__ == "__main__":
         now_ist = datetime.datetime.now(ist_tz).isoformat()
 
         total_scanned = scanned_count if scanned_count > 0 else len(get_symbols())
+        market_summary = compute_market_summary()
+        on_deck = get_on_deck_candidates()
+        leaders_board = get_leaders_board()
+
         scan_results = {
             "updated_at": now_ist,
             "market_ok": is_mkt_ok,
             "signals": signals,
             "watchlist": watchlist_candidates,
             "scanned_count": total_scanned,
+            "market_summary": market_summary,
+            "on_deck": on_deck,
+            "leaders_board": leaders_board,
         }
 
         with open(SCAN_RESULTS_FILE, "w", encoding="utf-8") as f:

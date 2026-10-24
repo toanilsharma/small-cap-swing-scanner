@@ -17,6 +17,24 @@ EXPECTED_TOP_LEVEL_KEYS = {
     "signals",
     "watchlist",
     "scanned_count",
+    "market_summary",
+    "on_deck",
+    "leaders_board",
+}
+
+EXPECTED_MARKET_SUMMARY_KEYS = {
+    "source",
+    "last_close",
+    "prev_close",
+    "chg_pct",
+    "last_bar_date",
+    "as_of_ist",
+    "breadth_above_sma50",
+    "breadth_above_sma200",
+    "universe_size",
+    "advancers",
+    "decliners",
+    "unchanged",
 }
 
 EXPECTED_SIGNAL_KEYS = {
@@ -38,6 +56,9 @@ EXPECTED_SIGNAL_KEYS = {
     "gap_qty_applied",
     "next_earnings",
     "circuit_skipped_reason",
+    "rs_rating",
+    "base_maturity",
+    "days_in_base",
 }
 
 EXPECTED_WATCHLIST_KEYS = {
@@ -56,6 +77,9 @@ EXPECTED_WATCHLIST_KEYS = {
     "grade",
     "Score",
     "Grade",
+    "rs_rating",
+    "base_maturity",
+    "days_in_base",
 }
 
 
@@ -89,6 +113,8 @@ def test_schema_keys_exact_match(tmp_cwd: Any, monkeypatch: pytest.MonkeyPatch):
             f"Missing: {EXPECTED_SIGNAL_KEYS - actual_sig_keys}\n"
             f"Unexpected: {actual_sig_keys - EXPECTED_SIGNAL_KEYS}"
         )
+        # rs_rating may be None at N=2 in small universes
+        assert "rs_rating" in sig
 
     # 3. Watchlist schema
     assert len(data["watchlist"]) > 0, "Expected at least one watchlist candidate in hermetic scan"
@@ -99,3 +125,28 @@ def test_schema_keys_exact_match(tmp_cwd: Any, monkeypatch: pytest.MonkeyPatch):
             f"Missing: {EXPECTED_WATCHLIST_KEYS - actual_wl_keys}\n"
             f"Unexpected: {actual_wl_keys - EXPECTED_WATCHLIST_KEYS}"
         )
+        assert "rs_rating" in wl
+
+    # 4. Market summary schema
+    assert isinstance(data["market_summary"], dict)
+    actual_market_summary_keys = set(data["market_summary"].keys())
+    assert actual_market_summary_keys == EXPECTED_MARKET_SUMMARY_KEYS, (
+        f"Market summary schema drift!\n"
+        f"Missing: {EXPECTED_MARKET_SUMMARY_KEYS - actual_market_summary_keys}\n"
+        f"Unexpected: {actual_market_summary_keys - EXPECTED_MARKET_SUMMARY_KEYS}"
+    )
+
+    # 5. On-deck & leaders board
+    assert isinstance(data["on_deck"], list)
+    assert isinstance(data["leaders_board"], list)
+
+
+def test_rs_graceful_small_universe():
+    """
+    Assert that calculate_rs_rating returns None gracefully when universe < 30.
+    At N=2, rs_rating is None for all symbols and does not crash or raise exceptions.
+    """
+    import main
+    res = main.calculate_rs_rating(["AAA.NS", "BBB.NS"])
+    assert res == {"AAA.NS": None, "BBB.NS": None}
+

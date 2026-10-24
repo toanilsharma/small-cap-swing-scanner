@@ -12,6 +12,11 @@ import os
 import sys
 import subprocess
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 
 TEST_LAYERS = [
     ("tests/test_rules_golden.py", "RULES GOLDEN"),
@@ -22,6 +27,7 @@ TEST_LAYERS = [
     ("tests/test_schema_drift.py", "SCHEMA DRIFT"),
     ("tests/test_thresholds_locked.py", "THRESHOLDS LOCKED"),
     ("tests/test_smallcap_survival.py", "SURVIVAL / REGIME"),
+    ("tests/test_smallcap_edge.py", "SMALL-CAP EDGE"),
 ]
 
 

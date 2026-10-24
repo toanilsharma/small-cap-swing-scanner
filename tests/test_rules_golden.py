@@ -91,6 +91,55 @@ def build_scenario_dataframe(scenario: str) -> pd.DataFrame:
             low[-1] = 202.85
             open_[-1] = 203.0
             volume[-1] = 300000.0
+        elif scenario == "spring":
+            # Scenario (e): Intraday undercut below 20-day low, reclaimed by close on volume >= 1.5x VOL50
+            close[-1] = 202.5
+            high[-1] = 202.8
+            low[-1] = 198.0
+            open_[-1] = 200.0
+            volume[-1] = 1600000.0
+        elif scenario == "pullback":
+            # Scenario (f): Pullback to 20-EMA on declining volume, reclaimed by a green candle
+            close[-1] = 204.5
+            high[-1] = 205.0
+            low[-1] = 201.0
+            open_[-1] = 202.0
+            volume[-1] = 300000.0
+        elif scenario == "obv_reject":
+            # Scenario (g): Breakout setup identical to textbook, but OBV non-confirmation blocks signal
+            close[-1] = 207.0
+            high[-1] = 207.2
+            low[-1] = 204.0
+            open_[-1] = 205.0
+            volume[-3] = 310000.0
+            volume[-2] = 350000.0
+            volume[-1] = 1900000.0
+        elif scenario == "rs_slope_reject":
+            # Scenario (h): Breakout setup identical to textbook, but RS slope < +2 percentile points/week
+            close[-1] = 207.0
+            high[-1] = 207.2
+            low[-1] = 204.0
+            open_[-1] = 205.0
+            volume[-3] = 310000.0
+            volume[-2] = 350000.0
+            volume[-1] = 1900000.0
+        elif scenario == "momentum_cutoff":
+            # Scenario (i): Breakout setup identical to textbook, but fails momentum rank cutoff
+            close[-1] = 207.0
+            high[-1] = 207.2
+            low[-1] = 204.0
+            open_[-1] = 205.0
+            volume[-3] = 310000.0
+            volume[-2] = 350000.0
+            volume[-1] = 1900000.0
+        elif scenario == "tail_capture_trail":
+            # Scenario (j): Trend-riding tail capture position above 20-EMA without fresh breakout today
+            high[242] = 218.0
+            close[-1] = 215.0
+            high[-1] = 216.0
+            low[-1] = 214.0
+            open_[-1] = 214.5
+            volume[-1] = 500000.0
         else:
             raise ValueError(f"Unknown scenario: {scenario}")
 
@@ -102,6 +151,24 @@ def build_scenario_dataframe(scenario: str) -> pd.DataFrame:
         "Close": close,
         "Volume": volume,
     })
+
+    if scenario == "downtrend":
+        df["RS_SLOPE_OK"] = False
+        df["MOMENTUM_OK"] = False
+    elif scenario == "obv_reject":
+        df["OBV_CONFIRM"] = False
+        df["RS_SLOPE_OK"] = True
+        df["MOMENTUM_OK"] = True
+    elif scenario == "rs_slope_reject":
+        df["RS_SLOPE_OK"] = False
+        df["MOMENTUM_OK"] = True
+    elif scenario == "momentum_cutoff":
+        df["RS_SLOPE_OK"] = True
+        df["MOMENTUM_OK"] = False
+    else:
+        df["RS_SLOPE_OK"] = True
+        df["MOMENTUM_OK"] = True
+
     return df
 
 

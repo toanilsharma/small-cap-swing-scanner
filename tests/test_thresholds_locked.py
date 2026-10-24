@@ -32,13 +32,15 @@ def test_core_trading_constants():
     assert main.MAX_TOTAL_HEAT_PCT == 0.05, f"MAX_TOTAL_HEAT_PCT changed: {main.MAX_TOTAL_HEAT_PCT}"
     assert main.DAILY_STOP_PCT == 0.02, f"DAILY_STOP_PCT changed: {main.DAILY_STOP_PCT}"
     assert main.MONTHLY_STOP_PCT == 0.06, f"MONTHLY_STOP_PCT changed: {main.MONTHLY_STOP_PCT}"
+    assert main.MOMENTUM_RANK_TOP == 20, f"MOMENTUM_RANK_TOP changed: {main.MOMENTUM_RANK_TOP}"
+    assert main.RS_SLOPE_WEEKS == 4, f"RS_SLOPE_WEEKS changed: {main.RS_SLOPE_WEEKS}"
 
 
 def test_core_flags_and_index_symbol():
     """
     Assert that setup enablement flags, basket parameters, and index symbol remain locked.
     """
-    assert main.ENABLE_PULLBACK is False, f"ENABLE_PULLBACK changed: {main.ENABLE_PULLBACK}"
+    assert main.ENABLE_PULLBACK is True, f"ENABLE_PULLBACK changed: {main.ENABLE_PULLBACK}"
     assert main.ENABLE_SQUEEZE is True, f"ENABLE_SQUEEZE changed: {main.ENABLE_SQUEEZE}"
     assert main.USE_LARGE_CAP_CRASH_CHECK is False, f"USE_LARGE_CAP_CRASH_CHECK changed: {main.USE_LARGE_CAP_CRASH_CHECK}"
     assert main.BASKET_MIN_SYMBOLS_PCT == 0.80, f"BASKET_MIN_SYMBOLS_PCT changed: {main.BASKET_MIN_SYMBOLS_PCT}"

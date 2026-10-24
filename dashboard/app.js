@@ -366,6 +366,66 @@ const TERMS = {
     short: "Hashtags (#breakout, #pullback, #plan_followed, #fomo) categorizing trade execution.",
     long: "Attached to /buy and /sell commands to track edge by setup type and diagnose psychological trading habits.",
     where_used: "Trade History Table, Stats Tab, Telegram Commands"
+  },
+  "Market Pulse": {
+    short: "Responsive real-time macro telemetry bar tracking index price, session close, live IST market hours, and universe breadth.",
+    long: "Replaces static loading text with live macro telemetry including NIFTY benchmark change, last EOD bar date, IST market operational hours status, and percentage of small-cap universe trading above 50 and 200 SMAs.",
+    where_used: "Top Header Bar, Help Guide",
+    anchor: "glossary-marketpulse"
+  },
+  "Market Summary": {
+    short: "Comprehensive diagnostic summary of index price action and market-wide participation metrics.",
+    long: "Provides institutional market context computed from daily index bars and small-cap constituent moving averages, including advancer/decliner count and moving average breadth.",
+    where_used: "Top Header Bar, Help Guide",
+    anchor: "glossary-marketpulse"
+  },
+  "Market Breadth": {
+    short: "Percentage of universe stocks trading above their 50-day and 200-day SMAs alongside advancers vs decliners.",
+    long: "Internal market participation indicator. High breadth (>70% above 50 SMA) signals widespread institutional buying support, while declining breadth warns of index divergence and distribution.",
+    where_used: "Market Pulse Row, Help Guide",
+    anchor: "glossary-breadth"
+  },
+  "Leaders Board": {
+    short: "Top 10 highest Relative Strength (RS 1-99) stocks that are also confirmed in Stage-2 uptrends.",
+    long: "Showcases institutional market leaders with the highest composite price momentum over 3, 6, 9, and 12 months that remain in Stage-2 uptrends (Close > SMA50 > SMA150 > SMA200).",
+    where_used: "Near Buy (Top Strip), Help Guide",
+    anchor: "glossary-leadersboard"
+  },
+  "On Deck": {
+    short: "Stage-2 setups passing Trend and Squeeze filters, within 5% of resistance, awaiting breakout or volume spike.",
+    long: "Diagnostic watchlist of near-miss setups positioned under resistance. They satisfy all Stage-2 trend and contraction criteria but have not yet fired a breakout close or 1.5x volume surge.",
+    where_used: "Near Buy (Below Watchlist), Help Guide",
+    anchor: "glossary-ondeck"
+  },
+  "Near Misses": {
+    short: "Synonym for On Deck candidates positioned under resistance awaiting volume or breakout confirmation.",
+    long: "High-quality Stage-2 candidates that fulfill Minervini trend and VCP filters but are waiting for either a price breakout or volume expansion to trigger an official buy signal.",
+    where_used: "Near Buy Tab, Help Guide",
+    anchor: "glossary-ondeck"
+  },
+  "RS Rating": {
+    short: "IBD-style 1 to 99 percentile score measuring price performance versus the entire market universe.",
+    long: "Ranks each stock's weighted return (40% 3M + 20% 6M + 20% 9M + 20% 12M) on a 1-99 percentile scale. Stocks rated RS 90+ are elite leaders; RS 80-89 are strong contenders.",
+    where_used: "Watchlist Table (RS Pill), Leaders Board, Help Guide",
+    anchor: "glossary-rsrating"
+  },
+  "Relative Strength": {
+    short: "Percentile ranking (1-99) of a stock's 1-year weighted performance compared to all other stocks.",
+    long: "Quantifies how strongly a stock is outperforming its peers. A rating of 95 means the stock has outperformed 95% of the universe over the past four quarters.",
+    where_used: "Watchlist (RS Pill), Leaders Board, Help Guide",
+    anchor: "glossary-rsrating"
+  },
+  "Base Maturity": {
+    short: "Stages of consolidation base development: Fresh (15-35 days), Mature (36-65 days), or Extended (>65 days).",
+    long: "Classifies how long a stock has been consolidating. Fresh and mature bases have the highest probability of sustained breakout follow-through; extended bases carry higher risk of late-stage failure.",
+    where_used: "Setup Details, Help Guide",
+    anchor: "glossary-basematurity"
+  },
+  "Days in Base": {
+    short: "Count of consecutive trading sessions the stock has spent consolidating within a 15% price band.",
+    long: "Measures the duration of the current contraction pattern. Institutional accumulation requires sufficient time (typically 3-10 weeks) to absorb overhead supply before initiating a markup.",
+    where_used: "Setup Details, Help Guide",
+    anchor: "glossary-daysinbase"
   }
 };
 
@@ -652,13 +712,340 @@ function renderTodaysPlan(scanData, openPositions) {
   `).join("");
 }
 
+// =====================================================================
+// SC-3: DIAGNOSTIC MARKET PULSE, LEADERS BOARD & ON DECK
+// =====================================================================
+
+function updateIstLiveChip() {
+  const istChip = document.getElementById("istLiveChip");
+  if (!istChip) return;
+
+  const now = new Date();
+  // Client UTC time to IST (UTC + 5:30)
+  const utcMs = now.getTime() + (now.getTimezoneOffset() * 60000);
+  const istDate = new Date(utcMs + (330 * 60000));
+  const day = istDate.getDay(); // 0 = Sun, 1 = Mon, ..., 6 = Sat
+  const hrs = istDate.getHours();
+  const mins = istDate.getMinutes();
+  const curMins = hrs * 60 + mins;
+  const openMins = 9 * 60 + 15;   // 9:15 AM
+  const closeMins = 15 * 60 + 30; // 3:30 PM (15:30)
+
+  const isWeekday = day >= 1 && day <= 5;
+  const isOpen = isWeekday && curMins >= openMins && curMins < closeMins;
+
+  if (isOpen) {
+    istChip.className = "pulse-chip live-chip open";
+    istChip.textContent = "🟢 MARKET OPEN 9:15-15:30 Mon-Fri";
+  } else {
+    istChip.className = "pulse-chip live-chip closed";
+    let nextDay = "Mon";
+    const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    if (day >= 1 && day <= 4) {
+      nextDay = curMins < openMins ? dayNames[day] : dayNames[day + 1];
+    } else if (day === 5) {
+      nextDay = curMins < openMins ? "Fri" : "Mon";
+    } else {
+      nextDay = "Mon";
+    }
+    istChip.textContent = `⚪ CLOSED - next open ${nextDay} 9:15`;
+  }
+}
+
+function renderMarketPulse(scanData) {
+  const marketBadge = document.getElementById("marketBadge");
+  const indexChip = document.getElementById("indexPriceChip");
+  const lastCloseChip = document.getElementById("lastCloseChip");
+  const breadthChip = document.getElementById("breadthChip");
+  const staleChip = document.getElementById("dataStaleChip");
+
+  // 1. Regime Badge
+  if (marketBadge) {
+    if (scanData && scanData.market_ok) {
+      marketBadge.className = "badge badge-success term-lookup";
+      marketBadge.setAttribute("data-term", "Market regime");
+      marketBadge.textContent = "Market: Uptrend";
+    } else if (scanData) {
+      marketBadge.className = "badge badge-danger term-lookup";
+      marketBadge.setAttribute("data-term", "Market regime");
+      marketBadge.textContent = "Market: Defensive";
+    } else {
+      marketBadge.className = "badge badge-neutral term-lookup";
+      marketBadge.setAttribute("data-term", "Market regime");
+      marketBadge.textContent = "Checking Market...";
+    }
+  }
+
+  const ms = scanData ? scanData.market_summary : null;
+
+  // 2. Index Price Chip ("<source> last ₹x (±y%)")
+  if (indexChip) {
+    if (ms && ms.last_close != null) {
+      const srcName = ms.source === "^NSEI" ? "NIFTY 50" : (ms.source || "NIFTY 50");
+      const sign = (ms.chg_pct >= 0) ? "+" : "";
+      const chgColor = (ms.chg_pct >= 0) ? "var(--success)" : "var(--danger)";
+      const formattedClose = Number(ms.last_close).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      indexChip.innerHTML = `${escapeHtml(srcName)} last ₹${formattedClose} (<span style="color: ${chgColor}; font-weight: 700;">${sign}${Number(ms.chg_pct).toFixed(2)}%</span>)`;
+    } else {
+      indexChip.textContent = "NIFTY 50 last --";
+    }
+  }
+
+  // 3. Last Close Chip ("Last close: <date> 3:30 PM IST")
+  if (lastCloseChip) {
+    if (ms && ms.last_bar_date) {
+      lastCloseChip.textContent = `Last close: ${ms.last_bar_date} 3:30 PM IST`;
+    } else if (scanData && scanData.updated_at) {
+      lastCloseChip.textContent = `Last close: ${scanData.updated_at.slice(0, 10)} 3:30 PM IST`;
+    } else {
+      lastCloseChip.textContent = "Last close: --";
+    }
+  }
+
+  // 4. Live IST Chip
+  updateIstLiveChip();
+
+  // 5. Breadth Line
+  if (breadthChip) {
+    if (ms && ms.breadth_above_sma50 != null) {
+      breadthChip.textContent = `Breadth: ${ms.breadth_above_sma50}% > SMA50 | ${ms.breadth_above_sma200}% > SMA200 (${ms.advancers} Adv / ${ms.decliners} Dec)`;
+    } else {
+      breadthChip.textContent = "Breadth: --";
+    }
+  }
+
+  // 6. Amber DATA STALE if as_of > 36h on a weekday
+  if (staleChip) {
+    let isStale = false;
+    const now = new Date();
+    const utcMs = now.getTime() + (now.getTimezoneOffset() * 60000);
+    const istDate = new Date(utcMs + (330 * 60000));
+    const day = istDate.getDay();
+    const isWeekday = day >= 1 && day <= 5;
+
+    if (isWeekday) {
+      let dataTime = null;
+      if (scanData && scanData.updated_at) {
+        dataTime = new Date(scanData.updated_at).getTime();
+      } else if (ms && ms.last_bar_date) {
+        dataTime = new Date(`${ms.last_bar_date}T15:30:00+05:30`).getTime();
+      }
+      if (dataTime && !isNaN(dataTime)) {
+        const diffHours = (now.getTime() - dataTime) / (1000 * 3600);
+        if (diffHours > 36) {
+          isStale = true;
+        }
+      }
+    }
+    staleChip.style.display = isStale ? "inline-flex" : "none";
+  }
+}
+
+function renderLeadersBoard(leaders) {
+  const countBadge = document.getElementById("leadersCountBadge");
+  const chipsRow = document.getElementById("leadersChipsRow");
+  if (!chipsRow) return;
+
+  const list = leaders || [];
+  if (countBadge) {
+    countBadge.textContent = `${list.length} Leader${list.length === 1 ? '' : 's'}`;
+  }
+
+  if (list.length === 0) {
+    chipsRow.innerHTML = `<span class="text-dim" style="font-size: 12px; padding: 4px 6px;">No Stage-2 leaders currently qualified.</span>`;
+    return;
+  }
+
+  chipsRow.innerHTML = list.map(item => {
+    const sym = escapeHtml(item.symbol || "");
+    const rs = item.rs_rating != null ? Math.round(Number(item.rs_rating)) : null;
+    let rsClass = "rs-pill-gray";
+    if (rs !== null && !isNaN(rs)) {
+      if (rs >= 90) rsClass = "rs-pill-green";
+      else if (rs >= 80) rsClass = "rs-pill-blue";
+    }
+    const rsText = rs !== null && !isNaN(rs) ? `RS ${rs}` : "RS n/a";
+    const priceText = item.close != null ? formatINR(item.close) : "";
+    const secText = item.sector ? escapeHtml(item.sector) : "";
+
+    return `
+      <div class="leader-chip term-lookup" data-term="Leaders Board" data-symbol="${sym}" title="Click to filter watchlist for ${sym}">
+        <span class="leader-chip-sym"><strong>${sym}</strong></span>
+        <span class="rs-pill ${rsClass}">${rsText}</span>
+        <span class="leader-chip-price">${priceText}</span>
+        ${secText ? `<span class="leader-chip-sector text-dim" style="font-size: 11px;">${secText}</span>` : ""}
+      </div>
+    `;
+  }).join("");
+
+  chipsRow.querySelectorAll(".leader-chip").forEach(chip => {
+    chip.addEventListener("click", () => {
+      const sym = chip.getAttribute("data-symbol");
+      const searchInput = document.getElementById("watchlistSearchInput");
+      if (searchInput && sym) {
+        searchInput.value = sym;
+        searchInput.dispatchEvent(new Event("input"));
+        document.getElementById("watchlistTable")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    });
+  });
+}
+
+function renderOnDeck(onDeckList) {
+  const countBadge = document.getElementById("onDeckCountBadge");
+  const grid = document.getElementById("onDeckCardsGrid");
+  if (!grid) return;
+
+  const list = onDeckList || [];
+  if (countBadge) {
+    countBadge.textContent = `${list.length} Setup${list.length === 1 ? '' : 's'}`;
+  }
+
+  if (list.length === 0) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column: 1 / -1; padding: 24px; text-align: center; color: var(--text-dim);">No near-miss candidates currently on deck. Candidates appear when satisfying Stage-2 Trend &amp; Squeeze criteria under resistance.</div>`;
+    return;
+  }
+
+  grid.innerHTML = list.map(item => {
+    const sym = escapeHtml(item.symbol || "");
+    const dist = item.dist_pct != null ? Number(item.dist_pct).toFixed(2) : "0.00";
+    const close = item.close != null ? formatINR(item.close) : "--";
+    const breakoutLevel = item.breakout_level != null ? formatINR(item.breakout_level) : "--";
+    const missing = escapeHtml(item.missing_condition || "TRIGGER");
+    const atr = item.atr14 != null ? `₹${Number(item.atr14).toFixed(2)}` : "--";
+    const rsi = item.rsi14 != null ? Number(item.rsi14).toFixed(1) : "--";
+
+    return `
+      <div class="on-deck-card" data-symbol="${sym}">
+        <div class="on-deck-card-header">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <strong class="on-deck-symbol">${sym}</strong>
+            <span class="badge badge-warning" style="font-size: 11px; font-weight: 700;">${dist}% to pivot</span>
+          </div>
+          <span class="badge badge-neutral" style="font-size: 11px;" title="Condition required to trigger buy signal">Awaiting: ${missing}</span>
+        </div>
+
+        <div class="on-deck-metrics" style="display: flex; align-items: center; justify-content: space-between; font-size: 12.5px; margin-top: 6px; flex-wrap: wrap; gap: 8px;">
+          <div><span class="text-dim">Close:</span> <strong>${close}</strong></div>
+          <div><span class="text-dim">Pivot:</span> <strong>${breakoutLevel}</strong></div>
+          <div><span class="badge badge-neutral" title="Average True Range (14)">ATR ${atr}</span></div>
+          <div><span class="badge badge-neutral" title="Relative Strength Index (14)">RSI ${rsi}</span></div>
+        </div>
+
+        <div style="display: flex; gap: 8px; margin-top: 10px;">
+          <button class="btn btn-secondary btn-sm on-deck-chart-btn" data-symbol="${sym}" data-breakout="${item.breakout_level || ''}" style="flex: 1; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
+            <span>📈 View 60-Bar Sparkline</span>
+          </button>
+          <button class="btn btn-outline-primary btn-sm on-deck-size-btn" data-symbol="${sym}" data-close="${item.close || ''}" data-atr="${item.atr14 || ''}" style="min-height: 44px; padding: 0 16px;">
+            <span>Size</span>
+          </button>
+        </div>
+
+        <div id="onDeckChartBox-${sym}" style="display: none; margin-top: 10px; background: rgba(0,0,0,0.25); border-radius: 8px; padding: 10px; border: 1px solid rgba(255,255,255,0.06);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <span style="font-size: 11px; font-weight: 600; color: #fff;">60-Bar Tightening Sparkline</span>
+            <span id="onDeckChartMeta-${sym}" style="font-size: 11px; color: var(--text-dim);">Loading candles...</span>
+          </div>
+          <canvas id="onDeckCanvas-${sym}" style="width: 100%; height: 180px; display: block;"></canvas>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  // Attach button events
+  grid.querySelectorAll(".on-deck-size-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const sym = btn.getAttribute("data-symbol");
+      const c = parseFloat(btn.getAttribute("data-close")) || 0;
+      const a = parseFloat(btn.getAttribute("data-atr")) || 0;
+      openPositionSizerFor({ Symbol: sym, Close: c, ATR14: a });
+    });
+  });
+
+  grid.querySelectorAll(".on-deck-chart-btn").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const sym = btn.getAttribute("data-symbol");
+      const breakoutLevel = parseFloat(btn.getAttribute("data-breakout")) || 0;
+      const box = document.getElementById(`onDeckChartBox-${sym}`);
+      const meta = document.getElementById(`onDeckChartMeta-${sym}`);
+      const canvas = document.getElementById(`onDeckCanvas-${sym}`);
+      if (!box || !canvas) return;
+
+      const isHidden = box.style.display === "none";
+      box.style.display = isHidden ? "block" : "none";
+      const spanText = btn.querySelector("span");
+      if (spanText) {
+        spanText.textContent = isHidden ? "📉 Hide Sparkline" : "📈 View 60-Bar Sparkline";
+      }
+
+      if (isHidden && !canvas._loaded) {
+        try {
+          if (meta) meta.textContent = "Fetching 60-bar candles...";
+          const chartData = await fetchChartData(sym);
+          if (!chartData || !chartData.chart || !chartData.chart.result || chartData.chart.result.length === 0) {
+            if (meta) meta.textContent = "Chart unavailable";
+            return;
+          }
+          const res = chartData.chart.result[0];
+          const timestamps = res.timestamp || [];
+          const quote = res.indicators?.quote?.[0] || {};
+          const candles = [];
+          for (let i = 0; i < timestamps.length; i++) {
+            const o = quote.open?.[i];
+            const h = quote.high?.[i];
+            const l = quote.low?.[i];
+            const c = quote.close?.[i];
+            const v = quote.volume?.[i] || 0;
+            if (o != null && h != null && l != null && c != null && !isNaN(c)) {
+              candles.push({ time: timestamps[i], open: o, high: h, low: l, close: c, volume: v });
+            }
+          }
+          const last60 = candles.slice(-60);
+          if (last60.length === 0) {
+            if (meta) meta.textContent = "No candle data";
+            return;
+          }
+          drawMiniChart(canvas, last60, breakoutLevel || last60[last60.length - 1].close, sym);
+          canvas._loaded = true;
+          if (meta) meta.textContent = `${last60.length} bars • Pivot: ₹${(breakoutLevel || 0).toFixed(2)}`;
+        } catch (err) {
+          if (meta) meta.textContent = "Error loading chart";
+        }
+      }
+    });
+  });
+}
+
+function initCollapsibleSections() {
+  const leadersBtn = document.getElementById("leadersToggleBtn");
+  const leadersContent = document.getElementById("leadersContent");
+  const leadersChevron = document.getElementById("leadersChevron");
+  if (leadersBtn && leadersContent) {
+    leadersBtn.addEventListener("click", () => {
+      const isExpanded = leadersBtn.getAttribute("aria-expanded") === "true";
+      leadersBtn.setAttribute("aria-expanded", !isExpanded);
+      leadersContent.style.display = isExpanded ? "none" : "block";
+      if (leadersChevron) leadersChevron.textContent = isExpanded ? "▶" : "▼";
+    });
+  }
+
+  const onDeckBtn = document.getElementById("onDeckToggleBtn");
+  const onDeckContent = document.getElementById("onDeckContent");
+  const onDeckChevron = document.getElementById("onDeckChevron");
+  if (onDeckBtn && onDeckContent) {
+    onDeckBtn.addEventListener("click", () => {
+      const isExpanded = onDeckBtn.getAttribute("aria-expanded") === "true";
+      onDeckBtn.setAttribute("aria-expanded", !isExpanded);
+      onDeckContent.style.display = isExpanded ? "none" : "block";
+      if (onDeckChevron) onDeckChevron.textContent = isExpanded ? "▶" : "▼";
+    });
+  }
+}
+
 // 1. Render Tab: Near Buy (Watchlist & Active Signals)
 function renderNearBuy(scanData, openPositions) {
-  const marketBadge = document.getElementById("marketBadge");
-  const regimeBanner = document.getElementById("regimeBanner");
-  const regimeText = document.getElementById("regimeText");
-  const scannedMeta = document.getElementById("scannedMeta");
-  const lastUpdated = document.getElementById("lastUpdatedText");
+  // Render Market Pulse row (SC-3 diagnostic telemetry)
+  renderMarketPulse(scanData);
 
   // Render Today's Plan box
   renderTodaysPlan(scanData, openPositions);
@@ -667,22 +1054,26 @@ function renderNearBuy(scanData, openPositions) {
     document.getElementById("watchlistBody").innerHTML = `
       <tr><td colspan="9" class="empty-state">No scan results found on GitHub repository.</td></tr>
     `;
+    renderLeadersBoard([]);
+    renderOnDeck([]);
     return;
   }
 
+  // Render Leaders Board (SC-3)
+  renderLeadersBoard(scanData.leaders_board || []);
+
+  const regimeBanner = document.getElementById("regimeBanner");
+  const regimeText = document.getElementById("regimeText");
+  const scannedMeta = document.getElementById("scannedMeta");
+  const lastUpdated = document.getElementById("lastUpdatedText");
+
   // Update header metadata
-  lastUpdated.textContent = `Updated: ${formatDateTime(scanData.updated_at)}`;
+  if (lastUpdated) lastUpdated.textContent = `Updated: ${formatDateTime(scanData.updated_at)}`;
 
   if (scanData.market_ok) {
-    marketBadge.className = "badge badge-success term-lookup";
-    marketBadge.setAttribute("data-term", "Market regime");
-    marketBadge.textContent = "Market: Uptrend";
     regimeBanner.className = "regime-banner uptrend";
     regimeText.textContent = "🟢 MARKET UPTREND CONFIRMED: Normal buy entry rules active.";
   } else {
-    marketBadge.className = "badge badge-danger term-lookup";
-    marketBadge.setAttribute("data-term", "Market regime");
-    marketBadge.textContent = "Market: Defensive";
     regimeBanner.className = "regime-banner defensive";
     regimeText.textContent = "🔴 MARKET FILTER ACTIVE: Index in pullback/downtrend. New entry signals blocked (O'Neil M-rule).";
   }
@@ -715,6 +1106,9 @@ function renderNearBuy(scanData, openPositions) {
   initWatchlistFilterListeners();
   renderSectorLeadership(watchlist);
   applyWatchlistFiltering(watchlist, scanData);
+
+  // Render On Deck candidates (SC-3)
+  renderOnDeck(scanData.on_deck || []);
 }
 
 // Module state for Watchlist Filter & Sort (Phase 1)
@@ -939,6 +1333,18 @@ function applyWatchlistFiltering(watchlist, scanData) {
     else if (grade === "C") gradeBadgeClass = "badge-danger";
     const gradeBadge = `<span class="badge ${gradeBadgeClass} term-lookup" data-term="Grade">${grade}</span>`;
 
+    const rawRs = item.rs_rating != null ? Number(item.rs_rating) : (item.RS_RATING != null ? Number(item.RS_RATING) : null);
+    let rsBadge = "";
+    if (rawRs !== null && !isNaN(rawRs)) {
+      const rsVal = Math.round(rawRs);
+      let rsClass = "rs-pill-gray";
+      if (rsVal >= 90) rsClass = "rs-pill-green";
+      else if (rsVal >= 80) rsClass = "rs-pill-blue";
+      rsBadge = `<span class="rs-pill ${rsClass} term-lookup" data-term="RS Rating" title="Relative Strength Rating: ${rsVal}/99">RS ${rsVal}</span>`;
+    } else {
+      rsBadge = `<span class="rs-pill rs-pill-gray term-lookup" data-term="RS Rating" title="Relative Strength Rating not available">RS n/a</span>`;
+    }
+
     return `
       <tr class="watchlist-row ${rowClass}" data-symbol="${item.Symbol}" title="Click to view 6-month chart & checklist">
         <td data-label="Symbol">
@@ -948,7 +1354,7 @@ function applyWatchlistFiltering(watchlist, scanData) {
           </div>
         </td>
         <td data-label="Score">${scoreBadge}</td>
-        <td data-label="Grade">${gradeBadge}</td>
+        <td data-label="Grade">${gradeBadge} ${rsBadge}</td>
         <td data-label="Close">${formatINR(item.Close)}</td>
         <td data-label="Dist to Breakout"><strong>${dist.toFixed(2)}%</strong> away</td>
         <td data-label="Coiling">${coilingBadge}</td>
@@ -3170,6 +3576,12 @@ document.addEventListener("DOMContentLoaded", () => {
   initScanArchiveListeners();
   initPostMortemListeners();
   initCsvExportListeners();
+
+  // Initialize SC-3 Collapsible Sections (Leaders Board & On Deck)
+  initCollapsibleSections();
+
+  // Keep IST Live chip ticking every 30 seconds
+  setInterval(updateIstLiveChip, 30000);
 
   // Initial load if on app page
   if (document.getElementById("watchlistTable")) {

@@ -53,12 +53,19 @@ def execute_full_scan_pipeline() -> Tuple[List[Dict[str, Any]], List[Dict[str, A
 
     # 4. Save scan_results.json
     now_str = datetime.datetime.now(main.IST_TZ).isoformat()
+    market_summary = main.compute_market_summary()
+    on_deck = main.get_on_deck_candidates()
+    leaders_board = main.get_leaders_board()
+
     scan_data = {
         "updated_at": now_str,
         "market_ok": is_mkt_ok,
         "signals": signals,
         "watchlist": watchlist,
         "scanned_count": scanned_count,
+        "market_summary": market_summary,
+        "on_deck": on_deck,
+        "leaders_board": leaders_board,
     }
     with open(main.SCAN_RESULTS_FILE, "w", encoding="utf-8") as f:
         json.dump(scan_data, f, indent=2, ensure_ascii=False)
@@ -89,7 +96,16 @@ def test_hermetic_scan_unmuted(tmp_cwd: Any, spy_posts: list, pin_ist_time: Any,
     with open(main.SCAN_RESULTS_FILE, "r", encoding="utf-8") as f:
         data = json.load(f)
 
-    assert set(data.keys()) == {"updated_at", "market_ok", "signals", "watchlist", "scanned_count"}
+    assert set(data.keys()) == {
+        "updated_at",
+        "market_ok",
+        "signals",
+        "watchlist",
+        "scanned_count",
+        "market_summary",
+        "on_deck",
+        "leaders_board",
+    }
     assert data["market_ok"] is True
     assert data["scanned_count"] == 2
 

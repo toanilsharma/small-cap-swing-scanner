@@ -25,11 +25,15 @@
         <span style="font-size: 22px;">📊</span>
         <div>
           <h1 class="header-title">Small Cap Swing Terminal</h1>
-          <div class="header-meta">
-            <span id="marketBadge" class="badge badge-neutral">Checking Market...</span>
-            <span class="meta-dot">•</span>
-            <span id="lastUpdatedText">Updated: Loading...</span>
+          <div id="marketPulseRow" class="market-pulse-row">
+            <span id="marketBadge" class="badge badge-neutral term-lookup" data-term="Market regime">Checking Market...</span>
+            <span id="indexPriceChip" class="pulse-chip index-chip">Index: Loading...</span>
+            <span id="lastCloseChip" class="pulse-chip date-chip">Last close: Loading...</span>
+            <span id="istLiveChip" class="pulse-chip live-chip">IST Status</span>
+            <span id="breadthChip" class="pulse-chip breadth-chip">Breadth: --</span>
+            <span id="dataStaleChip" class="pulse-chip stale-chip" style="display: none;">DATA STALE (&gt;36h)</span>
             <span id="cachedCopyChip" class="cached-copy-chip" style="display: none;">cached copy</span>
+            <span id="lastUpdatedText" style="display: none;">Updated: Loading...</span>
           </div>
         </div>
       </div>
@@ -146,6 +150,23 @@
         <button id="returnToLatestScanBtn" class="btn btn-xs btn-primary">Return to Latest (Live)</button>
       </div>
 
+      <!-- 🏆 LEADERS BOARD STRIP (Collapsible) -->
+      <div id="leadersBoardSection" class="leaders-strip-card">
+        <button id="leadersToggleBtn" class="leaders-toggle-btn" aria-expanded="true" title="Click to collapse/expand Leaders Board">
+          <div class="leaders-toggle-title">
+            <span style="font-size: 16px;">🏆</span>
+            <span class="leaders-title-text">Leaders Board (Top RS in Stage 2)</span>
+            <span id="leadersCountBadge" class="badge badge-success">0 Leaders</span>
+          </div>
+          <span id="leadersChevron" class="chevron">▼</span>
+        </button>
+        <div id="leadersContent" class="leaders-content-collapse" style="display: block;">
+          <div id="leadersChipsRow" class="leaders-chips-row">
+            <span class="text-dim" style="font-size: 12px;">Loading leaders...</span>
+          </div>
+        </div>
+      </div>
+
       <!-- WATCHLIST FILTER & SORT TOOLBAR (Item #1) -->
       <div class="watchlist-controls-card">
         <div class="watchlist-controls-top">
@@ -205,6 +226,26 @@
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <!-- 🎯 ON DECK (NEAR MISSES) (Collapsible) -->
+      <div id="onDeckSection" class="on-deck-section">
+        <button id="onDeckToggleBtn" class="on-deck-toggle-btn" aria-expanded="true" title="Click to collapse/expand On Deck Setups">
+          <div class="on-deck-toggle-title">
+            <span style="font-size: 18px;">🎯</span>
+            <span class="on-deck-title-text">On Deck (Near Misses)</span>
+            <span id="onDeckCountBadge" class="badge badge-warning">0 Setups</span>
+          </div>
+          <span id="onDeckChevron" class="chevron">▼</span>
+        </button>
+        <div id="onDeckContent" class="on-deck-content-collapse" style="display: block;">
+          <p class="on-deck-subtitle" style="font-size: 12px; color: var(--text-dim); margin-bottom: 14px;">
+            Stage-2 setups passing Trend &amp; Squeeze filters under resistance, awaiting final breakout trigger or institutional volume spike.
+          </p>
+          <div id="onDeckCardsGrid" class="on-deck-grid">
+            <div class="empty-state">Loading on-deck candidates...</div>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -1090,6 +1131,61 @@
                 <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Allows exceptional market leaders to turn into 3R, 4R, or 5R multi-week trend runners.</span></div>
                 <div class="glossary-section-row"><span class="glossary-label">main.py Threshold:</span><span class="glossary-threshold">Exit if daily Close &lt; EMA10 once past initial target</span></div>
                 <div class="glossary-section-row"><span class="glossary-label">Example:</span><span class="glossary-example">Stock runs from ₹500 to ₹650 without a single daily close under its rising 10 EMA line.</span></div>
+              </div>
+              <div class="glossary-card" id="glossary-marketpulse">
+                <div class="glossary-card-header"><span class="glossary-term">Market Pulse</span><span class="glossary-category">Regime & Breadth</span></div>
+                <p class="glossary-meaning">A real-time header row summarizing market regime, benchmark price change, market hours status, and universe breadth.</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Provides instant situational awareness before taking any trade. Warns if data is stale (&gt;36h on weekday).</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">main.py Threshold:</span><span class="glossary-threshold">market_summary dict {source, last_close, chg_pct, breadth, as_of_ist}</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Example:</span><span class="glossary-example">^NSEI last ₹24,850 (+0.45%), Market Open 9:15-15:30, Breadth 64% &gt; SMA50.</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-leadersboard">
+                <div class="glossary-card-header"><span class="glossary-term">Leaders Board</span><span class="glossary-category">Institutional Momentum</span></div>
+                <p class="glossary-meaning">The top 10 highest Relative Strength (RS) rated stocks that are currently confirmed in Stage 2 uptrend.</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Identifies market generals leading the index. These stocks provide the highest probability breakout candidates.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">main.py Threshold:</span><span class="glossary-threshold">leaders_board = up to 10 highest rs_rating with TREND_OK == True</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Example:</span><span class="glossary-example">TRENT (RS 98), DIXON (RS 95) displayed in the top leadership strip.</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-ondeck">
+                <div class="glossary-card-header"><span class="glossary-term">On Deck (Near Misses)</span><span class="glossary-category">Pre-Breakout Setup</span></div>
+                <p class="glossary-meaning">Candidates passing Stage 2 Trend, Coiling Squeeze, and Sector filters, but waiting on the final trigger.</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Alerts you to upcoming breakouts before they cross resistance so you can prepare position sizes early.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">main.py Threshold:</span><span class="glossary-threshold">TREND_OK &amp; SETUP_OK &amp; sector_ok, failing BREAKOUT or VOL_SPIKE; sorted by dist_pct asc</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Example:</span><span class="glossary-example">Stock 1.2% under resistance coiling tightly with missing VOL_SPIKE.</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-rsrating">
+                <div class="glossary-card-header"><span class="glossary-term">RS Rating (1-99)</span><span class="glossary-category">Relative Strength</span></div>
+                <p class="glossary-meaning">Blended percentile rating (1 to 99) comparing the stock's multi-quarter performance against the entire universe.</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Top performers (RS ≥90) drastically outperform lower rated stocks. Green pill indicates elite relative strength.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">main.py Threshold:</span><span class="glossary-threshold">0.4×ret63 + 0.2×ret126 + 0.2×ret189 + 0.2×ret252 percentile rank (1-99)</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Example:</span><span class="glossary-example">RS 94 means the stock outperformed 94% of all stocks in the universe over the past year.</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-basematurity">
+                <div class="glossary-card-header"><span class="glossary-term">Base Maturity (1-4)</span><span class="glossary-category">Base Formation</span></div>
+                <p class="glossary-meaning">Stages of successive volatility compression (1 to 4) within a consolidation pattern.</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Maturity 3 or 4 indicates late-stage coiled energy ready for immediate explosion.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">main.py Threshold:</span><span class="glossary-threshold">Successive step-downs of 10d rolling normalized high-low standard deviation</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Example:</span><span class="glossary-example">Base Maturity 3 confirms three distinct tightening contractions.</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-daysinbase">
+                <div class="glossary-card-header"><span class="glossary-term">Days in Base</span><span class="glossary-category">Consolidation Duration</span></div>
+                <p class="glossary-meaning">The count of consecutive sessions price has traded within the 20-day high/low base range.</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Bases between 10 and 45 days offer ideal balance between overhead supply absorption and timely momentum.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">main.py Threshold:</span><span class="glossary-threshold">Consecutive daily closes within 97% of LOW20 and 103% of HIGH20</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Example:</span><span class="glossary-example">24 days in base reflects nearly 5 calendar weeks of tight institutional absorption.</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-breadth">
+                <div class="glossary-card-header"><span class="glossary-term">Market Breadth</span><span class="glossary-category">Internal Health</span></div>
+                <p class="glossary-meaning">The percentage of universe stocks trading above their 50-day and 200-day moving averages.</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Broad participation confirms underlying market strength. Breadth divergences warn of trend exhaustion.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">main.py Threshold:</span><span class="glossary-threshold">breadth_above_sma50 and breadth_above_sma200 percentages</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Example:</span><span class="glossary-example">68% &gt; SMA50 signals healthy broad-based participation across sectors.</span></div>
               </div>
             </div>
           </article>

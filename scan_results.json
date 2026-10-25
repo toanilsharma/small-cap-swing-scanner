@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-10-24T07:23:25.982748+05:30",
+  "updated_at": "2026-10-25T14:00:16.722697+05:30",
   "market_ok": false,
   "signals": [],
   "watchlist": [
@@ -9,17 +9,165 @@
       "SectorBullish": "no",
       "Trend": "YES",
       "Coiling": "no",
-      "DistToBreakout%": -0.13,
-      "Close": 2223.0,
+      "DistToBreakout%": 0.28,
+      "Close": 2235.0,
       "VolDryup": "no",
       "RsiInRange": "no",
-      "RSI14": 65.2,
-      "ATR14": 50.86,
-      "score": 45,
+      "RSI14": 66.9,
+      "ATR14": 49.65,
+      "score": 44,
       "grade": "C",
-      "Score": 45,
-      "Grade": "C"
+      "Score": 44,
+      "Grade": "C",
+      "rs_rating": null,
+      "base_maturity": 2,
+      "days_in_base": 82,
+      "inst_footprint": "unknown",
+      "next_event": null,
+      "warn_event": false,
+      "mtf_confluence": true,
+      "thesis_card": "GRADE C | RS n/a | Base 2/4 (82d)\nTrend \u2713 / Setup Consolidating / Sector Neutral / MTF \u2713\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
     }
   ],
-  "scanned_count": 100
+  "scanned_count": 100,
+  "market_summary": {
+    "source": "^NSEI",
+    "last_close": 22600.0,
+    "prev_close": 22687.65,
+    "chg_pct": -0.39,
+    "last_bar_date": "2026-10-23",
+    "as_of_ist": "2026-10-25T14:00:16.824065+05:30",
+    "breadth_above_sma50": 9.0,
+    "breadth_above_sma200": 37.0,
+    "universe_size": 100,
+    "advancers": 8,
+    "decliners": 92,
+    "unchanged": 0
+  },
+  "on_deck": [],
+  "leaders_board": [
+    {
+      "symbol": "STLTECH.NS",
+      "rs_rating": 99,
+      "close": 826.65,
+      "sector": "^NSEI"
+    },
+    {
+      "symbol": "CUPID.NS",
+      "rs_rating": 98,
+      "close": 306.45,
+      "sector": "^NSEI"
+    },
+    {
+      "symbol": "HFCL.NS",
+      "rs_rating": 97,
+      "close": 240.07,
+      "sector": "^NSEI"
+    },
+    {
+      "symbol": "CHENNPETRO.NS",
+      "rs_rating": 91,
+      "close": 1475.6,
+      "sector": "^NSEI"
+    },
+    {
+      "symbol": "ANANDRATHI.NS",
+      "rs_rating": 81,
+      "close": 2235.0,
+      "sector": "^NSEI"
+    }
+  ],
+  "inst_summary": {
+    "accumulation_count": 0,
+    "churn_count": 0,
+    "unknown_count": 1,
+    "symbols_accumulating": []
+  },
+  "deals_stale": true,
+  "landmines": [],
+  "correlation": {
+    "pairs": [],
+    "betas": {},
+    "concentration_warning": false
+  },
+  "sector_rotation": {
+    "top_sectors": [
+      {
+        "sector": "^NSEI",
+        "n": 97,
+        "pct_above_sma50": 9.3,
+        "avg_ret_126d": 5.0,
+        "on_deck_count": 0,
+        "score": 6.15
+      },
+      {
+        "sector": "^NSEBANK",
+        "n": 2,
+        "pct_above_sma50": 0.0,
+        "avg_ret_126d": -3.1,
+        "on_deck_count": 0,
+        "score": -0.93
+      },
+      {
+        "sector": "^CNXREALTY",
+        "n": 1,
+        "pct_above_sma50": 0.0,
+        "avg_ret_126d": -7.9,
+        "on_deck_count": 0,
+        "score": -2.37
+      }
+    ],
+    "sector_map": {
+      "^NSEI": {
+        "sector": "^NSEI",
+        "n": 97,
+        "pct_above_sma50": 9.3,
+        "avg_ret_126d": 5.0,
+        "on_deck_count": 0,
+        "score": 6.15
+      },
+      "^NSEBANK": {
+        "sector": "^NSEBANK",
+        "n": 2,
+        "pct_above_sma50": 0.0,
+        "avg_ret_126d": -3.1,
+        "on_deck_count": 0,
+        "score": -0.93
+      },
+      "^CNXREALTY": {
+        "sector": "^CNXREALTY",
+        "n": 1,
+        "pct_above_sma50": 0.0,
+        "avg_ret_126d": -7.9,
+        "on_deck_count": 0,
+        "score": -2.37
+      }
+    },
+    "sectors": {
+      "^NSEI": {
+        "sector": "^NSEI",
+        "n": 97,
+        "pct_above_sma50": 9.3,
+        "avg_ret_126d": 5.0,
+        "on_deck_count": 0,
+        "score": 6.15
+      },
+      "^NSEBANK": {
+        "sector": "^NSEBANK",
+        "n": 2,
+        "pct_above_sma50": 0.0,
+        "avg_ret_126d": -3.1,
+        "on_deck_count": 0,
+        "score": -0.93
+      },
+      "^CNXREALTY": {
+        "sector": "^CNXREALTY",
+        "n": 1,
+        "pct_above_sma50": 0.0,
+        "avg_ret_126d": -7.9,
+        "on_deck_count": 0,
+        "score": -2.37
+      }
+    }
+  }
 }

@@ -16,6 +16,11 @@
   </script>
   <!-- Chart.js for smooth equity curve rendering -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <!-- KaTeX for rendering pure Math LaTeX -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="if (window.renderMathInElement) renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}], throwOnError: false});"></script>
 </head>
 <body>
   <!-- Header Bar -->
@@ -1045,6 +1050,7 @@
             <nav class="help-toc-nav">
               <a href="#help-start" class="help-toc-link active"><span>🚀</span> Start Here</a>
               <a href="#help-playbook" class="help-toc-link"><span>🛒</span> Trader's Playbook</a>
+              <a href="#help-rules-regulations" class="help-toc-link"><span>⚖️</span> Rules & Regulations (Pure LaTeX)</a>
               <a href="#help-architecture" class="help-toc-link"><span>⚙️</span> How It Works</a>
               <a href="#help-glossary" class="help-toc-link"><span>📚</span> Indicator Glossary</a>
               <a href="#help-rules" class="help-toc-link"><span>🎨</span> Rules in Pictures</a>
@@ -1248,7 +1254,9 @@
                     <div class="playbook-step-badge">Step 1</div>
                     <div class="playbook-step-title">Verify Signal</div>
                     <div class="playbook-step-desc">
-                      <code>verify Grade A/A+ &amp; dist&lt;1% &amp; no event&lt;=3d &amp; regime not Defensive unless exceptional;</code>
+                      <div class="latex-display">
+                        $$ \text{SignalValid} \iff \Big( \text{Grade} \in \{\text{A}, \text{A}^+\} \Big) \land \Big( |\text{dist}_{\text{pivot}}| < 0.01 \Big) \land \Big( \Delta t_{\text{event}} > 3\,\text{days} \Big) \land \Big( \text{Regime} \neq \text{Defensive} \lor \text{Exceptional} = \top \Big) $$
+                      </div>
                     </div>
                   </div>
                   <!-- Step 2 -->
@@ -1256,20 +1264,25 @@
                     <div class="playbook-step-badge">Step 2</div>
                     <div class="playbook-step-title">Size Position</div>
                     <div class="playbook-formula-box">
-                      <code>size=(CAPITAL*RISK_PCT)/(Entry-SL)</code>
+                      <div class="latex-display">
+                        $$ \text{Size} = \left\lfloor \frac{\text{Capital} \times \text{RiskPct}}{\text{Entry} - \text{SL}} \right\rfloor $$
+                      </div>
                       <button id="copyHelpFormulaBtn" class="btn btn-xs btn-outline-success copy-formula-btn" title="Copy sizing formula to clipboard">
                         📋 Copy Formula
                       </button>
                     </div>
                     <div class="playbook-worked-example">
-                      <strong>Worked Example (Repo Rules):</strong><br>
-                      <code>CAPITAL=200000, RISK 1%, ATR 2.5x, gap 20%</code><br>
-                      • Capital = ₹200,000 | 1% Risk Budget = ₹2,000<br>
-                      • Entry = ₹100.00 | ATR = ₹2.00 &rarr; SL = Entry - (2.5 &times; ATR) = ₹95.00<br>
-                      • Risk per share = Entry - SL = ₹5.00<br>
-                      • Raw Sizing = (200000 &times; 0.01) / 5 = <code>400 shares</code><br>
-                      • Gap 20% Cap Check: 400 &times; ₹100 = ₹40,000 (&le; 20% cap of ₹40,000 &#10003;)<br>
-                      • Target (+2R) = ₹110.00 (+₹4,000 profit / 2R)
+                      <div class="latex-display">
+                        $$ \begin{aligned}
+                        &\text{Parameters}: \quad \text{Capital} = ₹200{,}000, \quad \text{RiskPct} = 0.01 \, (1\%), \quad \text{ATRMult} = 2.5\times, \quad \text{WorstCaseGap} = 0.20 \, (20\%) \\
+                        &\text{Risk Budget}: \quad \mathcal{R}_{\text{budget}} = \text{Capital} \times \text{RiskPct} = ₹200{,}000 \times 0.01 = ₹2{,}000.00 \\
+                        &\text{Stop Loss}: \quad \text{Entry} = ₹100.00, \; \text{ATR}_{14} = ₹2.00 \implies \text{SL} = \text{Entry} - (2.5 \times \text{ATR}_{14}) = 100.00 - 5.00 = ₹95.00 \\
+                        &\text{Risk Per Unit}: \quad \Delta \mathcal{R} = \text{Entry} - \text{SL} = ₹100.00 - ₹95.00 = ₹5.00 \\
+                        &\text{Raw Position Size}: \quad \text{Size}_{\text{raw}} = \left\lfloor \frac{\mathcal{R}_{\text{budget}}}{\Delta \mathcal{R}} \right\rfloor = \left\lfloor \frac{₹2{,}000}{₹5.00} \right\rfloor = 400\,\text{shares} \\
+                        &\text{Gap Risk Check}: \quad \text{Exposure}_{\text{gap}} = 400 \times ₹100 \times 0.20 = ₹8{,}000 \le ₹5{,}000 \, (2.5\%) \implies \text{Size} = 400\,\text{shares} \\
+                        &\text{Profit Target (+2R)}: \quad \text{Target}_{+2\mathcal{R}} = \text{Entry} + (2 \times \Delta \mathcal{R}) = ₹100.00 + (2 \times ₹5.00) = ₹110.00 \quad (+₹4{,}000.00)
+                        \end{aligned} $$
+                      </div>
                     </div>
                   </div>
                   <!-- Step 3 -->
@@ -1277,7 +1290,12 @@
                     <div class="playbook-step-badge">Step 3</div>
                     <div class="playbook-step-title">Place GTT / Smart Order</div>
                     <div class="playbook-step-desc">
-                      <code>place GTT/Smart BUY at dashboard breakout level, Limit=Trigger+0.5%, validity GTC/7d, NEVER market order;</code>
+                      <div class="latex-display">
+                        $$ \begin{aligned}
+                        &P_{\text{trigger}} = P_{\text{pivot}}, \quad P_{\text{limit}} = P_{\text{trigger}} \times (1 + 0.005) \\
+                        &\text{Validity} = \text{GTC} \lor \tau \le 7\,\text{days}, \quad \text{OrderType} \neq \text{MARKET}
+                        \end{aligned} $$
+                      </div>
                     </div>
                   </div>
                   <!-- Step 4 -->
@@ -1285,7 +1303,13 @@
                     <div class="playbook-step-badge">Step 4</div>
                     <div class="playbook-step-title">Morning Routine Check</div>
                     <div class="playbook-step-desc">
-                      <code>morning check: gap-up&gt;2% above trigger =&gt; CANCEL, opens near trigger =&gt; let fill, else rests.</code>
+                      <div class="latex-display">
+                        $$ \text{OrderAction}(P_{\text{open}}) = \begin{cases}
+                        \text{CANCEL}, & \text{if } \dfrac{P_{\text{open}} - P_{\text{trigger}}}{P_{\text{trigger}}} > 0.02 \\[8pt]
+                        \text{LET\_FILL}, & \text{if } \left|\dfrac{P_{\text{open}} - P_{\text{trigger}}}{P_{\text{trigger}}}\right| \le 0.005 \\[8pt]
+                        \text{REST}, & \text{otherwise}
+                        \end{cases} $$
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1308,7 +1332,9 @@
                     <div class="scenario-badge scenario-a">Scenario A</div>
                     <div class="scenario-title">Stop-Hit Discipline</div>
                     <div class="scenario-desc">
-                      <code>A stop-hit (auto, log /sell, no revenge);</code>
+                      <div class="latex-display">
+                        $$ P_t \le \text{SL} \implies \text{AUTO\_EXIT}(\text{Qty}_{\text{pos}}) \land \text{LOG}(\text{/sell}) \land \text{REVENGE\_LOCK} = \top $$
+                      </div>
                     </div>
                   </div>
                   <!-- Scenario B -->
@@ -1316,7 +1342,9 @@
                     <div class="scenario-badge scenario-b">Scenario B</div>
                     <div class="scenario-title">+2R Profit Taking</div>
                     <div class="scenario-desc">
-                      <code>B +2R (sell 50%, SL-&gt;breakeven, trail rest 20-EMA close);</code>
+                      <div class="latex-display">
+                        $$ P_t \ge \text{Target}_{+2\mathcal{R}} \implies \text{SELL}\left(\left\lfloor \frac{\text{Qty}}{2} \right\rfloor\right) \land \text{SL}_t \gets \max(\text{SL}_{t-1}, \text{Entry}) \land \text{SL}_{\text{trail}} \gets \text{EMA}_{20}(t) $$
+                      </div>
                     </div>
                   </div>
                   <!-- Scenario C -->
@@ -1324,7 +1352,9 @@
                     <div class="scenario-badge scenario-c">Scenario C</div>
                     <div class="scenario-title">Time-Stop Rule</div>
                     <div class="scenario-desc">
-                      <code>C time-stop &gt;8d not in profit (exit at close);</code>
+                      <div class="latex-display">
+                        $$ (t - t_{\text{entry}} > 8\,\text{trading days}) \land (P_t \le \text{Entry}) \implies \text{EXIT\_AT\_CLOSE}(\text{Qty}_{\text{pos}}) $$
+                      </div>
                     </div>
                   </div>
                   <!-- Scenario D -->
@@ -1332,8 +1362,279 @@
                     <div class="scenario-badge scenario-d">Scenario D</div>
                     <div class="scenario-title">Event Warning Protection</div>
                     <div class="scenario-desc">
-                      <code>D event warning (close before event regardless of P&amp;L).</code>
+                      <div class="latex-display">
+                        $$ \Delta t_{\text{event}} \le 3\,\text{days} \implies \text{EXIT\_PRE\_EVENT}(\text{Qty}_{\text{pos}}, \forall P_t) $$
+                      </div>
                     </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <!-- SECTION 1B: RULES & REGULATIONS (PURE MATH LATEX ONLY) -->
+          <article id="help-rules-regulations" class="help-section">
+            <div class="help-section-header">
+              <h2 class="help-section-title"><span>⚖️</span> RULES &amp; REGULATIONS</h2>
+              <p class="help-section-subtitle">Formal mathematical specification of all 17 system rules, constraints, and execution invariants</p>
+            </div>
+
+            <div class="math-rules-grid">
+              <!-- Rule 1 -->
+              <div class="math-rule-card">
+                <div class="math-rule-header">
+                  <span class="math-rule-num">Rule 01</span>
+                  <span class="math-rule-title">Market Regime Filter (O'Neil M-Rule)</span>
+                </div>
+                <div class="math-rule-body">
+                  <div class="latex-display">
+                    $$ \text{Regime} = \begin{cases}
+                    \text{Confirmed Uptrend}, & \text{if } P_{\text{\textasciicircum NSEI}} > \text{SMA}_{50} > \text{SMA}_{200} \land \dfrac{d}{dt}\text{SMA}_{200} > 0 \\[6pt]
+                    \text{Uptrend Under Pressure}, & \text{if } P_{\text{\textasciicircum NSEI}} < \text{SMA}_{50} \land P_{\text{\textasciicircum NSEI}} > \text{SMA}_{200} \\[6pt]
+                    \text{Defensive / Cash}, & \text{if } P_{\text{\textasciicircum NSEI}} \le \text{SMA}_{200} \lor \text{DistributionDays}_{25d} \ge 5
+                    \end{cases} $$
+                    $$ \text{Regime} = \text{Defensive} \implies \text{Score}_{\max} \le 50 \land \text{NewBuysBlocked} = \top $$
+                  </div>
+                </div>
+              </div>
+
+              <!-- Rule 2 -->
+              <div class="math-rule-card">
+                <div class="math-rule-header">
+                  <span class="math-rule-num">Rule 02</span>
+                  <span class="math-rule-title">Minimum Liquidity &amp; Sizing Capacity</span>
+                </div>
+                <div class="math-rule-body">
+                  <div class="latex-display">
+                    $$ \text{ADV}_{20} = \frac{1}{20} \sum_{i=0}^{19} \big( P_{t-i} \times V_{t-i} \big) \ge ₹50{,}000{,}000 \quad (₹5\text{ Cr}) $$
+                    $$ \text{PositionValue} = \text{Entry} \times \text{Qty} \le \text{ADV}_{20} \times 0.01 \quad (1\%\text{ ADV Capacity Limit}) $$
+                  </div>
+                </div>
+              </div>
+
+              <!-- Rule 3 -->
+              <div class="math-rule-card">
+                <div class="math-rule-header">
+                  <span class="math-rule-num">Rule 03</span>
+                  <span class="math-rule-title">Small-Cap Universe Basket &amp; Drawdown Guard</span>
+                </div>
+                <div class="math-rule-body">
+                  <div class="latex-display">
+                    $$ \mathcal{U}_{\text{valid}} \iff \frac{|\mathcal{S}_{\text{active}}|}{|\mathcal{S}_{\text{basket}}|} \ge 0.80 \quad (80\%\text{ Minimum Active Constituents}) $$
+                    $$ \text{DD}_{\text{basket}}(t) = \frac{\text{BasketClose}_t - \max_{\tau \le t} \text{BasketClose}_\tau}{\max_{\tau \le t} \text{BasketClose}_\tau} \ge -0.07 \quad (\text{Ceiling } -7\%) $$
+                  </div>
+                </div>
+              </div>
+
+              <!-- Rule 4 -->
+              <div class="math-rule-card">
+                <div class="math-rule-header">
+                  <span class="math-rule-num">Rule 04</span>
+                  <span class="math-rule-title">Stage-2 Structural Trend Template</span>
+                </div>
+                <div class="math-rule-body">
+                  <div class="latex-display">
+                    $$ \begin{aligned}
+                    &1.\; P_t > \text{SMA}_{50}(t) > \text{SMA}_{150}(t) > \text{SMA}_{200}(t) \\
+                    &2.\; \text{SMA}_{200}(t) > \text{SMA}_{200}(t - 50\,\text{days}) \quad (\text{Ascending for } \ge 1\,\text{month}) \\
+                    &3.\; P_t \ge 1.30 \times \min_{i \in [0, 252]} P_{t-i} \quad (\ge +30\%\text{ above 52-week low}) \\
+                    &4.\; P_t \ge 0.75 \times \max_{i \in [0, 252]} P_{t-i} \quad (\le 25\%\text{ below 52-week high})
+                    \end{aligned} $$
+                  </div>
+                </div>
+              </div>
+
+              <!-- Rule 5 -->
+              <div class="math-rule-card">
+                <div class="math-rule-header">
+                  <span class="math-rule-num">Rule 05</span>
+                  <span class="math-rule-title">Volatility Contraction Pattern (VCP / Squeeze)</span>
+                </div>
+                <div class="math-rule-body">
+                  <div class="latex-display">
+                    $$ \text{SqueezeValid} \iff \text{BB}_{\text{width}}(20, 2.0) \le \text{KC}_{\text{width}}(20, 1.5) \iff 2 \times 2.0 \times \sigma_{20} \le 2 \times 1.5 \times \text{ATR}_{20} $$
+                    $$ \Delta \text{Range}_{10d} = \frac{\max_{i \in [0, 10]} P_{t-i} - \min_{i \in [0, 10]} P_{t-i}}{\min_{i \in [0, 10]} P_{t-i}} \le 0.12 \quad (12\%\text{ Maximum 10-day Base Tightness}) $$
+                  </div>
+                </div>
+              </div>
+
+              <!-- Rule 6 -->
+              <div class="math-rule-card">
+                <div class="math-rule-header">
+                  <span class="math-rule-num">Rule 06</span>
+                  <span class="math-rule-title">Resistance Pivot &amp; Proximity Threshold</span>
+                </div>
+                <div class="math-rule-body">
+                  <div class="latex-display">
+                    $$ P_{\text{pivot}} = \max_{i \in [1, 20]} \text{High}_{t-i} $$
+                    $$ \text{dist}_{\text{pivot}}(P_t) = \frac{P_t - P_{\text{pivot}}}{P_{\text{pivot}}} \in [-0.01, +0.005] \quad (\text{Within } 1\%\text{ of 20-day high}) $$
+                  </div>
+                </div>
+              </div>
+
+              <!-- Rule 7 -->
+              <div class="math-rule-card">
+                <div class="math-rule-header">
+                  <span class="math-rule-num">Rule 07</span>
+                  <span class="math-rule-title">Breakout Volume Expansion Gate</span>
+                </div>
+                <div class="math-rule-body">
+                  <div class="latex-display">
+                    $$ V_{\text{breakout}} \ge 2.0 \times \overline{V}_{50} \quad \text{where} \quad \overline{V}_{50} = \frac{1}{50} \sum_{i=1}^{50} V_{t-i} $$
+                    $$ \text{CloseLocationValue} = \frac{P_{\text{close}} - P_{\text{low}}}{P_{\text{high}} - P_{\text{low}}} \ge 0.60 \quad (\text{Top } 40\%\text{ of daily candle range}) $$
+                  </div>
+                </div>
+              </div>
+
+              <!-- Rule 8 -->
+              <div class="math-rule-card">
+                <div class="math-rule-header">
+                  <span class="math-rule-num">Rule 08</span>
+                  <span class="math-rule-title">Fixed Fractional Sizing &amp; Capital Allocation</span>
+                </div>
+                <div class="math-rule-body">
+                  <div class="latex-display">
+                    $$ \text{Size}_{\text{raw}} = \left\lfloor \frac{\text{Capital} \times \text{RiskPct}}{\text{Entry} - \text{SL}} \right\rfloor = \left\lfloor \frac{200{,}000 \times 0.01}{\text{Entry} - \text{SL}} \right\rfloor = \left\lfloor \frac{2{,}000}{\Delta \mathcal{R}} \right\rfloor $$
+                    $$ \text{Size}_{\text{gap\_cap}} = \left\lfloor \frac{\text{Capital} \times \text{MaxGapLossPct}}{\text{Entry} \times \text{WorstCaseGapPct}} \right\rfloor = \left\lfloor \frac{200{,}000 \times 0.025}{\text{Entry} \times 0.20} \right\rfloor = \left\lfloor \frac{5{,}000}{0.20 \times \text{Entry}} \right\rfloor $$
+                    $$ \text{FinalPositionSize} = \min\left(\text{Size}_{\text{raw}}, \; \text{Size}_{\text{gap\_cap}}, \; \left\lfloor \frac{0.01 \times \text{ADV}_{20}}{\text{Entry}} \right\rfloor\right) $$
+                  </div>
+                </div>
+              </div>
+
+              <!-- Rule 9 -->
+              <div class="math-rule-card">
+                <div class="math-rule-header">
+                  <span class="math-rule-num">Rule 09</span>
+                  <span class="math-rule-title">Volatility-Based Stop-Loss &amp; Risk Ceiling</span>
+                </div>
+                <div class="math-rule-body">
+                  <div class="latex-display">
+                    $$ \text{SL}_{\text{raw}} = \text{Entry} - (2.5 \times \text{ATR}_{14}) $$
+                    $$ \text{SL}_{\text{effective}} = \max\Big( \text{SL}_{\text{raw}}, \; \text{Entry} \times (1 - \text{MaxStopLossPct}) \Big) = \max\Big( \text{SL}_{\text{raw}}, \; \text{Entry} \times 0.91 \Big) $$
+                    $$ \text{CeilingConstraint}: \quad \frac{\text{Entry} - \text{SL}_{\text{effective}}}{\text{Entry}} \le 0.09 \quad (\text{Strict } 9\%\text{ Stop Loss Ceiling}) $$
+                  </div>
+                </div>
+              </div>
+
+              <!-- Rule 10 -->
+              <div class="math-rule-card">
+                <div class="math-rule-header">
+                  <span class="math-rule-num">Rule 10</span>
+                  <span class="math-rule-title">GTT Order Execution &amp; Slippage Buffer</span>
+                </div>
+                <div class="math-rule-body">
+                  <div class="latex-display">
+                    $$ P_{\text{trigger}} = P_{\text{pivot}} $$
+                    $$ P_{\text{limit}} = P_{\text{trigger}} \times (1 + \delta_{\text{slippage}}) = P_{\text{trigger}} \times (1 + 0.005) \quad (+0.5\%\text{ Slippage Buffer}) $$
+                    $$ T_{\text{validity}} \in \{\text{GTC}, \; 7\,\text{days}\}, \quad \text{OrderType} \neq \text{MARKET} $$
+                  </div>
+                </div>
+              </div>
+
+              <!-- Rule 11 -->
+              <div class="math-rule-card">
+                <div class="math-rule-header">
+                  <span class="math-rule-num">Rule 11</span>
+                  <span class="math-rule-title">Asymmetric $+2\mathcal{R}$ Profit Taking &amp; Breakeven Ratchet</span>
+                </div>
+                <div class="math-rule-body">
+                  <div class="latex-display">
+                    $$ \text{Target}_{+2\mathcal{R}} = \text{Entry} + 2.0 \times (\text{Entry} - \text{SL}_{\text{initial}}) $$
+                    $$ P_t \ge \text{Target}_{+2\mathcal{R}} \implies \text{SELL}\left(\left\lfloor \frac{\text{Qty}}{2} \right\rfloor\right) \land \text{SL}_t \gets \max(\text{SL}_{t-1}, \text{Entry}) $$
+                    $$ \text{BreakevenRatchet}: \quad \frac{P_t - \text{Entry}}{\text{Entry}} \ge +0.08 \implies \text{SL}_t \gets \max(\text{SL}_{t-1}, \text{Entry}) $$
+                  </div>
+                </div>
+              </div>
+
+              <!-- Rule 12 -->
+              <div class="math-rule-card">
+                <div class="math-rule-header">
+                  <span class="math-rule-num">Rule 12</span>
+                  <span class="math-rule-title">20-Day EMA Trailing Runner Protocol</span>
+                </div>
+                <div class="math-rule-body">
+                  <div class="latex-display">
+                    $$ \text{For remainder runner shares } \left(\left\lceil \frac{\text{Qty}}{2} \right\rceil\right): $$
+                    $$ \text{TrailExitSignal}(t) \iff P_{\text{close}}(t) < \text{EMA}_{20}(t) \implies \text{EXIT\_RUNNER\_AT\_CLOSE} $$
+                  </div>
+                </div>
+              </div>
+
+              <!-- Rule 13 -->
+              <div class="math-rule-card">
+                <div class="math-rule-header">
+                  <span class="math-rule-num">Rule 13</span>
+                  <span class="math-rule-title">8-Day Dead-Money Time Stop</span>
+                </div>
+                <div class="math-rule-body">
+                  <div class="latex-display">
+                    $$ \Delta \tau_{\text{held}} = t - t_{\text{entry}} \quad (\text{Trading Days}) $$
+                    $$ \text{TimeStopTrigger} \iff \Big( \Delta \tau_{\text{held}} > 8 \Big) \land \Big( P_{\text{close}}(t) \le \text{Entry} \Big) \implies \text{EXIT\_POSITION\_AT\_CLOSE} $$
+                  </div>
+                </div>
+              </div>
+
+              <!-- Rule 14 -->
+              <div class="math-rule-card">
+                <div class="math-rule-header">
+                  <span class="math-rule-num">Rule 14</span>
+                  <span class="math-rule-title">Corporate Landmines &amp; Earnings Lockout</span>
+                </div>
+                <div class="math-rule-body">
+                  <div class="latex-display">
+                    $$ \Delta t_{\text{event}} = \text{Date}_{\text{event}} - t_{\text{today}} \quad (\text{Calendar Days}) $$
+                    $$ \text{New Entry Gate}: \quad \Delta t_{\text{event}} \le 5\,\text{days} \implies \text{BUY\_GATE} = \text{BLOCKED} $$
+                    $$ \text{Open Position Gate}: \quad \Delta t_{\text{event}} \le 3\,\text{days} \implies \text{WARNING} = \text{ACTIVE} \land \text{EXIT\_PRE\_EVENT} $$
+                  </div>
+                </div>
+              </div>
+
+              <!-- Rule 15 -->
+              <div class="math-rule-card">
+                <div class="math-rule-header">
+                  <span class="math-rule-num">Rule 15</span>
+                  <span class="math-rule-title">Portfolio Heat Gauge &amp; Maximum Aggregate Risk</span>
+                </div>
+                <div class="math-rule-body">
+                  <div class="latex-display">
+                    $$ \text{TotalPortfolioHeat} = \sum_{k=1}^{N_{\text{open}}} \Big( (\text{Entry}_k - \text{SL}_k) \times \text{Qty}_k \Big) \le \text{Capital} \times 0.05 \quad (₹10{,}000) $$
+                    $$ N_{\text{smallcap\_open}} \le 3 \quad (\text{Max 3 Concurrent Small-Cap Positions}) $$
+                    $$ \text{MeterStatus}(\text{Heat}) = \begin{cases}
+                    \text{GREEN (Optimal)}, & \text{if } \text{Heat} \le 0.60 \times \text{Heat}_{\max} \quad (\le ₹6{,}000) \\[4pt]
+                    \text{AMBER (Caution)}, & \text{if } 0.60 < \dfrac{\text{Heat}}{\text{Heat}_{\max}} \le 0.90 \quad (₹6{,}000 - ₹9{,}000) \\[4pt]
+                    \text{RED (Locked)}, & \text{if } \text{Heat} > 0.90 \times \text{Heat}_{\max} \quad (> ₹9{,}000)
+                    \end{cases} $$
+                  </div>
+                </div>
+              </div>
+
+              <!-- Rule 16 -->
+              <div class="math-rule-card">
+                <div class="math-rule-header">
+                  <span class="math-rule-num">Rule 16</span>
+                  <span class="math-rule-title">Daily &amp; Monthly Account Circuit Breakers</span>
+                </div>
+                <div class="math-rule-body">
+                  <div class="latex-display">
+                    $$ \Delta \text{PnL}_{\text{daily}}(t) \le -0.02 \times \text{Capital} \quad (-₹4{,}000) \implies \text{HALT\_TRADING\_TODAY} $$
+                    $$ \Delta \text{PnL}_{\text{monthly}}(m) \le -0.06 \times \text{Capital} \quad (-₹12{,}000) \implies \text{HALT\_TRADING\_MONTH} $$
+                    $$ N_{\text{trades\_per\_day}} \le 2 \quad (\text{Maximum 2 Executions Per Session}) $$
+                  </div>
+                </div>
+              </div>
+
+              <!-- Rule 17 -->
+              <div class="math-rule-card">
+                <div class="math-rule-header">
+                  <span class="math-rule-num">Rule 17</span>
+                  <span class="math-rule-title">Relative Strength Momentum Percentile &amp; RS Slope</span>
+                </div>
+                <div class="math-rule-body">
+                  <div class="latex-display">
+                    $$ \text{RS}_{\text{score}} = 0.40 \times \text{Ret}_{63d} + 0.20 \times \text{Ret}_{126d} + 0.20 \times \text{Ret}_{189d} + 0.20 \times \text{Ret}_{252d} $$
+                    $$ \text{RS}_{\text{percentile}} = \text{PercentileRank}\big(\text{RS}_{\text{score}}, \; \mathcal{U}_{\text{smallcap}}\big) \ge 70 \quad (\text{Rank} \in [1, 99]) $$
+                    $$ \text{RS}_{\text{slope}} = \frac{d}{dt}\left(\frac{P_{\text{stock}}}{P_{\text{\textasciicircum NSEI}}}\right)_{\text{4-weeks}} > 0 \quad (\text{Positive Relative Momentum Slope}) $$
+                    $$ \text{MomentumRank} \in [1, 20] \quad (\text{Top 20 Universe Momentum Filter}) $$
                   </div>
                 </div>
               </div>

@@ -4386,6 +4386,37 @@ function initHelpCenter() {
       }
     }, { passive: true });
   }
+
+  // 5. KaTeX Math rendering in Help Center
+  renderHelpMath();
+}
+
+function renderHelpMath() {
+  function tryRender() {
+    if (typeof renderMathInElement === "function") {
+      const helpContainer = document.getElementById("tabHelp");
+      if (helpContainer) {
+        try {
+          renderMathInElement(helpContainer, {
+            delimiters: [
+              { left: "$$", right: "$$", display: true },
+              { left: "$", right: "$", display: false },
+              { left: "\\(", right: "\\)", display: false },
+              { left: "\\[", right: "\\]", display: true }
+            ],
+            throwOnError: false
+          });
+        } catch (err) {
+          console.warn("KaTeX rendering error:", err);
+        }
+      }
+    }
+  }
+
+  tryRender();
+  if (typeof renderMathInElement !== "function") {
+    window.addEventListener("load", tryRender, { once: true });
+  }
 }
 
 // =====================================================================
@@ -4704,6 +4735,9 @@ document.addEventListener("DOMContentLoaded", () => {
       const targetContent = document.getElementById(targetTabId);
       if (targetContent) {
         targetContent.classList.add("active");
+      }
+      if (targetTabId === "tabHelp") {
+        renderHelpMath();
       }
     });
   });

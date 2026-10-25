@@ -56,8 +56,10 @@ jobs:
 
       - name: Commit and push state
         run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
           staged=0
-          for f in trades.json open_positions.json alert_settings.json tg_offset.txt scan_results.json deals.json events.json; do
+          for f in scan_results.json trades.json open_positions.json alert_settings.json tg_offset.txt deals.json events.json; do
             if [ -f "$f" ]; then git add "$f" && staged=1; fi
           done
           if [ "$staged" -eq 0 ]; then echo "No state files present to stage; nothing to commit."; exit 0; fi

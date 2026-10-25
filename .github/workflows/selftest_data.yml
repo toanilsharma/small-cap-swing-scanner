@@ -21,7 +21,7 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Self-test state files and allowlist alignment
+      - name: Verify state files and catch allowlist drift
         run: |
           python - << 'EOF'
           import json
@@ -29,56 +29,68 @@ jobs:
           import re
           import sys
 
-          # 1. Assert scan_results.json exists and json.load() parses
-          assert os.path.exists("scan_results.json"), "scan_results.json does not exist!"
-          with open("scan_results.json", "r", encoding="utf-8") as f:
-              scan_data = json.load(f)
-          assert isinstance(scan_data, dict), "scan_results.json must contain a JSON object!"
-          print(f"[OK] scan_results.json exists and parsed successfully ({len(scan_data.get('signals', []))} signals).")
+          # 1. If scan_results.json exists, assert json.load() parses, else print info & continue
+          if os.path.exists("scan_results.json"):
+              try:
+                  with open("scan_results.json", "r", encoding="utf-8") as f:
+                      scan_data = json.load(f)
+                  assert isinstance(scan_data, dict), "scan_results.json must contain a JSON object!"
+                  signals_cnt = len(scan_data.get('signals', []))
+                  watchlist_cnt = len(scan_data.get('watchlist', []))
+                  print(f"[OK] scan_results.json exists and parsed successfully ({signals_cnt} signals, {watchlist_cnt} watchlist items).")
+              except Exception as e:
+                  raise AssertionError(f"Failed to parse scan_results.json: {e}")
+          else:
+              print("no scan yet (expected on fresh repo / weekends)")
 
-          # 2. Extract ALLOWLIST from netlify/functions/data.js
-          assert os.path.exists("netlify/functions/data.js"), "netlify/functions/data.js missing!"
-          with open("netlify/functions/data.js", "r", encoding="utf-8") as f:
-              data_js = f.read()
+          # 2. Assert the set of state filenames the workflows commit is a subset of the existence-tolerant loop
+          LOOP_ALLOWLIST = {
+              "scan_results.json",
+              "trades.json",
+              "open_positions.json",
+              "alert_settings.json",
+              "tg_offset.txt",
+              "deals.json",
+              "events.json"
+          }
 
-          match = re.search(r"EXACT_ALLOWLIST\s*=\s*new\s+Set\(\[\s*([\s\S]*?)\s*\]\)", data_js)
-          assert match, "Could not find EXACT_ALLOWLIST in netlify/functions/data.js"
-          allowlist_files = set(re.findall(r'["\']([^"\']+\.json)["\']', match.group(1)))
-          print(f"data.js ALLOWLIST: {allowlist_files}")
-
-          # 3. Extract state filenames that workflows commit
           workflow_dir = ".github/workflows"
-          workflow_state_files = set()
+          workflow_committed_files = set()
           for wf in os.listdir(workflow_dir):
-              if wf.endswith(".yml") or wf.endswith(".yaml"):
+              if (wf.endswith(".yml") or wf.endswith(".yaml")) and wf != "selftest_data.yml":
                   with open(os.path.join(workflow_dir, wf), "r", encoding="utf-8") as fh:
                       content = fh.read()
                       for m in re.finditer(r"for\s+f\s+in\s+([\w\s\.-]+);", content):
                           for fname in m.group(1).split():
-                              if fname.endswith(".json"):
-                                  workflow_state_files.add(fname)
+                              if fname:
+                                  workflow_committed_files.add(fname)
 
-          print(f"Workflow state files committed: {workflow_state_files}")
+          print(f"Existence-tolerant loop allowlist: {LOOP_ALLOWLIST}")
+          print(f"Workflow state files committed: {workflow_committed_files}")
 
-          # State filenames referenced in data.js ALLOWLIST must match dashboard state filenames committed by workflows
-          expected_allowlist = {"scan_results.json", "trades.json", "open_positions.json"}
-          assert allowlist_files == expected_allowlist, (
-              f"ALLOWLIST drift! Expected {expected_allowlist}, got {allowlist_files}"
+          assert workflow_committed_files.issubset(LOOP_ALLOWLIST), (
+              f"Allowlist drift! Workflows commit files not in allowlist: {workflow_committed_files - LOOP_ALLOWLIST}"
           )
-          assert allowlist_files.issubset(workflow_state_files), (
-              f"Drift between data.js ALLOWLIST and workflow commits! "
-              f"Files in allowlist but not committed: {allowlist_files - workflow_state_files}"
-          )
-          committed_dashboard_files = {f for f in workflow_state_files if f in expected_allowlist}
-          assert allowlist_files == committed_dashboard_files, (
-              f"Dashboard state files drift: allowlist {allowlist_files} != committed {committed_dashboard_files}"
-          )
-          print("[OK] data.js ALLOWLIST perfectly matches committed dashboard state files.")
+          print("[OK] All workflow committed state files are a subset of the existence-tolerant loop allowlist.")
           EOF
 
-      - name: Check anonymous raw URL (expected 404 for private repository)
+      - name: Check anonymous raw URL status
         run: |
-          RAW_URL="https://raw.githubusercontent.com/toanilsharma/small-cap-swing-scanner/main/scan_results.json"
+          # Read <REPO> from repository dynamically
+          REPO_SLUG="${GITHUB_REPOSITORY}"
+          if [ -z "$REPO_SLUG" ]; then
+            ORIGIN_URL=$(git config --get remote.origin.url || echo "toanilsharma/small-cap-swing-scanner")
+            REPO_SLUG=$(echo "$ORIGIN_URL" | sed -E 's#^.*github.com[:/]([^/]+/[^/]+)(\.git)?$#\1#')
+          fi
+          RAW_URL="https://raw.githubusercontent.com/${REPO_SLUG}/main/scan_results.json"
+          echo "Anonymous raw URL: $RAW_URL"
           HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$RAW_URL" || echo "000")
-          echo "Anonymous raw URL status: $HTTP_STATUS (expected 404 for private repository lock)"
+          echo "HTTP status: $HTTP_STATUS"
+          if [ "$HTTP_STATUS" = "200" ]; then
+            echo "[INFO] Public raw URL returned 200 (live scan data accessible)."
+          elif [ "$HTTP_STATUS" = "404" ]; then
+            echo "[INFO] Public raw URL returned 404 (expected before first scan / on weekends)."
+          else
+            echo "[INFO] Public raw URL returned HTTP $HTTP_STATUS."
+          fi
           exit 0

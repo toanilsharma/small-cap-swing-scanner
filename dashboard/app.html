@@ -61,6 +61,7 @@
       <button class="tab-btn" data-tab="tabOpen">💼 Open Positions (<span id="openCountBadge">0</span>)</button>
       <button class="tab-btn" data-tab="tabHistory">📜 Trade History</button>
       <button class="tab-btn" data-tab="tabStats">📈 Performance Stats</button>
+      <button class="tab-btn" data-tab="tabBacktest">🧪 Backtest</button>
       <button class="tab-btn" data-tab="tabHelp" id="helpTabBtn">📖 Help & Guide</button>
     </div>
   </nav>
@@ -568,6 +569,186 @@
             <div id="statsMistakesContent" class="stats-insight-body">
               <div class="empty-state-sm">No mistake records yet</div>
             </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: RULES-REPLAY BACKTEST (SC-5) -->
+    <section id="tabBacktest" class="tab-content">
+      <div class="tab-guide-banner">
+        <div class="tab-guide-content">
+          <span class="tab-guide-icon">🧪</span>
+          <span class="tab-guide-text">Rules-Replay Backtest: Replays the exact live production rules (indicators, gap-aware sizing, 2R partial, and 20-EMA trail) across archived OHLCV daily bars.</span>
+        </div>
+      </div>
+
+      <!-- Controls & Header Bar -->
+      <div class="backtest-header-bar">
+        <div>
+          <h2 style="font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 4px;">🧪 Rules-Replay Backtest Engine</h2>
+          <span id="backtestPeriodLabel" style="font-size: 12px; color: var(--text-dim);">Period: Loading...</span>
+        </div>
+        <div class="backtest-date-controls">
+          <div class="bt-input-group">
+            <label for="btStartInput">Start:</label>
+            <input type="date" id="btStartInput" class="bt-date-input" value="2024-01-01">
+          </div>
+          <div class="bt-input-group">
+            <label for="btEndInput">End:</label>
+            <input type="date" id="btEndInput" class="bt-date-input">
+          </div>
+          <button id="btFilterBtn" class="btn btn-sm btn-primary">Filter Period</button>
+        </div>
+      </div>
+
+      <!-- Empty Archive State (Hidden when data present) -->
+      <div id="btEmptyState" class="empty-state" style="display: none; padding: 40px 20px; text-align: center; margin-bottom: 24px;">
+        <span style="font-size: 32px; display: block; margin-bottom: 8px;">📂</span>
+        <h3 style="font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 6px;">No Archive Data Available Yet</h3>
+        <p style="font-size: 13px; color: var(--text-dim); max-width: 500px; margin: 0 auto;">
+          The nightly scanner automatically appends daily OHLCV bars into <code>archive/ohlcv_YYYY-MM.csv.gz</code>. Once historical bars accumulate or on-demand backtests run, detailed replay metrics appear here.
+        </p>
+      </div>
+
+      <!-- Backtest Content (Shown when data present) -->
+      <div id="btContentWrapper">
+        <!-- Headline Stats Grid -->
+        <div class="bt-stats-grid">
+          <div class="bt-stat-card">
+            <span class="bt-stat-label">Win Rate</span>
+            <span id="btWinRate" class="bt-stat-val positive">--%</span>
+          </div>
+          <div class="bt-stat-card">
+            <span class="bt-stat-label">Profit Factor</span>
+            <span id="btProfitFactor" class="bt-stat-val">--</span>
+          </div>
+          <div class="bt-stat-card">
+            <span class="bt-stat-label">Expectancy (R)</span>
+            <span id="btExpectancyR" class="bt-stat-val">-- R</span>
+          </div>
+          <div class="bt-stat-card">
+            <span class="bt-stat-label">Max Drawdown</span>
+            <span id="btMaxDrawdown" class="bt-stat-val negative">--%</span>
+          </div>
+          <div class="bt-stat-card">
+            <span class="bt-stat-label">Total Simulated Trades</span>
+            <span id="btTotalTrades" class="bt-stat-val">--</span>
+          </div>
+          <div class="bt-stat-card">
+            <span class="bt-stat-label">Avg Win / Loss</span>
+            <span id="btAvgWinLoss" class="bt-stat-val" style="font-size: 16px; margin-top: 4px;">-- / --</span>
+          </div>
+        </div>
+
+        <!-- 🚀 TAIL-CAPTURE THESIS PROOF PANEL -->
+        <div class="tail-capture-card">
+          <div class="tail-capture-header">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 20px;">🚀</span>
+              <strong style="font-size: 15px; color: #fff;">Tail-Capture Thesis Proof (20-EMA Trail vs 2R Cap)</strong>
+            </div>
+            <span class="badge badge-success">Quantitative Advantage</span>
+          </div>
+          <div class="tail-capture-grid">
+            <div class="tail-item">
+              <div class="bt-stat-label">% Winners Past 2R</div>
+              <div id="btTailPct" class="bt-stat-val positive" style="font-size: 20px; margin-top: 4px;">--%</div>
+              <div style="font-size: 11px; color: var(--text-dim); margin-top: 2px;">Traded past initial profit target</div>
+            </div>
+            <div class="tail-item">
+              <div class="bt-stat-label">Avg R-Multiple of Tails</div>
+              <div id="btTailAvgR" class="bt-stat-val positive" style="font-size: 20px; margin-top: 4px;">-- R</div>
+              <div style="font-size: 11px; color: var(--text-dim); margin-top: 2px;">Average return on trailing runners</div>
+            </div>
+            <div class="tail-item">
+              <div class="bt-stat-label">Trailing Profit Alpha</div>
+              <div id="btTailDelta" class="bt-stat-val positive" style="font-size: 20px; margin-top: 4px;">+₹0.00</div>
+              <div style="font-size: 11px; color: var(--text-dim); margin-top: 2px;">Net extra gain vs capping at 2R</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Equity Curve & Drawdown Chart -->
+        <div class="chart-card" style="margin-bottom: 24px;">
+          <div class="chart-header">
+            <h2 class="chart-title">📈 Equity Curve &amp; Drawdown Overlay (Replay)</h2>
+            <span id="btFinalEquityBadge" class="badge badge-success">₹200,000</span>
+          </div>
+          <div class="canvas-wrapper">
+            <canvas id="backtestEquityCanvas" style="width: 100%; height: 280px; display: block;"></canvas>
+          </div>
+        </div>
+
+        <!-- Breakdown Grids (By Grade & By Setup Type) -->
+        <div class="bt-breakdown-grid">
+          <!-- By Grade -->
+          <div class="stat-card" style="padding: 16px;">
+            <div style="font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+              <span>🏆</span> Performance by Setup Grade
+            </div>
+            <div class="table-scroll">
+              <table style="width: 100%; font-size: 12px;">
+                <thead>
+                  <tr>
+                    <th>Grade</th>
+                    <th>Trades</th>
+                    <th>Win Rate</th>
+                    <th>Profit Factor</th>
+                    <th>Expectancy</th>
+                  </tr>
+                </thead>
+                <tbody id="btByGradeBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- By Type -->
+          <div class="stat-card" style="padding: 16px;">
+            <div style="font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+              <span>⚡</span> Performance by Signal Trigger
+            </div>
+            <div class="table-scroll">
+              <table style="width: 100%; font-size: 12px;">
+                <thead>
+                  <tr>
+                    <th>Type</th>
+                    <th>Trades</th>
+                    <th>Win Rate</th>
+                    <th>Profit Factor</th>
+                    <th>Expectancy</th>
+                  </tr>
+                </thead>
+                <tbody id="btByTypeBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Simulated Closed Trades Log -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <h2 class="chart-title">📜 Simulated Closed Trades Log</h2>
+            <span id="btTradesCountBadge" class="badge badge-neutral">0 Trades</span>
+          </div>
+          <div class="table-scroll" tabindex="0">
+            <table id="btTradesTable">
+              <thead>
+                <tr>
+                  <th>Symbol</th>
+                  <th>Type</th>
+                  <th>Grade</th>
+                  <th>Entry Date</th>
+                  <th>Entry</th>
+                  <th>Exit Date</th>
+                  <th>Exit Price</th>
+                  <th>Exit Reason</th>
+                  <th>R-Multiple</th>
+                  <th>Net PnL</th>
+                </tr>
+              </thead>
+              <tbody id="btTradesBody"></tbody>
+            </table>
           </div>
         </div>
       </div>

@@ -1,0 +1,76 @@
+{
+  "period": {
+    "start": "2024-01-01",
+    "end": "2026-10-23"
+  },
+  "trades": [],
+  "equity_curve": [
+    {
+      "date": "2026-10-22",
+      "value": 200000,
+      "drawdown": 0.0
+    },
+    {
+      "date": "2026-10-23",
+      "value": 200000,
+      "drawdown": 0.0
+    }
+  ],
+  "win_rate": 0.0,
+  "avg_win_R": 0.0,
+  "avg_loss_R": 0.0,
+  "expectancy_R": 0.0,
+  "profit_factor": 0.0,
+  "max_drawdown_pct": 0.0,
+  "by_grade": {
+    "A+": {
+      "trades": 0,
+      "win_rate": 0.0,
+      "profit_factor": 0.0,
+      "expectancy_R": 0.0
+    },
+    "A": {
+      "trades": 0,
+      "win_rate": 0.0,
+      "profit_factor": 0.0,
+      "expectancy_R": 0.0
+    },
+    "B": {
+      "trades": 0,
+      "win_rate": 0.0,
+      "profit_factor": 0.0,
+      "expectancy_R": 0.0
+    },
+    "C": {
+      "trades": 0,
+      "win_rate": 0.0,
+      "profit_factor": 0.0,
+      "expectancy_R": 0.0
+    }
+  },
+  "by_signal_type": {
+    "BREAKOUT": {
+      "trades": 0,
+      "win_rate": 0.0,
+      "profit_factor": 0.0,
+      "expectancy_R": 0.0
+    },
+    "PULLBACK": {
+      "trades": 0,
+      "win_rate": 0.0,
+      "profit_factor": 0.0,
+      "expectancy_R": 0.0
+    },
+    "SPRING": {
+      "trades": 0,
+      "win_rate": 0.0,
+      "profit_factor": 0.0,
+      "expectancy_R": 0.0
+    }
+  },
+  "tail_capture": {
+    "pct_winners_past_2R": 0.0,
+    "avg_R_of_tails": 0.0,
+    "capped_vs_trailed_delta": 0.0
+  }
+}

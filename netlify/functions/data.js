@@ -7,6 +7,7 @@ const EXACT_ALLOWLIST = new Set([
   "scan_results.json",
   "trades.json",
   "open_positions.json",
+  "backtest_results.json",
 ]);
 const ARCHIVE_REGEX = /^archive\/[A-Za-z0-9_.-]+$/;
 

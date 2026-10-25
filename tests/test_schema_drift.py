@@ -25,6 +25,21 @@ EXPECTED_TOP_LEVEL_KEYS = {
     "landmines",
 }
 
+EXPECTED_BACKTEST_RESULTS_KEYS = {
+    "period",
+    "trades",
+    "equity_curve",
+    "win_rate",
+    "avg_win_R",
+    "avg_loss_R",
+    "expectancy_R",
+    "profit_factor",
+    "max_drawdown_pct",
+    "by_grade",
+    "by_signal_type",
+    "tail_capture",
+}
+
 EXPECTED_MARKET_SUMMARY_KEYS = {
     "source",
     "last_close",
@@ -209,4 +224,61 @@ def test_rs_graceful_small_universe():
     import main
     res = main.calculate_rs_rating(["AAA.NS", "BBB.NS"])
     assert res == {"AAA.NS": None, "BBB.NS": None}
+
+
+def test_backtest_schema_drift_and_empty_tolerance(tmp_cwd: Any):
+    """
+    Schema-drift: assert backtest_results.json schema matches EXPECTED_BACKTEST_RESULTS_KEYS
+    AND assert the system is absent/empty-tolerant when no archive exists.
+    """
+    import backtest
+
+    # 1. Absence tolerance: when no archive exists, run_backtest returns clean empty schema
+    empty_res = backtest.run_backtest(archive_dfs={})
+    assert isinstance(empty_res, dict)
+    assert set(empty_res.keys()) == EXPECTED_BACKTEST_RESULTS_KEYS
+    assert empty_res["trades"] == []
+    assert empty_res["win_rate"] == 0.0
+
+    # 2. Schema check on emitted backtest_results.json
+    out_file = "backtest_results.json"
+    backtest.run_backtest(archive_dfs={}, out_file=out_file)
+    assert os.path.exists(out_file)
+    with open(out_file, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    assert set(data.keys()) == EXPECTED_BACKTEST_RESULTS_KEYS
+
+
+def test_archive_ohlcv_append_and_deduplicate(tmp_cwd: Any):
+    """
+    Assert that archive_ohlcv appends daily bars, preserves correct gzip schema,
+    and deduplicates strictly by (date, symbol) keeping newest.
+    """
+    import datetime
+    import pandas as pd
+    from scripts import archive_ohlcv
+
+    test_date = datetime.date(2025, 6, 15)
+    rows_day1 = [
+        {"date": "2025-06-15", "symbol": "TEST1.NS", "open": 100.0, "high": 105.0, "low": 99.0, "close": 102.0, "volume": 50000},
+        {"date": "2025-06-15", "symbol": "TEST2.NS", "open": 50.0, "high": 55.0, "low": 48.0, "close": 52.0, "volume": 20000},
+    ]
+    path1 = archive_ohlcv.append_bars_to_archive(rows_day1, target_date=test_date)
+    assert os.path.exists(path1)
+
+    df1 = pd.read_csv(path1, compression="gzip")
+    assert len(df1) == 2
+    assert list(df1.columns) == ["date", "symbol", "open", "high", "low", "close", "volume"]
+
+    # Append duplicate date + symbol (updated close) and new bar
+    rows_day2 = [
+        {"date": "2025-06-15", "symbol": "TEST1.NS", "open": 100.0, "high": 106.0, "low": 99.0, "close": 104.0, "volume": 60000},
+        {"date": "2025-06-16", "symbol": "TEST1.NS", "open": 104.0, "high": 110.0, "low": 103.0, "close": 108.0, "volume": 70000},
+    ]
+    path2 = archive_ohlcv.append_bars_to_archive(rows_day2, target_date=test_date)
+    df2 = pd.read_csv(path2, compression="gzip")
+    assert len(df2) == 3
+    test1_june15 = df2[(df2["symbol"] == "TEST1.NS") & (df2["date"] == "2025-06-15")].iloc[0]
+    assert test1_june15["close"] == 104.0
+
 

@@ -139,3 +139,63 @@ def test_risk_math_zero_qty_returns_none(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(main, "RISK_PCT", 0.01)  # budget = 10 Rs
     sig = _invoke_scan_symbol_with_risk_inputs(entry=1000.0, atr=50.0, monkeypatch=monkeypatch)
     assert sig is None, "When computed qty is 0, scan_symbol must return None"
+
+
+def test_backtest_matches_live_risk(monkeypatch: pytest.MonkeyPatch, tmp_cwd: Any):
+    """
+    SC-5 Drift Guard: Replay == Live.
+    Builds a 65-bar synthetic archive with the textbook breakout pattern,
+    runs the rules-replay backtester, and asserts that it produced EXACTLY 1 simulated
+    trade whose entry, stop, target, and qty EQUAL the live risk-math test's asserted values
+    for entry=100.0, atr=5.0 (entry=100.0, stop=91.0, target=118.0, qty=222).
+    """
+    import backtest
+
+    n = 65
+    dates = pd.date_range("2025-01-01", periods=n, freq="D")
+    entry_val = 100.0
+    atr_val = 5.0
+    vol = 10000000.0
+
+    # 59 bars of tight base around 95-99, bar 60 breakouts at 100.0, takes 2R partial, then trail exits
+    close = np.linspace(95.0, 99.0, n)
+    close[59] = entry_val     # breakout day (entry=100.0)
+    close[60:62] = 125.0      # hits 2R target, takes 50% partial
+    close[62:] = 90.0         # drops below 20-EMA, triggers EMA20 trail exit
+
+    high = close + 1.0
+    low = close - 1.0
+    open_ = close.copy()
+
+    df = pd.DataFrame({
+        "Date": dates,
+        "Open": open_,
+        "High": high,
+        "Low": low,
+        "Close": close,
+        "Volume": np.full(n, vol),
+    })
+
+    # Hook add_indicators to set SIGNAL on bar index 59
+    orig_add_indicators = main.add_indicators
+    def patched_add_indicators(d: pd.DataFrame) -> pd.DataFrame:
+        out = orig_add_indicators(d)
+        if len(d) == 60:
+            out.loc[out.index[-1], "SIGNAL"] = True
+            out.loc[out.index[-1], "ATR14"] = atr_val
+        return out
+
+    monkeypatch.setattr(main, "add_indicators", patched_add_indicators)
+    monkeypatch.setattr(main, "diagnose", lambda sym: {"grade": "A", "score": 85})
+
+    res = backtest.run_backtest(archive_dfs={"TEXTBOOK.NS": df})
+
+    assert len(res["trades"]) == 1, "Backtest should have executed exactly 1 trade"
+    trade = res["trades"][0]
+
+    # Drift guard: Replay trade parameters must EQUAL live test_risk_math asserted values
+    assert trade["entry_price"] == 100.0, f"Expected 100.0, got {trade['entry_price']}"
+    assert trade["initial_stop"] == 91.0, f"Expected 91.0, got {trade['initial_stop']}"
+    assert trade["target"] == 118.0, f"Expected 118.0, got {trade['target']}"
+    assert trade["qty"] == 222, f"Expected 222, got {trade['qty']}"
+

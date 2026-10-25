@@ -1760,6 +1760,60 @@ def sector_ok(symbol: str) -> bool:
         return True  # Strictly fail-open on any unexpected error
 
 
+def calculate_position_risk_parameters(
+    entry: float,
+    atr: float,
+    signal_type: str = "BREAKOUT",
+    low_price: Optional[float] = None,
+    capital: float = CAPITAL,
+) -> Optional[Dict[str, Any]]:
+    """
+    Standard position sizing, ATR stop loss, 9% floor cap, and 2R profit targets.
+    Single source of truth used across live scanning and rules-replay backtesting.
+    """
+    if pd.isna(entry) or pd.isna(atr) or atr <= 0 or entry <= 0:
+        return None
+
+    if signal_type == "SPRING":
+        # Initial stop placed below the spring low (tighter than 2.5 ATR default)
+        spring_low = float(low_price) if (low_price is not None and not pd.isna(low_price)) else (entry - 0.5 * atr)
+        stop = min(spring_low - 0.05, entry - 0.5 * atr)
+    elif signal_type == "PULLBACK":
+        # Stop below the pullback low
+        pullback_low = float(low_price) if (low_price is not None and not pd.isna(low_price)) else (entry - 0.5 * atr)
+        stop = min(pullback_low - 0.05, entry - 0.5 * atr)
+    else:
+        stop = entry - (ATR_STOP_MULTIPLIER * atr)
+
+    # Floor stop loss at MAX_STOP_LOSS_PCT (9% maximum risk from entry)
+    stop = max(stop, entry * (1.0 - MAX_STOP_LOSS_PCT))
+    if stop >= entry:
+        return None
+
+    # Sizing and target (gap / circuit survival sizing)
+    risk_per_unit = entry - stop
+    target = entry + (TARGET_R_MULTIPLE * risk_per_unit)
+    gap_based_qty = math.floor((capital * MAX_GAP_LOSS_PCT) / (entry * WORST_CASE_GAP_PCT))
+    risk_based_qty = math.floor((capital * RISK_PCT) / risk_per_unit)
+    qty = min(risk_based_qty, gap_based_qty)
+    if qty <= 0:
+        return None
+
+    risk_amount = qty * risk_per_unit
+
+    return {
+        "Entry": round(entry, 2),
+        "Stop": round(stop, 2),
+        "Target": round(target, 2),
+        "Qty": int(qty),
+        "Risk Per Unit": round(risk_per_unit, 2),
+        "Risk Amount": round(risk_amount, 2),
+        "gap_based_qty": gap_based_qty,
+        "risk_based_qty": risk_based_qty,
+        "gap_qty_applied": bool(gap_based_qty < risk_based_qty),
+    }
+
+
 # =====================================================================
 # 7) SINGLE SYMBOL SCANNER & POSITION SIZER
 # =====================================================================
@@ -1835,36 +1889,27 @@ def scan_symbol(symbol: str) -> Optional[Dict[str, Any]]:
         if not (has_catalyst or has_inst_print):
             return None
 
-    # 7) Entry and Stop Loss
+    # 7 & 8) Entry, Stop Loss, Sizing and Target (via unified calculate_position_risk_parameters)
     entry = float(last_row["Close"])
     atr = float(last_row["ATR14"])
-    if pd.isna(entry) or pd.isna(atr) or atr <= 0 or entry <= 0:
+    low_price = float(last_row["Low"]) if "Low" in last_row and not pd.isna(last_row["Low"]) else None
+
+    risk_params = calculate_position_risk_parameters(
+        entry=entry,
+        atr=atr,
+        signal_type=signal_type,
+        low_price=low_price,
+        capital=CAPITAL,
+    )
+    if not risk_params:
         return None
 
-    if signal_type == "SPRING":
-        # Initial stop placed below the spring low (tighter than 2.5 ATR default)
-        spring_low = float(last_row["Low"]) if "Low" in last_row and not pd.isna(last_row["Low"]) else (entry - 0.5 * atr)
-        stop = min(spring_low - 0.05, entry - 0.5 * atr)
-    elif signal_type == "PULLBACK":
-        # Stop below the pullback low
-        pullback_low = float(last_row["Low"]) if "Low" in last_row and not pd.isna(last_row["Low"]) else (entry - 0.5 * atr)
-        stop = min(pullback_low - 0.05, entry - 0.5 * atr)
-    else:
-        stop = entry - (ATR_STOP_MULTIPLIER * atr)
-
-    # Floor stop loss at MAX_STOP_LOSS_PCT (9% maximum risk from entry)
-    stop = max(stop, entry * (1.0 - MAX_STOP_LOSS_PCT))
-    if stop >= entry:
-        return None
-
-    # 8) Sizing and target (gap / circuit survival sizing)
-    risk_per_unit = entry - stop
-    target = entry + (TARGET_R_MULTIPLE * risk_per_unit)
-    gap_based_qty = math.floor((CAPITAL * MAX_GAP_LOSS_PCT) / (entry * WORST_CASE_GAP_PCT))
-    risk_based_qty = math.floor((CAPITAL * RISK_PCT) / risk_per_unit)
-    qty = min(risk_based_qty, gap_based_qty)
-    if qty <= 0:
-        return None
+    qty = risk_params["Qty"]
+    stop = risk_params["Stop"]
+    target = risk_params["Target"]
+    risk_per_unit = risk_params["Risk Per Unit"]
+    risk_amount = risk_params["Risk Amount"]
+    gap_qty_applied = risk_params["gap_qty_applied"]
 
     # Size-aware cap: max_position_value = 0.015 * ADV20_rupees (notional <= 1.5% of avg daily turnover)
     max_position_value = MAX_POSITION_ADV_PCT * adv20_rupees
@@ -1895,7 +1940,7 @@ def scan_symbol(symbol: str) -> Optional[Dict[str, Any]]:
         "RSI14": round(float(last_row["RSI14"]), 1),
         "catalyst": None,
         "adv20_cr": round(adv20_rupees / 10000000.0, 2),
-        "gap_qty_applied": bool(gap_based_qty < risk_based_qty),
+        "gap_qty_applied": gap_qty_applied,
         "next_earnings": next_earnings,
         "circuit_skipped_reason": circuit_reason,
         "rs_rating": rs_val,

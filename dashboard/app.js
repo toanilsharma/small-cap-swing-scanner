@@ -15,10 +15,13 @@ const DATA_PROXY_BASE = "/.netlify/functions/data";
 const SCAN_RESULTS_URL = `${DATA_PROXY_BASE}?file=scan_results.json`;
 const OPEN_POSITIONS_URL = `${DATA_PROXY_BASE}?file=open_positions.json`;
 const TRADES_URL = `${DATA_PROXY_BASE}?file=trades.json`;
+const BACKTEST_RESULTS_URL = `${DATA_PROXY_BASE}?file=backtest_results.json`;
 
 let equityChartInstance = null;
+let backtestChartInstance = null;
 let _liveScanData = null;
 let _cachedTradesData = null;
+let _cachedBacktestData = null;
 let _isViewingArchive = false;
 
 // =====================================================================
@@ -450,6 +453,18 @@ const TERMS = {
     long: "Fail-open safety mechanism ensuring the scanner functions seamlessly during NSE exchange connectivity outages while transparently alerting the trader.",
     where_used: "Market Pulse Row, Help Guide",
     anchor: "glossary-dealsstale"
+  },
+  "Backtest": {
+    short: "Rules-replay simulation engine importing and executing live production indicators, sizing, and exits across historical OHLCV bars.",
+    long: "Strict zero-drift replay of main.py logic. Verifies win rate, profit factor, expectancy, and small-cap tail capture over historical market regimes.",
+    where_used: "Backtest Tab, Help Guide",
+    anchor: "glossary-backtest"
+  },
+  "Tail Capture": {
+    short: "Asymmetric exit rule taking 50% partial at +2R and riding the remaining 50% along the 20-EMA trail.",
+    long: "Proof of the small-cap momentum thesis: letting high-conviction winners trend past +2R with an EMA20 trailing stop generates substantial extra profit over mechanical target capping.",
+    where_used: "Backtest (Tail-Capture Panel), Help Guide",
+    anchor: "glossary-tailcapture"
   }
 };
 
@@ -3356,6 +3371,16 @@ async function loadAllData() {
       renderHistory(_cachedTradesData);
       renderStats(_cachedTradesData);
     }
+
+    // Fetch and render Backtest results (Fail-open)
+    let backtestData = null;
+    try {
+      backtestData = await fetchJson(BACKTEST_RESULTS_URL);
+    } catch {
+      // Fail-open: backtest data optional / not yet generated
+    }
+    _cachedBacktestData = backtestData;
+    renderBacktestTab(backtestData);
   } catch (renderErr) {
     console.error("Error rendering dashboard data:", renderErr);
   } finally {
@@ -3783,6 +3808,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Initialize SC-3 Collapsible Sections (Leaders Board & On Deck)
   initCollapsibleSections();
+
+  // Initialize SC-5 Backtest Tab Listeners
+  initBacktestListeners();
 
   // Keep IST Live chip ticking every 30 seconds
   setInterval(updateIstLiveChip, 30000);
@@ -4288,6 +4316,257 @@ function initCsvExportListeners() {
     exportStatsBtn.addEventListener("click", exportTradesToCsv);
   }
 }
+
+// =====================================================================
+// 🧪 RULES-REPLAY BACKTEST TAB (SC-5)
+// =====================================================================
+function renderBacktestTab(btData) {
+  const emptyState = document.getElementById("btEmptyState");
+  const contentWrapper = document.getElementById("btContentWrapper");
+  const periodLabel = document.getElementById("backtestPeriodLabel");
+
+  if (!btData || !btData.trades || btData.trades.length === 0) {
+    if (emptyState) emptyState.style.display = "block";
+    if (contentWrapper) contentWrapper.style.display = "none";
+    if (periodLabel) {
+      if (btData && btData.period && btData.period.start) {
+        periodLabel.textContent = `Period: ${btData.period.start} to ${btData.period.end} (0 archived trades)`;
+      } else {
+        periodLabel.textContent = "No archived backtest runs yet";
+      }
+    }
+    return;
+  }
+
+  if (emptyState) emptyState.style.display = "none";
+  if (contentWrapper) contentWrapper.style.display = "block";
+
+  if (periodLabel && btData.period) {
+    periodLabel.textContent = `Period: ${btData.period.start} to ${btData.period.end}`;
+  }
+
+  // Populate headline stats
+  const winRateEl = document.getElementById("btWinRate");
+  const pfEl = document.getElementById("btProfitFactor");
+  const expEl = document.getElementById("btExpectancyR");
+  const ddEl = document.getElementById("btMaxDrawdown");
+  const tradesEl = document.getElementById("btTotalTrades");
+  const winLossEl = document.getElementById("btAvgWinLoss");
+
+  if (winRateEl) winRateEl.textContent = `${(btData.win_rate * 100).toFixed(1)}%`;
+  if (pfEl) pfEl.textContent = Number(btData.profit_factor).toFixed(2);
+  if (expEl) {
+    const sign = btData.expectancy_R >= 0 ? "+" : "";
+    expEl.textContent = `${sign}${Number(btData.expectancy_R).toFixed(2)} R`;
+    expEl.className = `bt-stat-val ${btData.expectancy_R >= 0 ? 'positive' : 'negative'}`;
+  }
+  if (ddEl) ddEl.textContent = `-${Number(btData.max_drawdown_pct).toFixed(1)}%`;
+  if (tradesEl) tradesEl.textContent = `${btData.trades.length} Trades`;
+  if (winLossEl) winLossEl.textContent = `+${btData.avg_win_R}R / ${btData.avg_loss_R}R`;
+
+  // Tail-Capture Panel
+  const tail = btData.tail_capture || {};
+  const tailPctEl = document.getElementById("btTailPct");
+  const tailAvgREl = document.getElementById("btTailAvgR");
+  const tailDeltaEl = document.getElementById("btTailDelta");
+
+  if (tailPctEl) tailPctEl.textContent = `${Number(tail.pct_winners_past_2R || 0).toFixed(1)}%`;
+  if (tailAvgREl) tailAvgREl.textContent = `+${Number(tail.avg_R_of_tails || 0).toFixed(2)} R`;
+  if (tailDeltaEl) {
+    const delta = Number(tail.capped_vs_trailed_delta || 0);
+    tailDeltaEl.textContent = `+${formatINR(delta)}`;
+  }
+
+  // Equity Curve Canvas
+  drawBacktestChart(btData.equity_curve || []);
+
+  // Final Equity Badge
+  const finalEqBadge = document.getElementById("btFinalEquityBadge");
+  if (finalEqBadge && btData.equity_curve && btData.equity_curve.length > 0) {
+    const finalVal = btData.equity_curve[btData.equity_curve.length - 1].value;
+    finalEqBadge.textContent = formatINR(finalVal);
+    finalEqBadge.className = `badge ${finalVal >= 200000 ? 'badge-success' : 'badge-danger'}`;
+  }
+
+  // By Grade Table
+  const byGradeBody = document.getElementById("btByGradeBody");
+  if (byGradeBody) {
+    const grades = ["A+", "A", "B", "C"];
+    byGradeBody.innerHTML = grades.map(g => {
+      const info = (btData.by_grade && btData.by_grade[g]) || { trades: 0, win_rate: 0, profit_factor: 0, expectancy_R: 0 };
+      const wr = (info.win_rate * 100).toFixed(0);
+      return `
+        <tr>
+          <td><span class="badge ${g === 'A+' || g === 'A' ? 'badge-success' : (g === 'B' ? 'badge-warning' : 'badge-danger')}">${g}</span></td>
+          <td>${info.trades}</td>
+          <td>${wr}%</td>
+          <td>${Number(info.profit_factor).toFixed(2)}</td>
+          <td>${info.expectancy_R >= 0 ? '+' : ''}${Number(info.expectancy_R).toFixed(2)}R</td>
+        </tr>
+      `;
+    }).join("");
+  }
+
+  // By Type Table
+  const byTypeBody = document.getElementById("btByTypeBody");
+  if (byTypeBody) {
+    const types = ["BREAKOUT", "PULLBACK", "SPRING"];
+    byTypeBody.innerHTML = types.map(t => {
+      const info = (btData.by_signal_type && btData.by_signal_type[t]) || { trades: 0, win_rate: 0, profit_factor: 0, expectancy_R: 0 };
+      const wr = (info.win_rate * 100).toFixed(0);
+      return `
+        <tr>
+          <td><span class="badge badge-neutral">${t}</span></td>
+          <td>${info.trades}</td>
+          <td>${wr}%</td>
+          <td>${Number(info.profit_factor).toFixed(2)}</td>
+          <td>${info.expectancy_R >= 0 ? '+' : ''}${Number(info.expectancy_R).toFixed(2)}R</td>
+        </tr>
+      `;
+    }).join("");
+  }
+
+  // Closed Trades Log Table
+  const tradesBody = document.getElementById("btTradesBody");
+  const tradesCountBadge = document.getElementById("btTradesCountBadge");
+  if (tradesCountBadge) tradesCountBadge.textContent = `${btData.trades.length} Trade${btData.trades.length === 1 ? '' : 's'}`;
+
+  if (tradesBody) {
+    tradesBody.innerHTML = btData.trades.map(t => {
+      const sym = escapeHtml(t.symbol);
+      const isWin = t.pnl > 0;
+      const pnlClass = isWin ? "text-success" : (t.pnl < 0 ? "text-danger" : "");
+      const pnlSign = isWin ? "+" : "";
+      const rSign = t.r_multiple >= 0 ? "+" : "";
+      const grade = escapeHtml(t.grade || "A");
+      const sigType = escapeHtml(t.signal_type || "BREAKOUT");
+      const reason = escapeHtml(t.exit_reason || "EXIT");
+
+      return `
+        <tr>
+          <td><strong>${sym}</strong></td>
+          <td><span class="badge badge-neutral" style="font-size: 10px;">${sigType}</span></td>
+          <td><span class="badge ${grade === 'A+' || grade === 'A' ? 'badge-success' : 'badge-warning'}" style="font-size: 10px;">${grade}</span></td>
+          <td>${t.entry_date}</td>
+          <td>₹${Number(t.entry_price).toFixed(2)}</td>
+          <td>${t.exit_date}</td>
+          <td>₹${Number(t.exit_price).toFixed(2)}</td>
+          <td><span class="badge badge-neutral" style="font-size: 10.5px;">${reason}</span></td>
+          <td class="${pnlClass}"><strong>${rSign}${Number(t.r_multiple).toFixed(2)}R</strong></td>
+          <td class="${pnlClass}">${pnlSign}${formatINR(t.pnl)}</td>
+        </tr>
+      `;
+    }).join("");
+  }
+}
+
+function drawBacktestChart(equityCurve) {
+  const canvas = document.getElementById("backtestEquityCanvas");
+  if (!canvas || typeof Chart === "undefined") return;
+
+  if (backtestChartInstance) {
+    backtestChartInstance.destroy();
+  }
+
+  if (!equityCurve || equityCurve.length === 0) return;
+
+  const labels = equityCurve.map(pt => pt.date);
+  const values = equityCurve.map(pt => pt.value);
+  const drawdowns = equityCurve.map(pt => -Math.abs(pt.drawdown || 0));
+
+  const ctx = canvas.getContext("2d");
+  const gradient = ctx.createLinearGradient(0, 0, 0, 280);
+  gradient.addColorStop(0, "rgba(16, 185, 129, 0.28)");
+  gradient.addColorStop(1, "rgba(16, 185, 129, 0.0)");
+
+  backtestChartInstance = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: "Portfolio Equity (₹)",
+          data: values,
+          borderColor: "#10b981",
+          borderWidth: 2,
+          pointRadius: values.length > 50 ? 0 : 2,
+          backgroundColor: gradient,
+          fill: true,
+          tension: 0.2,
+          yAxisID: "y",
+        },
+        {
+          label: "Drawdown (%)",
+          data: drawdowns,
+          borderColor: "rgba(239, 68, 68, 0.6)",
+          borderWidth: 1.5,
+          borderDash: [3, 3],
+          pointRadius: 0,
+          backgroundColor: "rgba(239, 68, 68, 0.08)",
+          fill: true,
+          tension: 0.1,
+          yAxisID: "y1",
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: { display: true, position: "top", labels: { color: "#94a3b8", font: { size: 11 } } },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              if (ctx.datasetIndex === 0) return ` Equity: ${formatINR(ctx.raw)}`;
+              return ` Drawdown: ${Number(ctx.raw).toFixed(1)}%`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: "rgba(255, 255, 255, 0.04)" },
+          ticks: { color: "#94a3b8", font: { size: 10 }, maxTicksLimit: 12 }
+        },
+        y: {
+          type: "linear",
+          position: "left",
+          grid: { color: "rgba(255, 255, 255, 0.06)" },
+          ticks: { color: "#94a3b8", font: { size: 10 }, callback: (v) => formatINR(v) }
+        },
+        y1: {
+          type: "linear",
+          position: "right",
+          grid: { display: false },
+          ticks: { color: "#f87171", font: { size: 10 }, callback: (v) => `${v}%` }
+        }
+      }
+    }
+  });
+}
+
+function initBacktestListeners() {
+  const filterBtn = document.getElementById("btFilterBtn");
+  if (filterBtn) {
+    filterBtn.addEventListener("click", () => {
+      const start = document.getElementById("btStartInput")?.value;
+      const end = document.getElementById("btEndInput")?.value;
+      if (!_cachedBacktestData) return;
+
+      let filteredTrades = _cachedBacktestData.trades || [];
+      if (start) filteredTrades = filteredTrades.filter(t => t.entry_date >= start);
+      if (end) filteredTrades = filteredTrades.filter(t => t.entry_date <= end);
+
+      const subData = Object.assign({}, _cachedBacktestData, {
+        period: { start: start || _cachedBacktestData.period?.start, end: end || _cachedBacktestData.period?.end },
+        trades: filteredTrades,
+      });
+      renderBacktestTab(subData);
+    });
+  }
+}
+
 
 
 

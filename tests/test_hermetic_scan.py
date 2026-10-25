@@ -96,6 +96,7 @@ def execute_full_scan_pipeline() -> Tuple[List[Dict[str, Any]], List[Dict[str, A
         "correlation": correlation,
         "sector_rotation": sector_rotation,
         "hurst_summary": hurst_summary,
+        "vol_regime": main.get_volatility_regime(),
     }
     with open(main.SCAN_RESULTS_FILE, "w", encoding="utf-8") as f:
         json.dump(scan_data, f, indent=2, ensure_ascii=False)
@@ -141,6 +142,7 @@ def test_hermetic_scan_unmuted(tmp_cwd: Any, spy_posts: list, pin_ist_time: Any,
         "correlation",
         "sector_rotation",
         "hurst_summary",
+        "vol_regime",
     }
     assert data["market_ok"] is True
     assert data["scanned_count"] == 2

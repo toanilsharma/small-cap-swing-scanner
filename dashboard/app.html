@@ -111,7 +111,10 @@
             </div>
             <div class="hero-regime-group">
               <span class="hero-regime-label">MARKET REGIME</span>
-              <span id="heroRegimeWord" class="hero-regime-word badge badge-neutral">CHECKING...</span>
+              <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                <span id="heroRegimeWord" class="hero-regime-word badge badge-neutral">CHECKING...</span>
+                <span id="heroVolRegimeWord" class="badge badge-neutral" style="font-size: 11px; padding: 4px 8px; font-weight: 600;" title="Market Volatility Regime (EWMA RiskMetrics lambda=0.94)">VOL: --</span>
+              </div>
             </div>
           </div>
           <div id="heroBreadthInline" class="hero-breadth-inline">
@@ -2239,6 +2242,20 @@
                 <div class="glossary-section-row"><span class="glossary-label">Clamp Bounds:</span><span class="glossary-threshold">Strictly clamped to [0.25%, 1.5%] risk of Capital (never below ₹500, never above ₹3,000 on ₹200,000).</span></div>
                 <div class="glossary-section-row"><span class="glossary-label">Worked Example:</span><span class="glossary-example">Capital = ₹2,00,000. If Half-Kelly = 0.90%, Risk Budget = ₹2,00,000 × 0.009 = ₹1,800. Shares = min(₹1,800 / (Entry - SL), Gap Cap ₹5,000 / (Entry × 0.20)). If backtest has &lt;30 closed trades in bucket, falls back to flat 1.0% (₹2,000) with "flat-fallback".</span></div>
                 <div class="glossary-section-row"><span class="glossary-label">Where used:</span><span class="glossary-example">Open Positions, Near Buy Expandable Details, Position Sizer.</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-vol-regime">
+                <div class="glossary-card-header"><span class="glossary-term">Volatility Regime (EWMA)</span><span class="glossary-category">Risk Architecture</span></div>
+                <p class="glossary-meaning">Deterministic market-wide volatility measurement using RiskMetrics EWMA ($\lambda=0.94$) across the small-cap basket's daily log-returns, dynamically adapting protective stop loss width without altering per-trade rupee risk.</p>
+                <div class="glossary-section-row"><span class="glossary-label">EWMA Recurrence:</span><span class="glossary-threshold">$$\sigma_t^2 = \lambda \sigma_{t-1}^2 + (1-\lambda) r_t^2, \quad \lambda = 0.94, \quad r_t = \ln\left(\frac{C_t}{C_{t-1}}\right)$$</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Annualized Volatility:</span><span class="glossary-threshold">$$\sigma_{\text{ann}} = \sigma_t \times \sqrt{252} \times 100\%$$</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Regime Classification:</span><span class="glossary-threshold">$$\text{HIGH if } \text{Percentile} \ge 80\%, \quad \text{LOW if } \text{Percentile} \le 20\%, \quad \text{else NORMAL}$$</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Adaptive Multipliers:</span><span class="glossary-threshold">$$\text{effective\_ATR\_mult} = \text{base\_ATR\_STOP\_MULTIPLIER} \times \text{factor}$$
+                $$\text{factor} = \begin{cases} 1.30 & \text{HIGH } (3.25\times \text{ATR}) \\ 1.00 & \text{NORMAL } (2.50\times \text{ATR}) \\ 0.85 & \text{LOW } (2.125\times \text{ATR}) \end{cases}$$</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Risk-Invariance Rule:</span><span class="glossary-example">$$\text{"regime changes the stop shape, never the risk budget."}$$
+                $$\text{size} = \left\lfloor \frac{\text{risk\_rupees}}{\text{entry} - \text{stop}_{\text{adapted}}} \right\rfloor, \quad \text{risk\_rupees} = \text{Capital} \times f^*_{\text{Kelly}} \equiv \text{constant}$$
+                When storms widen the stop ($\text{HIGH}$), position size shrinks so total rupee risk remains invariant. When calm tightens the stop ($\text{LOW}$), size grows but stays strictly bounded by the gap cap ($2.5\%$ loss at $20\%$ gap), ADV liquidity ceiling ($1.0\%$), and portfolio heat ($5.0\%$).</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Where used:</span><span class="glossary-example">Market Pulse Header chip, Open Positions Detail Drawer, Signal Risk Parameters, Risk Math Layer.</span></div>
               </div>
             </div>
           </article>

@@ -17,11 +17,12 @@ def _invoke_scan_symbol_with_risk_inputs(
     entry: float,
     atr: float,
     monkeypatch: pytest.MonkeyPatch,
-    override_signal: bool = True
+    override_signal: bool = True,
+    vol_regime: str = "NORMAL",
 ) -> Optional[Dict[str, Any]]:
     """
     Feeds synthetic entry and atr directly into main.scan_symbol.
-    Mocks historical fetch, sector filter, and index return to isolate the risk math.
+    Mocks historical fetch, sector filter, index return, and vol regime to isolate the risk math.
     """
     n = 260
     dates = pd.date_range("2025-01-01", periods=n, freq="D")
@@ -53,6 +54,11 @@ def _invoke_scan_symbol_with_risk_inputs(
     monkeypatch.setattr(main, "sector_ok", lambda sym: True)
     monkeypatch.setattr(main, "index_return_50", lambda: 0.0)
     monkeypatch.setattr(main, "get_next_earnings", lambda sym: "2026-12-01")
+    monkeypatch.setattr(main, "get_volatility_regime", lambda force_rebuild=False: {
+        "bucket": vol_regime,
+        "sigma_ann_pct": 20.0,
+        "percentile": 50.0 if vol_regime == "NORMAL" else (90.0 if vol_regime == "HIGH" else 10.0),
+    })
 
     return main.scan_symbol("MOCK.NS")
 
@@ -80,6 +86,8 @@ def test_risk_math_7pct_floor_cap_binds(monkeypatch: pytest.MonkeyPatch):
     assert sig["Risk Amount"] == 1998.0
     assert sig["sizing_source"] == "flat-fallback"
     assert sig["chosen_kelly_f"] == 0.01
+    assert sig["effective_ATR_mult"] == 2.5
+    assert sig["vol_regime"] == "NORMAL"
 
 
 def test_risk_math_atr_stop_above_floor(monkeypatch: pytest.MonkeyPatch):
@@ -101,6 +109,48 @@ def test_risk_math_atr_stop_above_floor(monkeypatch: pytest.MonkeyPatch):
     assert sig["Target"] == 115.0
     assert sig["Qty"] == 250
     assert sig["Risk Amount"] == 1875.0
+    assert sig["effective_ATR_mult"] == 2.5
+    assert sig["vol_regime"] == "NORMAL"
+
+
+def test_risk_math_high_regime_textbook_trade(monkeypatch: pytest.MonkeyPatch):
+    """
+    HIGH-regime textbook trade (factor=1.30, effective_ATR_mult=3.25):
+    entry=100, atr=2.6
+    Raw stop = 100 - (3.25 * 2.6) = 91.55 (wider than NORMAL 93.50).
+    Risk per unit = 8.45 (larger than NORMAL 6.50).
+    Qty = floor(2000 / 8.45) = 236 shares (smaller than NORMAL 250 shares).
+    Risk rupees = 2000.0 (identical 1% risk budget).
+    Risk amount = 236 * 8.45 = 1994.20 Rs (<= 2000 Rs).
+    """
+    sig = _invoke_scan_symbol_with_risk_inputs(entry=100.0, atr=2.6, monkeypatch=monkeypatch, vol_regime="HIGH")
+    assert sig is not None
+    assert sig["effective_ATR_mult"] == 3.25
+    assert sig["vol_regime"] == "HIGH"
+    assert sig["Stop"] == 91.55
+    assert sig["Risk Per Unit"] == 8.45
+    assert sig["Qty"] == 236
+    assert sig["Risk Amount"] == 1994.20
+    assert sig["chosen_kelly_f"] == 0.01
+
+
+def test_risk_math_low_regime_textbook_trade(monkeypatch: pytest.MonkeyPatch):
+    """
+    LOW-regime textbook trade (factor=0.85, effective_ATR_mult=2.125):
+    entry=100, atr=2.6
+    Raw stop = 100 - (2.125 * 2.6) = 94.475 -> 94.47 (tighter than NORMAL 93.50).
+    Risk per unit = 5.53.
+    Risk-based Qty = floor(2000 / 5.525) = 361 (grows larger than 250).
+    Gap cap = floor(5000 / 20) = 250 (survival cap clamps it!).
+    Qty = min(361, 250) = 250.
+    """
+    sig = _invoke_scan_symbol_with_risk_inputs(entry=100.0, atr=2.6, monkeypatch=monkeypatch, vol_regime="LOW")
+    assert sig is not None
+    assert sig["effective_ATR_mult"] == 2.125
+    assert sig["vol_regime"] == "LOW"
+    assert sig["Stop"] == 94.47
+    assert sig["Qty"] == 250
+    assert sig["chosen_kelly_f"] == 0.01
 
 
 def test_risk_math_extreme_atr_hard_capped(monkeypatch: pytest.MonkeyPatch):
@@ -329,5 +379,82 @@ def test_kelly_never_breaches_survival_caps():
     )
     assert heat_res["qty"] == 55, "Heat cap strictly clamps remaining shares"
     assert heat_res["qty"] * (entry - stop) <= (capital * 0.05 - 9500.0)
+
+
+def test_vol_regime_risk_invariant():
+    """
+    M3 Invariant: "regime changes the stop shape, never the risk budget."
+    In HIGH regime, factor=1.30 widens stop to 3.25x ATR and shares shrink.
+    In NORMAL regime, factor=1.00 sets stop to 2.50x ATR.
+    In LOW regime, factor=0.85 tightens stop to 2.125x ATR and shares grow (clamped by survival caps).
+    Across all three regimes, the per-trade risk budget remains strictly invariant (size * (entry - stop) preserves budget).
+    """
+    entry = 100.0
+    atr = 2.60
+    capital = 200000.0
+    expected_risk_rupees = 2000.0  # 1% flat fallback risk budget
+
+    # 1. Run textbook setup across the three volatility regimes
+    high_params = main.calculate_position_risk_parameters(
+        entry=entry, atr=atr, capital=capital, vol_regime_override="HIGH"
+    )
+    norm_params = main.calculate_position_risk_parameters(
+        entry=entry, atr=atr, capital=capital, vol_regime_override="NORMAL"
+    )
+    low_params = main.calculate_position_risk_parameters(
+        entry=entry, atr=atr, capital=capital, vol_regime_override="LOW"
+    )
+
+    assert high_params is not None
+    assert norm_params is not None
+    assert low_params is not None
+
+    # Multipliers match exact factor specification
+    assert high_params["effective_ATR_mult"] == 3.25
+    assert norm_params["effective_ATR_mult"] == 2.50
+    assert low_params["effective_ATR_mult"] == 2.125
+
+    # Stop prices: wider in storm (HIGH), tighter in calm (LOW)
+    # HIGH: 100 - (3.25 * 2.60) = 100 - 8.45 = 91.55 (above 91.0 floor)
+    # NORMAL: 100 - (2.50 * 2.60) = 100 - 6.50 = 93.50
+    # LOW: 100 - (2.125 * 2.60) = 100 - 5.525 = 94.47 (rounded half-to-even)
+    assert high_params["Stop"] == 91.55
+    assert norm_params["Stop"] == 93.50
+    assert low_params["Stop"] == 94.47
+
+    assert high_params["Stop"] < norm_params["Stop"] < low_params["Stop"]
+    assert high_params["Risk Per Unit"] > norm_params["Risk Per Unit"] > low_params["Risk Per Unit"]
+
+    # Position size adapts to stop width:
+    # HIGH stop is wider -> shares MUST shrink (236 shares)
+    # NORMAL stop is moderate -> 250 shares (gap cap binds)
+    # LOW stop is tighter -> 250 shares (gap cap binds)
+    assert high_params["Qty"] == 236
+    assert norm_params["Qty"] == 250
+    assert low_params["Qty"] == 250
+    assert high_params["Qty"] < norm_params["Qty"]
+
+    # Per-trade risk budget invariance:
+    # Both HIGH and NORMAL share the identical 1% risk fraction (f* = 0.01)
+    assert high_params["chosen_kelly_f"] == norm_params["chosen_kelly_f"] == low_params["chosen_kelly_f"] == 0.01
+
+    # Realized risk amount is bounded within risk budget:
+    # HIGH: 236 * 8.45 = 1994.20 Rs (<= 2000 Rs budget, integer floor delta < 1 share)
+    assert high_params["Risk Amount"] <= expected_risk_rupees
+    assert abs(high_params["Risk Amount"] - expected_risk_rupees) < high_params["Risk Per Unit"]
+
+    # Also test with smaller atr=1.5 to demonstrate raw unconstrained risk-based qty progression:
+    # HIGH raw qty: floor(2000 / (3.25 * 1.5)) = floor(2000 / 4.875) = 410
+    # NORMAL raw qty: floor(2000 / (2.5 * 1.5)) = floor(2000 / 3.75) = 533
+    # LOW raw qty: floor(2000 / (2.125 * 1.5)) = floor(2000 / 3.1875) = 627
+    h_small = main.calculate_position_risk_parameters(entry=entry, atr=1.5, capital=capital, vol_regime_override="HIGH")
+    n_small = main.calculate_position_risk_parameters(entry=entry, atr=1.5, capital=capital, vol_regime_override="NORMAL")
+    l_small = main.calculate_position_risk_parameters(entry=entry, atr=1.5, capital=capital, vol_regime_override="LOW")
+
+    assert h_small["risk_based_qty"] < n_small["risk_based_qty"] < l_small["risk_based_qty"]
+    assert (3.25 * 1.5) * h_small["risk_based_qty"] <= expected_risk_rupees
+    assert (2.50 * 1.5) * n_small["risk_based_qty"] <= expected_risk_rupees
+    assert (2.125 * 1.5) * l_small["risk_based_qty"] <= expected_risk_rupees
+
 
 

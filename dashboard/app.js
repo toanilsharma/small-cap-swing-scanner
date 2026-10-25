@@ -303,6 +303,18 @@ const TERMS = {
     where_used: "Near Buy, Open Positions, Position Sizer, Help Guide",
     anchor: "glossary-half-kelly"
   },
+  "Volatility Regime (EWMA)": {
+    short: "Deterministic EWMA volatility (lambda=0.94) adapting ATR stop multipliers (1.30/1.00/0.85) with risk invariance.",
+    long: "Calculates basket EWMA variance sigma_t^2 = lambda*sigma_{t-1}^2 + (1-lambda)*r_t^2 with lambda=0.94 over rolling 250 bars. Classifies HIGH (>=80th percentile), LOW (<=20th percentile), or NORMAL. Stop multiplier adapts (3.25x / 2.50x / 2.125x ATR) while rupee risk remains strictly invariant: regime changes stop shape, never risk budget.",
+    where_used: "Market Pulse Header, Open Positions, Setup Cards, Help Guide",
+    anchor: "glossary-vol-regime"
+  },
+  "Volatility Regime": {
+    short: "Deterministic EWMA volatility (lambda=0.94) adapting ATR stop multipliers (1.30/1.00/0.85) with risk invariance.",
+    long: "Calculates basket EWMA variance sigma_t^2 = lambda*sigma_{t-1}^2 + (1-lambda)*r_t^2 with lambda=0.94 over rolling 250 bars. Classifies HIGH (>=80th percentile), LOW (<=20th percentile), or NORMAL. Stop multiplier adapts (3.25x / 2.50x / 2.125x ATR) while rupee risk remains strictly invariant.",
+    where_used: "Market Pulse Header, Open Positions, Setup Cards, Help Guide",
+    anchor: "glossary-vol-regime"
+  },
   "Win rate": {
     short: "The percentage of closed trades that resulted in a positive realized profit.",
     long: "Calculated as Winning Trades / Total Trades. Because our 2R target delivers twice what our stop loses, a 45-50% win rate generates steady capital growth.",
@@ -1271,6 +1283,39 @@ function renderMarketPulse(scanData) {
     } else {
       heroRegime.textContent = "AWAITING SCAN";
       heroRegime.className = "hero-regime-word neutral";
+    }
+  }
+
+  const heroVolRegime = document.getElementById("heroVolRegimeWord");
+  if (heroVolRegime) {
+    const vr = (scanData && scanData.vol_regime) ? scanData.vol_regime : null;
+    if (vr && vr.bucket) {
+      const bucket = String(vr.bucket).toUpperCase();
+      const sigmaStr = vr.sigma_ann_pct != null ? ` (${vr.sigma_ann_pct}%)` : "";
+      heroVolRegime.textContent = `VOL: ${bucket}${sigmaStr}`;
+      if (bucket === "HIGH") {
+        heroVolRegime.className = "badge";
+        heroVolRegime.style.background = "rgba(245, 158, 11, 0.2)";
+        heroVolRegime.style.color = "#fbbf24";
+        heroVolRegime.style.border = "1px solid rgba(245, 158, 11, 0.5)";
+      } else if (bucket === "LOW") {
+        heroVolRegime.className = "badge";
+        heroVolRegime.style.background = "rgba(16, 185, 129, 0.2)";
+        heroVolRegime.style.color = "#34d399";
+        heroVolRegime.style.border = "1px solid rgba(16, 185, 129, 0.5)";
+      } else {
+        heroVolRegime.className = "badge badge-neutral";
+        heroVolRegime.style.background = "rgba(100, 116, 139, 0.2)";
+        heroVolRegime.style.color = "#94a3b8";
+        heroVolRegime.style.border = "1px solid rgba(100, 116, 139, 0.4)";
+      }
+      heroVolRegime.title = `Volatility Regime: ${bucket} (ann. sigma: ${vr.sigma_ann_pct || 'n/a'}%, pct: ${vr.percentile || 'n/a'}th). RiskMetrics EWMA lambda=0.94.`;
+    } else {
+      heroVolRegime.textContent = "VOL: NORMAL";
+      heroVolRegime.className = "badge badge-neutral";
+      heroVolRegime.style.background = "rgba(100, 116, 139, 0.2)";
+      heroVolRegime.style.color = "#94a3b8";
+      heroVolRegime.style.border = "1px solid rgba(100, 116, 139, 0.4)";
     }
   }
 
@@ -3671,18 +3716,26 @@ async function renderOpenPositions(positions) {
       </tr>
       <tr class="accordion-drawer-row detail-row" id="open-drawer-${escapeHtml(pos.symbol)}" style="display: none;">
         <td colspan="9" style="padding: 16px; background: rgba(15, 23, 42, 0.45);">
-          <!-- Sizing & Risk Allocation (Half-Kelly) -->
+          <!-- Sizing & Adaptive Stop Risk Allocation (Half-Kelly & Vol Regime) -->
           <div class="card" style="margin-bottom: 12px; padding: 10px 14px; background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 6px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
-            <div style="display: flex; align-items: center; gap: 8px; font-size: 12px;">
+            <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; flex-wrap: wrap;">
               <span>🛡️ <strong>Risk Allocation:</strong></span>
               <span class="pill pill-primary" style="font-size: 11px;">
                 ${pos.sizing_source ? `${pos.sizing_source} ${(pos.chosen_kelly_f ? (pos.chosen_kelly_f * 100).toFixed(1) : (pos.risk_pct || 1.0))}%` : (match?.sizing_source ? `${match.sizing_source} ${(match.chosen_kelly_f * 100).toFixed(1)}%` : `flat-fallback ${pRiskPct}%`)}
               </span>
+              <span class="pill" style="font-size: 11px; background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.3); color: #38bdf8;" title="Active Stop Multiplier derived from EWMA market volatility regime">
+                🎯 Stop: ${pos.effective_ATR_mult ? `${pos.effective_ATR_mult}x` : (match?.effective_ATR_mult ? `${match.effective_ATR_mult}x` : '2.5x')} ATR (${pos.vol_regime || match?.vol_regime || (_cachedScanData?.vol_regime?.bucket || 'NORMAL')})
+              </span>
               <span style="color: var(--text-dim); font-size: 11.5px;">₹${Math.round(posRiskAmount).toLocaleString('en-IN')} max risk (${pRiskPct}% of capital)</span>
             </div>
-            <a href="javascript:void(0)" onclick="document.querySelector('[data-tab=tabHelp]').click(); setTimeout(() => { const el = document.getElementById('glossary-half-kelly'); if(el) el.scrollIntoView({behavior: 'smooth'}); }, 100);" style="font-size: 11px; color: #38bdf8; text-decoration: underline;">
-              Half-Kelly details ➔
-            </a>
+            <div style="display: flex; gap: 10px; align-items: center;">
+              <a href="javascript:void(0)" onclick="document.querySelector('[data-tab=tabHelp]').click(); setTimeout(() => { const el = document.getElementById('glossary-vol-regime'); if(el) el.scrollIntoView({behavior: 'smooth'}); }, 100);" style="font-size: 11px; color: #38bdf8; text-decoration: underline;" title="Adaptive Stop Multiplier Details">
+                Adaptive Stops ➔
+              </a>
+              <a href="javascript:void(0)" onclick="document.querySelector('[data-tab=tabHelp]').click(); setTimeout(() => { const el = document.getElementById('glossary-half-kelly'); if(el) el.scrollIntoView({behavior: 'smooth'}); }, 100);" style="font-size: 11px; color: #94a3b8; text-decoration: underline;">
+                Half-Kelly ➔
+              </a>
+            </div>
           </div>
 
           <!-- Thesis Card (SC-B) -->

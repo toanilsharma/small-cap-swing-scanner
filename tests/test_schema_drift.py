@@ -26,6 +26,7 @@ EXPECTED_TOP_LEVEL_KEYS = {
     "correlation",
     "sector_rotation",
     "hurst_summary",
+    "vol_regime",
 }
 
 EXPECTED_BACKTEST_RESULTS_KEYS = {
@@ -88,6 +89,8 @@ EXPECTED_SIGNAL_KEYS = {
     "hurst",
     "sizing_source",
     "chosen_kelly_f",
+    "effective_ATR_mult",
+    "vol_regime",
 }
 
 EXPECTED_WATCHLIST_KEYS = {
@@ -172,6 +175,11 @@ def test_schema_keys_exact_match(tmp_cwd: Any, monkeypatch: pytest.MonkeyPatch):
         assert isinstance(v, int)
         assert v >= 0
 
+    assert "vol_regime" in data
+    assert isinstance(data["vol_regime"], dict)
+    assert set(data["vol_regime"].keys()) == {"bucket", "sigma_ann_pct", "percentile"}
+    assert data["vol_regime"]["bucket"] in {"HIGH", "NORMAL", "LOW"}
+
     # 2. Signals schema
     assert len(data["signals"]) > 0, "Expected at least one signal in hermetic scan"
     for sig in data["signals"]:
@@ -185,6 +193,10 @@ def test_schema_keys_exact_match(tmp_cwd: Any, monkeypatch: pytest.MonkeyPatch):
         assert "rs_rating" in sig
         assert isinstance(sig["thesis_card"], str) and len(sig["thesis_card"]) > 0
         assert isinstance(sig["mtf_confluence"], bool)
+        assert "effective_ATR_mult" in sig
+        assert "vol_regime" in sig
+        assert sig["effective_ATR_mult"] in {3.25, 2.5, 2.125}
+        assert sig["vol_regime"] in {"HIGH", "NORMAL", "LOW"}
 
     # 3. Watchlist schema
     assert len(data["watchlist"]) > 0, "Expected at least one watchlist candidate in hermetic scan"

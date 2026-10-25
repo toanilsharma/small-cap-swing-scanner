@@ -12,7 +12,7 @@ import os
 import re
 import sys
 import time
-from typing import Optional, Dict, Any, List, Tuple, Set
+from typing import Optional, Dict, Any, List, Tuple, Set, Union
 
 # Suppress yfinance warning logs (e.g. 'No data found / may be delisted')
 logging.getLogger("yfinance").setLevel(logging.CRITICAL)
@@ -53,6 +53,16 @@ INDEX_SYMBOL = "^NSEI"
 USE_LARGE_CAP_CRASH_CHECK = False
 BASKET_MIN_SYMBOLS_PCT = 0.80
 BASKET_DRAWDOWN_GUARD_PCT = -0.07
+
+# Market Volatility Regime (EWMA RiskMetrics lambda=0.94)
+VOL_REGIME_LAMBDA = 0.94
+VOL_REGIME_WINDOW = 250
+VOL_REGIME_FACTORS = {
+    "HIGH": 1.30,
+    "NORMAL": 1.00,
+    "LOW": 0.85,
+}
+_VOL_REGIME_CACHE: Optional[Dict[str, Any]] = None
 
 # Position-aware liquidity
 ADV20_MIN_RUPEES = 50000000  # 5 Crores hard sanity floor
@@ -1343,6 +1353,106 @@ def index_return_50() -> Optional[float]:
     return float((last_close / close_50) - 1.0)
 
 
+def compute_ewma_volatility_regime(
+    basket_df: Optional[pd.DataFrame] = None,
+    returns_series: Optional[Union[pd.Series, np.ndarray, List[float]]] = None,
+    force_rebuild: bool = False,
+) -> Dict[str, Any]:
+    """
+    Computes basket EWMA variance sigma_t^2 = lambda*sigma_{t-1}^2 + (1-lambda)*r_t^2
+    over the regime basket's last 250 daily log-returns (lambda=0.94 fixed).
+    Annualizes sigma: sigma_ann = sqrt(252) * sigma_t * 100%.
+    Classifies vol_regime by comparing current sigma to its own 1-year rolling percentile:
+      HIGH if percentile >= 80.0
+      LOW  if percentile <= 20.0
+      else NORMAL
+    Deterministic, fixed window, no seed.
+    """
+    global _VOL_REGIME_CACHE
+    if _VOL_REGIME_CACHE is not None and not force_rebuild and basket_df is None and returns_series is None:
+        return _VOL_REGIME_CACHE
+
+    default_res = {
+        "bucket": "NORMAL",
+        "sigma_ann_pct": None,
+        "percentile": 50.0,
+    }
+
+    try:
+        # 1. Obtain daily log returns
+        rets = None
+        if returns_series is not None:
+            if isinstance(returns_series, (pd.Series, np.ndarray, list)):
+                rets = np.array(returns_series, dtype=float)
+        else:
+            if basket_df is None:
+                basket_df = get_basket_df()
+            if basket_df is None or len(basket_df) < 2:
+                idx_df = get_cached_index_df()
+                if idx_df is not None and len(idx_df) >= 2:
+                    basket_df = idx_df
+
+            if basket_df is not None and "Close" in basket_df.columns and len(basket_df) >= 2:
+                c = basket_df["Close"].dropna().values.astype(float)
+                if len(c) >= 2:
+                    rets = np.diff(np.log(c))
+
+        if rets is None or len(rets) < 2:
+            _VOL_REGIME_CACHE = default_res
+            return default_res
+
+        # Take up to the last VOL_REGIME_WINDOW (250) returns
+        window_rets = rets[-VOL_REGIME_WINDOW:]
+        n = len(window_rets)
+        if n < 5:
+            _VOL_REGIME_CACHE = default_res
+            return default_res
+
+        # 2. RiskMetrics EWMA recurrence: sigma_t^2 = lambda * sigma_{t-1}^2 + (1 - lambda) * r_t^2
+        lam = VOL_REGIME_LAMBDA
+        var_series = np.empty(n, dtype=float)
+        var_series[0] = float(window_rets[0] ** 2) if window_rets[0] != 0 else float(np.var(window_rets) or 1e-4)
+        for t in range(1, n):
+            var_series[t] = lam * var_series[t - 1] + (1.0 - lam) * (window_rets[t] ** 2)
+
+        sigma_series = np.sqrt(np.maximum(var_series, 1e-12))
+        curr_sigma = float(sigma_series[-1])
+        curr_sigma_ann = float(curr_sigma * math.sqrt(252) * 100.0)
+
+        # 3. Percentile of current sigma against its own rolling window
+        percentile = float(np.mean(sigma_series <= curr_sigma) * 100.0)
+
+        # 4. Classification
+        if percentile >= 80.0:
+            bucket = "HIGH"
+        elif percentile <= 20.0:
+            bucket = "LOW"
+        else:
+            bucket = "NORMAL"
+
+        res = {
+            "bucket": bucket,
+            "sigma_ann_pct": round(curr_sigma_ann, 2),
+            "percentile": round(percentile, 1),
+        }
+        if basket_df is None and returns_series is None:
+            _VOL_REGIME_CACHE = res
+        return res
+    except Exception as exc:
+        print(f"Warning in compute_ewma_volatility_regime: {exc}")
+        _VOL_REGIME_CACHE = default_res
+        return default_res
+
+
+def get_volatility_regime(force_rebuild: bool = False) -> Dict[str, Any]:
+    """Helper to retrieve current cached volatility regime or compute it."""
+    global _VOL_REGIME_CACHE
+    if _VOL_REGIME_CACHE is None or force_rebuild:
+        return compute_ewma_volatility_regime(force_rebuild=force_rebuild)
+    return _VOL_REGIME_CACHE
+
+
+
 # =====================================================================
 # CIRCUIT, EARNINGS & HEAT GUARDS (SMALL-CAP SURVIVAL LAYER)
 # =====================================================================
@@ -2339,16 +2449,22 @@ def calculate_position_risk_parameters(
     adv20_rupees: Optional[float] = None,
     current_heat: float = 0.0,
     stats_override: Optional[Dict[str, Any]] = None,
+    vol_regime_override: Optional[str] = None,
 ) -> Optional[Dict[str, Any]]:
     """
-    Standard position sizing, ATR stop loss, 9% floor cap, and 2R profit targets.
+    Standard position sizing, adaptive ATR stop loss, 9% floor cap, and 2R profit targets.
     Single source of truth used across live scanning and rules-replay backtesting.
     """
     if pd.isna(entry) or pd.isna(atr) or atr <= 0 or entry <= 0:
         return None
 
+    # Determine volatility regime and adaptive factor
+    v_bucket = str(vol_regime_override or get_volatility_regime().get("bucket", "NORMAL")).upper()
+    factor = VOL_REGIME_FACTORS.get(v_bucket, 1.00)
+    effective_atr_mult = round(ATR_STOP_MULTIPLIER * factor, 3)
+
     if signal_type == "SPRING":
-        # Initial stop placed below the spring low (tighter than 2.5 ATR default)
+        # Initial stop placed below the spring low (tighter than default)
         spring_low = float(low_price) if (low_price is not None and not pd.isna(low_price)) else (entry - 0.5 * atr)
         stop = min(spring_low - 0.05, entry - 0.5 * atr)
     elif signal_type == "PULLBACK":
@@ -2356,7 +2472,8 @@ def calculate_position_risk_parameters(
         pullback_low = float(low_price) if (low_price is not None and not pd.isna(low_price)) else (entry - 0.5 * atr)
         stop = min(pullback_low - 0.05, entry - 0.5 * atr)
     else:
-        stop = entry - (ATR_STOP_MULTIPLIER * atr)
+        # Adaptive ATR stop: wider in storms, tighter in calm
+        stop = entry - (effective_atr_mult * atr)
 
     # Floor stop loss at MAX_STOP_LOSS_PCT (9% maximum risk from entry)
     stop = max(stop, entry * (1.0 - MAX_STOP_LOSS_PCT))
@@ -2368,6 +2485,7 @@ def calculate_position_risk_parameters(
     target = entry + (TARGET_R_MULTIPLE * risk_per_unit)
 
     # Kelly sets the bet size; survival caps still clamp it.
+    # regime changes the stop shape, never the risk budget.
     size_res = calculate_position_size(
         entry=entry,
         stop=stop,
@@ -2395,6 +2513,8 @@ def calculate_position_risk_parameters(
         "gap_qty_applied": size_res["gap_qty_applied"],
         "chosen_kelly_f": size_res["chosen_kelly_f"],
         "sizing_source": size_res["sizing_source"],
+        "effective_ATR_mult": effective_atr_mult,
+        "vol_regime": v_bucket,
     }
 
 
@@ -2496,6 +2616,8 @@ def scan_symbol(symbol: str) -> Optional[Dict[str, Any]]:
     gap_qty_applied = risk_params["gap_qty_applied"]
     chosen_kelly_f = risk_params.get("chosen_kelly_f", RISK_PCT)
     sizing_source = risk_params.get("sizing_source", "flat-fallback")
+    effective_atr_mult = risk_params.get("effective_ATR_mult", ATR_STOP_MULTIPLIER)
+    vol_regime = risk_params.get("vol_regime", "NORMAL")
 
     # Size-aware cap: max_position_value = 0.015 * ADV20_rupees (notional <= 1.5% of avg daily turnover)
     max_position_value = MAX_POSITION_ADV_PCT * adv20_rupees
@@ -2539,6 +2661,8 @@ def scan_symbol(symbol: str) -> Optional[Dict[str, Any]]:
         "hurst": calculate_hurst_exponent(df),
         "sizing_source": sizing_source,
         "chosen_kelly_f": chosen_kelly_f,
+        "effective_ATR_mult": effective_atr_mult,
+        "vol_regime": vol_regime,
     }
     sig_dict["thesis_card"] = build_thesis_card(sig_dict)
     return sig_dict
@@ -3370,6 +3494,9 @@ def handle_command(text: str, chat_id: Any = None) -> Optional[str]:
 
             open_positions = load_open_positions()
             today_str = datetime.date.today().isoformat()
+            v_reg_dict = get_volatility_regime()
+            v_reg_bucket = v_reg_dict.get("bucket", "NORMAL")
+            eff_mult = round(ATR_STOP_MULTIPLIER * VOL_REGIME_FACTORS.get(v_reg_bucket, 1.0), 3)
 
             new_pos = {
                 "symbol": sym,
@@ -3380,6 +3507,8 @@ def handle_command(text: str, chat_id: Any = None) -> Optional[str]:
                 "planned_stop": round(stop, 2) if stop is not None else None,
                 "target": round(target, 2) if target is not None else None,
                 "tags": tags,
+                "effective_ATR_mult": eff_mult,
+                "vol_regime": v_reg_bucket,
             }
             open_positions.append(new_pos)
             save_open_positions(open_positions)
@@ -4143,6 +4272,7 @@ if __name__ == "__main__":
         scan_results = {
             "updated_at": now_ist,
             "market_ok": is_mkt_ok,
+            "vol_regime": get_volatility_regime(),
             "signals": signals,
             "watchlist": watchlist_candidates,
             "scanned_count": total_scanned,

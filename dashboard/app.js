@@ -609,48 +609,132 @@ function formatDateTime(isoStr) {
 }
 
 // =====================================================================
-// DATA LAYER: PROXY-AWARE loadFile(name) WITH LOCALSTORAGE CACHE
+// DATA LAYER: SINGLE GLOBAL DATA-STATE MACHINE & loadFile(name)
+// State machine states: 'loading' | 'ready' | 'awaiting' | 'error'
 // =====================================================================
 
-function stopLoadingStates(statusCode) {
-  const codeStr = statusCode || "Error";
+let _globalDataState = "loading";
+let _lastDataErrorCode = null;
 
-  // Stop header chips
-  const lastUpdatedEl = document.getElementById("lastUpdatedText");
-  if (lastUpdatedEl && lastUpdatedEl.textContent.includes("Loading")) {
-    lastUpdatedEl.textContent = `Updated: Data link error (${codeStr})`;
-    lastUpdatedEl.style.display = "inline-block";
-  }
-  const mktBadge = document.getElementById("marketBadge");
-  if (mktBadge && mktBadge.textContent.includes("Checking")) {
-    mktBadge.textContent = "Data Link Error";
-    mktBadge.className = "badge badge-danger";
-  }
+function setDataState(state, errCode = null) {
+  _globalDataState = state;
+  _lastDataErrorCode = errCode;
+
+  const headerBadge = document.getElementById("marketBadge");
+  const errorBanner = document.getElementById("dataLinkErrorBanner");
   const indexChip = document.getElementById("indexPriceChip");
-  if (indexChip && indexChip.textContent.includes("Loading")) {
-    indexChip.textContent = `Index: ${codeStr}`;
-  }
   const closeChip = document.getElementById("lastCloseChip");
-  if (closeChip && closeChip.textContent.includes("Loading")) {
-    closeChip.textContent = "Last close: N/A";
-  }
+  const lastUpdatedEl = document.getElementById("lastUpdatedText");
+  const awaitingNotice = document.getElementById("watchlistAwaitingNotice");
 
-  // Stop tables
-  const watchlistBody = document.getElementById("watchlistBody");
-  if (watchlistBody && watchlistBody.querySelector(".skeleton-row")) {
-    watchlistBody.innerHTML = `<tr><td colspan="9" class="empty-state" style="color: var(--bad);">Data link error (${codeStr}) — unable to fetch scan results</td></tr>`;
-  }
-  const openPosBody = document.getElementById("openPositionsBody");
-  if (openPosBody && openPosBody.innerHTML.includes("Loading")) {
-    openPosBody.innerHTML = `<tr><td colspan="12" class="empty-state" style="color: var(--bad);">Data link error (${codeStr}) — unable to fetch open positions</td></tr>`;
-  }
-  const histBody = document.getElementById("historyBody");
-  if (histBody && histBody.innerHTML.includes("Loading")) {
-    histBody.innerHTML = `<tr><td colspan="12" class="empty-state" style="color: var(--bad);">Data link error (${codeStr}) — unable to fetch trade history</td></tr>`;
-  }
-  const btEmpty = document.getElementById("btEmptyState");
-  if (btEmpty && btEmpty.innerHTML.includes("Loading")) {
-    btEmpty.innerHTML = `<span>⚠️ Data link error (${codeStr})</span>`;
+  if (state === "loading") {
+    if (headerBadge) {
+      headerBadge.textContent = "Checking Market...";
+      headerBadge.className = "badge badge-neutral";
+    }
+    if (errorBanner) errorBanner.style.display = "none";
+    if (awaitingNotice) awaitingNotice.style.display = "none";
+  } else if (state === "awaiting") {
+    // 404: Expected before first scan / on weekends. ZERO red alarms, ONE gray status chip
+    if (errorBanner) errorBanner.style.display = "none";
+    if (headerBadge) {
+      headerBadge.textContent = "Awaiting first scan";
+      headerBadge.className = "badge badge-neutral";
+    }
+    if (indexChip) indexChip.textContent = "Index: N/A";
+    if (closeChip) closeChip.textContent = "Last close: N/A";
+    if (lastUpdatedEl) {
+      lastUpdatedEl.textContent = "Awaiting first scan";
+      lastUpdatedEl.style.display = "none";
+    }
+    if (awaitingNotice) awaitingNotice.style.display = "flex";
+
+    // Hero Zone 1 calm awaiting state
+    const heroPrice = document.getElementById("heroIndexPrice");
+    const heroChange = document.getElementById("heroIndexChange");
+    const heroRegime = document.getElementById("heroRegimeWord");
+    const heroActionText = document.getElementById("heroActionPlanText");
+    const heroBreadth = document.getElementById("heroBreadthInline");
+    const heroSectors = document.getElementById("heroSectorChipsRow");
+
+    if (heroPrice) heroPrice.textContent = "--";
+    if (heroChange) {
+      heroChange.textContent = "±0.00%";
+      heroChange.className = "hero-index-change";
+    }
+    if (heroRegime) {
+      heroRegime.textContent = "AWAITING SCAN";
+      heroRegime.className = "hero-regime-word neutral";
+    }
+    if (heroActionText) {
+      heroActionText.textContent = "Awaiting first scan — runs weekday 4:15 PM IST. Cash is 100% until signals trigger.";
+    }
+    if (heroBreadth) {
+      heroBreadth.innerHTML = `<span class="breadth-pill">Universe: 250</span><span class="breadth-pill">Status: Idle</span>`;
+    }
+    if (heroSectors) {
+      heroSectors.innerHTML = `<span style="color: var(--text-dim); font-size: 12px;">Sector leaders will populate following market close scan.</span>`;
+    }
+
+    // Kill orphaned spinners in all consumers!
+    const leadersChipsRow = document.getElementById("leadersChipsRow");
+    if (leadersChipsRow) {
+      leadersChipsRow.innerHTML = `<div class="empty-state" style="padding: 8px 12px; color: var(--text-dim); font-size: 12.5px;">Awaiting first scan — runs weekday 4:15 PM IST</div>`;
+    }
+    const onDeckGrid = document.getElementById("onDeckCardsGrid");
+    if (onDeckGrid) {
+      onDeckGrid.innerHTML = `<div class="empty-state" style="grid-column: 1 / -1; padding: 20px; text-align: center; color: var(--text-dim); font-size: 12.5px;">Awaiting first scan — runs weekday 4:15 PM IST</div>`;
+    }
+    const openPosBody = document.getElementById("openPositionsBody");
+    if (openPosBody) {
+      openPosBody.innerHTML = `<tr><td colspan="12" class="empty-state" style="color: var(--text-muted); padding: 24px;">Awaiting first scan — runs weekday 4:15 PM IST</td></tr>`;
+    }
+    const historyBody = document.getElementById("historyBody");
+    if (historyBody) {
+      historyBody.innerHTML = `<tr><td colspan="12" class="empty-state" style="color: var(--text-muted); padding: 24px;">No closed trades recorded yet</td></tr>`;
+    }
+
+    // Render teaching empty state mock row in watchlist
+    renderAwaitingWatchlistBody();
+  } else if (state === "error") {
+    // 401/403/5xx/network error: Red banner ONLY here
+    const code = errCode || "Network Error";
+    if (errorBanner) {
+      errorBanner.innerHTML = `<span>⚠️</span><span>Data link error (HTTP ${escapeHtml(String(code))}) — unable to connect to GitHub</span>`;
+      errorBanner.style.display = "flex";
+    }
+    if (headerBadge) {
+      headerBadge.textContent = "Data link error";
+      headerBadge.className = "badge badge-danger";
+    }
+    if (indexChip && indexChip.textContent.includes("Loading")) {
+      indexChip.textContent = `Index: ${escapeHtml(String(code))}`;
+    }
+    if (closeChip && closeChip.textContent.includes("Loading")) {
+      closeChip.textContent = "Last close: N/A";
+    }
+    if (awaitingNotice) awaitingNotice.style.display = "none";
+
+    // Show error state in consumers if empty
+    const watchlistBody = document.getElementById("watchlistBody");
+    if (watchlistBody && (watchlistBody.querySelector(".skeleton-row") || !watchlistBody.children.length)) {
+      watchlistBody.innerHTML = `<tr><td colspan="9" class="empty-state" style="color: var(--bad);">Data link error (${escapeHtml(String(code))}) — unable to fetch scan results</td></tr>`;
+    }
+    const openPosBody = document.getElementById("openPositionsBody");
+    if (openPosBody && (openPosBody.innerHTML.includes("Loading") || !openPosBody.children.length)) {
+      openPosBody.innerHTML = `<tr><td colspan="12" class="empty-state" style="color: var(--bad); padding: 20px;">Data link error (${escapeHtml(String(code))}) — unable to fetch open positions</td></tr>`;
+    }
+    const leadersChipsRow = document.getElementById("leadersChipsRow");
+    if (leadersChipsRow && leadersChipsRow.innerHTML.includes("Loading")) {
+      leadersChipsRow.innerHTML = `<div class="empty-state" style="color: var(--bad); font-size: 12.5px;">Data link error (${escapeHtml(String(code))})</div>`;
+    }
+    const onDeckGrid = document.getElementById("onDeckCardsGrid");
+    if (onDeckGrid && onDeckGrid.innerHTML.includes("Loading")) {
+      onDeckGrid.innerHTML = `<div class="empty-state" style="grid-column: 1 / -1; color: var(--bad); padding: 20px; font-size: 12.5px;">Data link error (${escapeHtml(String(code))})</div>`;
+    }
+  } else if (state === "ready") {
+    if (errorBanner) errorBanner.style.display = "none";
+    if (awaitingNotice) awaitingNotice.style.display = "none";
   }
 
   const refreshBtn = document.getElementById("refreshBtn");
@@ -660,17 +744,20 @@ function stopLoadingStates(statusCode) {
   }
 }
 
-function showDataLinkError(statusCode) {
-  const codeStr = statusCode || "Network Error";
-  const banner = document.getElementById("dataLinkErrorBanner");
-  if (banner) {
-    const msg = codeStr === "404"
-      ? "Data file not found (404) — awaiting first automated scan in repo"
-      : `Data link error (HTTP ${codeStr}) — unable to connect to GitHub`;
-    banner.innerHTML = `<span>⚠️</span><span>${msg}</span>`;
-    banner.style.display = "flex";
+function stopLoadingStates(statusCode) {
+  if (statusCode === "404" || statusCode === 404) {
+    setDataState("awaiting");
+  } else {
+    setDataState("error", statusCode);
   }
-  stopLoadingStates(codeStr);
+}
+
+function showDataLinkError(statusCode) {
+  if (statusCode === "404" || statusCode === 404) {
+    setDataState("awaiting");
+  } else {
+    setDataState("error", statusCode);
+  }
 }
 
 function hideDataLinkError() {
@@ -703,44 +790,7 @@ function showCachedCopyChip(timestamp) {
   }
 }
 
-// Single data layer fetching public raw GitHub URL directly (anonymous, no headers)
-async function loadFile(name) {
-  const cleanName = String(name || "").replace(/^\/+/, "").trim();
-  const url = `https://raw.githubusercontent.com/${OWNER}/${REPO}/main/${encodeURIComponent(cleanName)}`;
-
-  try {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const payload = await res.json();
-
-    // Cache every successful payload to localStorage keyed by name+updated_at
-    const updatedAt = (payload && payload.updated_at) ? payload.updated_at : new Date().toISOString();
-    const cacheKey = `cached_${cleanName}_${updatedAt}`;
-    try {
-      localStorage.setItem(cacheKey, JSON.stringify(payload));
-      localStorage.setItem(`cached_${cleanName}_latest_key`, cacheKey);
-      localStorage.setItem(`cached_${cleanName}_latest_time`, updatedAt);
-      localStorage.setItem(`cached_${cleanName}`, JSON.stringify(payload));
-    } catch (e) {
-      console.warn("localStorage quota exceeded writing cache:", e);
-    }
-    return payload;
-  } catch (err) {
-    const statusMatch = err && err.message && err.message.match(/HTTP (\d+)/);
-    const status = statusMatch ? statusMatch[1] : "Network Error";
-    console.warn(`Direct fetch failed for ${cleanName} (${status}):`, err.message);
-    return handleLoadFallback(cleanName, status);
-  }
-}
-
-function handleLoadFallback(cleanName, statusCode) {
-  // 1. STOP any "Loading..." state
-  stopLoadingStates(statusCode);
-
-  // 2. Show red #dataLinkError banner
-  showDataLinkError(statusCode);
-
-  // 3. Fallback to localStorage previous good payload
+function getCachedPayload(cleanName) {
   let cachedPayload = null;
   let timestamp = null;
 
@@ -789,12 +839,134 @@ function handleLoadFallback(cleanName, statusCode) {
   }
 
   if (cachedPayload) {
-    showCachedCopyChip(timestamp);
-    return cachedPayload;
+    return { payload: cachedPayload, timestamp: timestamp };
+  }
+  return null;
+}
+
+// Single data layer fetching public raw GitHub URL directly (anonymous, no headers)
+async function loadFile(name) {
+  const cleanName = String(name || "").replace(/^\/+/, "").trim();
+  const url = `https://raw.githubusercontent.com/${OWNER}/${REPO}/main/${encodeURIComponent(cleanName)}`;
+
+  try {
+    const res = await fetch(url);
+    if (!res.ok) {
+      const err = new Error(`HTTP ${res.status}`);
+      err.status = res.status;
+      throw err;
+    }
+    const payload = await res.json();
+
+    // Cache every successful payload to localStorage keyed by name+updated_at
+    const updatedAt = (payload && payload.updated_at) ? payload.updated_at : new Date().toISOString();
+    const cacheKey = `cached_${cleanName}_${updatedAt}`;
+    try {
+      localStorage.setItem(cacheKey, JSON.stringify(payload));
+      localStorage.setItem(`cached_${cleanName}_latest_key`, cacheKey);
+      localStorage.setItem(`cached_${cleanName}_latest_time`, updatedAt);
+      localStorage.setItem(`cached_${cleanName}`, JSON.stringify(payload));
+    } catch (e) {
+      console.warn("localStorage quota exceeded writing cache:", e);
+    }
+
+    if (cleanName === "scan_results.json") {
+      setDataState("ready");
+    }
+    return payload;
+  } catch (err) {
+    const statusCode = err.status || (err.message && err.message.match(/HTTP (\d+)/) ? parseInt(err.message.match(/HTTP (\d+)/)[1], 10) : null) || 0;
+    console.warn(`Direct fetch failed for ${cleanName} (${statusCode}):`, err.message);
+
+    // Fallback to localStorage previous good payload
+    const cached = getCachedPayload(cleanName);
+    if (cached) {
+      showCachedCopyChip(cached.timestamp);
+      if (cleanName === "scan_results.json") {
+        setDataState("ready");
+      }
+      return cached.payload;
+    }
+
+    // If scan_results.json: 404 is awaiting; other is error
+    if (cleanName === "scan_results.json") {
+      if (statusCode === 404) {
+        setDataState("awaiting");
+      } else {
+        setDataState("error", statusCode || "Network Error");
+      }
+    }
+    return null;
+  }
+}
+
+// Teaching empty state: faint mock example row
+function renderAwaitingWatchlistBody() {
+  const watchlistBody = document.getElementById("watchlistBody");
+  if (!watchlistBody) return;
+
+  const mockGttStr = "BUY EXAMPLESYM | Trigger 450.00 | Limit 452.25 | Qty=44 | GTC";
+
+  watchlistBody.innerHTML = `
+    <tr class="watchlist-row mock-example-row" title="Teaching Example — demonstrating row anatomy (not live)">
+      <td data-label="Symbol">
+        <div style="display: flex; flex-direction: column; gap: 2px;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <strong style="font-size: 13.5px; color: #fff;">EXAMPLESYM</strong>
+            <span class="mock-tag">example — not live</span>
+          </div>
+          <span style="font-size: 11px; color: var(--text-dim);">Example Diagnostics Ltd</span>
+        </div>
+      </td>
+      <td data-label="Grade">
+        <div style="display: flex; align-items: center; gap: 4px; flex-wrap: wrap;">
+          <span class="pill pill-success" style="font-weight: 700;">A+</span>
+          <span class="pill pill-outline" title="Relative Strength vs Nifty">RS 88</span>
+          <span class="pill pill-neutral" title="Institutional Footprint">Inst 72</span>
+          <span class="pill pill-success" title="Multitimeframe alignment">MTF ✓</span>
+        </div>
+      </td>
+      <td data-label="Close"><strong>₹446.50</strong></td>
+      <td data-label="Dist %"><span class="dist-pill dist-green">+0.78%</span></td>
+      <td data-label="Status"><span class="pill pill-success">READY</span></td>
+      <td data-label="Score" class="hide-mobile"><span class="pill pill-primary">9.4/10</span></td>
+      <td data-label="Sector" class="hide-mobile"><span class="pill pill-neutral">Healthcare</span></td>
+      <td data-label="Action">
+        <div style="display: flex; align-items: center; gap: 4px; flex-wrap: nowrap;">
+          <button class="badge-gtt copy-gtt-btn" data-symbol="EXAMPLESYM" data-gtt="${escapeHtml(mockGttStr)}" title="Copy GTT order instruction to clipboard">
+            📋 Copy GTT
+          </button>
+          <button class="btn btn-xs btn-outline-primary size-trade-btn" title="Size this trade with Position Sizer">
+            Size
+          </button>
+        </div>
+      </td>
+      <td style="text-align: right; width: 44px;">
+        <span class="chevron" style="font-size: 11px; color: var(--text-dim); padding: 8px;">▼</span>
+      </td>
+    </tr>
+  `;
+
+  // Attach mock copy GTT handler
+  const copyBtn = watchlistBody.querySelector(".copy-gtt-btn");
+  if (copyBtn) {
+    copyBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      navigator.clipboard.writeText(mockGttStr).then(() => {
+        const orig = copyBtn.innerHTML;
+        copyBtn.innerHTML = "✓ Copied!";
+        setTimeout(() => { copyBtn.innerHTML = orig; }, 2000);
+      }).catch(() => {});
+    });
   }
 
-  // Never a blank infinite spinner
-  return null;
+  const sizeBtn = watchlistBody.querySelector(".size-trade-btn");
+  if (sizeBtn) {
+    sizeBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      openPositionSizerFor({ Symbol: "EXAMPLESYM", Close: 446.50, ATR14: 11.20 });
+    });
+  }
 }
 
 // FetchJson helper delegating to loadFile
@@ -950,6 +1122,21 @@ function renderTodaysPlan(scanData, openPositions) {
     }
   }
 
+  // Prominent Single-Sentence Action Plan in Hero Zone 1 (Item #12)
+  const heroActionText = document.getElementById("heroActionPlanText");
+  if (heroActionText) {
+    if (!isMarketOk) {
+      heroActionText.textContent = "Market defensive: Cash is a position today — capital protection mode, new buy entries blocked.";
+    } else if (nearStopCount > 0) {
+      heroActionText.textContent = `Active defense: ${nearStopCount} position${nearStopCount > 1 ? "s" : ""} near stop loss — review exit rules immediately.`;
+    } else if (topGradeItems.length > 0) {
+      const symList = topGradeItems.map(i => i.Symbol || "").filter(Boolean).slice(0, 3).join(", ");
+      heroActionText.textContent = `${topGradeItems.length} A-grade setup${topGradeItems.length > 1 ? "s" : ""} on deck (${symList}) — verify <1% distance and place GTT limit orders.`;
+    } else {
+      heroActionText.textContent = "Uptrend intact with 0 A-grade breakout triggers today — standing by for fresh institutional volume.";
+    }
+  }
+
   // Render bullets list
   bulletsList.innerHTML = bullets.map(b => `
     <li class="todays-plan-item">
@@ -1024,6 +1211,56 @@ function renderMarketPulse(scanData) {
   }
 
   const ms = scanData ? scanData.market_summary : null;
+
+  // Hero Zone 1 Telemetry (Item #12)
+  const heroPrice = document.getElementById("heroIndexPrice");
+  const heroChange = document.getElementById("heroIndexChange");
+  const heroRegime = document.getElementById("heroRegimeWord");
+  const heroBreadth = document.getElementById("heroBreadthInline");
+
+  if (heroPrice) {
+    if (ms && ms.last_close != null) {
+      heroPrice.textContent = "₹" + Number(ms.last_close).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    } else {
+      heroPrice.textContent = "--";
+    }
+  }
+
+  if (heroChange) {
+    if (ms && ms.chg_pct != null) {
+      const sign = ms.chg_pct >= 0 ? "+" : "";
+      heroChange.textContent = `${sign}${Number(ms.chg_pct).toFixed(2)}%`;
+      heroChange.className = `hero-index-change ${ms.chg_pct >= 0 ? "positive" : "negative"}`;
+    } else {
+      heroChange.textContent = "±0.00%";
+      heroChange.className = "hero-index-change";
+    }
+  }
+
+  if (heroRegime) {
+    if (scanData && scanData.market_ok) {
+      heroRegime.textContent = "BULL CONFIRMED";
+      heroRegime.className = "hero-regime-word bullish";
+    } else if (scanData) {
+      heroRegime.textContent = "DEFENSIVE";
+      heroRegime.className = "hero-regime-word defensive";
+    } else {
+      heroRegime.textContent = "AWAITING SCAN";
+      heroRegime.className = "hero-regime-word neutral";
+    }
+  }
+
+  if (heroBreadth) {
+    if (ms && ms.breadth_above_sma50 != null) {
+      heroBreadth.innerHTML = `
+        <span class="breadth-pill" title="% of small-cap universe above 50-day SMA"><strong>${ms.breadth_above_sma50}%</strong> &gt; 50 SMA</span>
+        <span class="breadth-pill" title="% of small-cap universe above 200-day SMA"><strong>${ms.breadth_above_sma200}%</strong> &gt; 200 SMA</span>
+        <span class="breadth-pill" title="Advancers vs Decliners in universe"><strong>${ms.advancers}</strong> Adv / <strong>${ms.decliners}</strong> Dec</span>
+      `;
+    } else {
+      heroBreadth.innerHTML = `<span class="breadth-pill">Universe: 250</span><span class="breadth-pill">Status: Active</span>`;
+    }
+  }
 
   // 2. Index Price Chip ("<source> last ₹x (±y%)")
   if (indexChip) {
@@ -4011,11 +4248,11 @@ async function loadAllData() {
     refreshBtn.textContent = "⏳ Updating...";
   }
 
+  setDataState("loading");
+
   let scanData = null;
   let openPositions = null;
   let trades = null;
-  let hasError = false;
-  let firstErrorCode = null;
 
   try {
     // Fetch all core datasets via single data layer loadFile(name)
@@ -4028,7 +4265,8 @@ async function loadAllData() {
     openPositions = opData || [];
     trades = tData || [];
 
-    if (scanData && openPositions && trades) {
+    if (scanData) {
+      setDataState("ready");
       hideDataLinkError();
     }
   } catch (err) {
@@ -4042,15 +4280,17 @@ async function loadAllData() {
 
     if (scanData) {
       archiveScanData(scanData);
-    }
-
-    if (scanData || (openPositions && openPositions.length > 0) || (trades && trades.length > 0)) {
       if (!_isViewingArchive) {
         renderNearBuy(scanData, _cachedOpenPositions);
       }
       await renderOpenPositions(_cachedOpenPositions);
       renderHistory(_cachedTradesData);
       renderStats(_cachedTradesData);
+    } else {
+      // If scanData is null, ensure awaiting state is active if not in error
+      if (_globalDataState !== "error") {
+        setDataState("awaiting");
+      }
     }
 
     // Fetch and render Backtest results (Fail-open)
@@ -4068,10 +4308,6 @@ async function loadAllData() {
     if (refreshBtn) {
       refreshBtn.disabled = false;
       refreshBtn.textContent = "🔄 Refresh";
-    }
-    // Final check: if error occurred and no cached data was rendered, ensure Loading... is stopped
-    if (hasError && !scanData && (!openPositions || openPositions.length === 0)) {
-      showDataLinkError(firstErrorCode);
     }
   }
 }
@@ -4497,6 +4733,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Initialize SC-6 Trader's Playbook Listeners (Buy & Sell Cards)
   initPlaybookListeners();
+
+  // Initialize SC-UX1: Responsive Header Menu & Playbook Cheat Strip
+  initHeaderMenu();
+  initPlaybookCheatStrip();
 
   // Keep IST Live chip ticking every 30 seconds
   setInterval(updateIstLiveChip, 30000);
@@ -5323,10 +5563,9 @@ function initPlaybookListeners() {
     });
   }
 
-  // 3. Copy Formula Button (#copyFormulaBtn)
-  const copyFormulaBtn = document.getElementById("copyFormulaBtn");
-  if (copyFormulaBtn) {
-    copyFormulaBtn.addEventListener("click", async () => {
+  // 3. Copy Formula Buttons (.copy-formula-btn)
+  document.querySelectorAll(".copy-formula-btn").forEach(btn => {
+    btn.addEventListener("click", async () => {
       const formula = "size=(CAPITAL*RISK_PCT)/(Entry-SL)";
       try {
         if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -5339,22 +5578,114 @@ function initPlaybookListeners() {
           document.execCommand("copy");
           document.body.removeChild(ta);
         }
-        const originalHtml = copyFormulaBtn.innerHTML;
-        copyFormulaBtn.innerHTML = "✓ Copied!";
-        copyFormulaBtn.classList.add("btn-success");
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = "✓ Copied!";
+        btn.classList.add("btn-success");
         setTimeout(() => {
-          copyFormulaBtn.innerHTML = originalHtml;
-          copyFormulaBtn.classList.remove("btn-success");
+          btn.innerHTML = originalHtml;
+          btn.classList.remove("btn-success");
         }, 2000);
         showToast("Copied formula to clipboard", "📋");
       } catch (err) {
         console.warn("Failed to copy formula:", err);
       }
     });
+  });
+}
+
+// =====================================================================
+// SC-UX1: HEADER MORE MENU & PLAYBOOK CHEAT-STRIP
+// =====================================================================
+
+function initHeaderMenu() {
+  const moreBtn = document.getElementById("headerMoreBtn");
+  const dropdownMenu = document.getElementById("headerDropdownMenu");
+  const overflowSearchBtn = document.getElementById("overflowSearchBtn");
+  const overflowRefreshBtn = document.getElementById("overflowRefreshBtn");
+  const overflowLogoutBtn = document.getElementById("overflowLogoutBtn");
+
+  if (!moreBtn || !dropdownMenu) return;
+
+  moreBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const isHidden = dropdownMenu.style.display === "none" || !dropdownMenu.style.display;
+    dropdownMenu.style.display = isHidden ? "flex" : "none";
+    moreBtn.setAttribute("aria-expanded", isHidden ? "true" : "false");
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!dropdownMenu.contains(e.target) && e.target !== moreBtn) {
+      dropdownMenu.style.display = "none";
+      moreBtn.setAttribute("aria-expanded", "false");
+    }
+  });
+
+  if (overflowSearchBtn) {
+    overflowSearchBtn.addEventListener("click", () => {
+      dropdownMenu.style.display = "none";
+      const globalSearchBtn = document.getElementById("globalSearchBtn");
+      if (globalSearchBtn) globalSearchBtn.click();
+    });
+  }
+
+  if (overflowRefreshBtn) {
+    overflowRefreshBtn.addEventListener("click", () => {
+      dropdownMenu.style.display = "none";
+      loadAllData();
+    });
+  }
+
+  if (overflowLogoutBtn) {
+    overflowLogoutBtn.addEventListener("click", () => {
+      dropdownMenu.style.display = "none";
+      const logoutBtn = document.getElementById("logoutBtn");
+      if (logoutBtn) logoutBtn.click();
+    });
   }
 }
 
+function initPlaybookCheatStrip() {
+  const cheatStrip = document.getElementById("playbookCheatStrip");
+  const collapsedBadge = document.getElementById("playbookCollapsedBadge");
+  const fullPlaybookBtn = document.getElementById("openFullPlaybookBtn");
+  const helpTabBtn = document.getElementById("helpTabBtn");
 
+  function openFullPlaybook() {
+    let readCount = parseInt(localStorage.getItem("playbook_read") || "0", 10);
+    readCount++;
+    localStorage.setItem("playbook_read", String(readCount));
 
+    if (helpTabBtn) {
+      helpTabBtn.click();
+    }
+    setTimeout(() => {
+      const section = document.getElementById("help-playbook");
+      if (section) {
+        section.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }, 100);
 
+    checkPlaybookCollapse();
+  }
 
+  function checkPlaybookCollapse() {
+    const readCount = parseInt(localStorage.getItem("playbook_read") || "0", 10);
+    if (readCount >= 3) {
+      if (cheatStrip) cheatStrip.style.display = "none";
+      if (collapsedBadge) collapsedBadge.style.display = "inline-flex";
+    } else {
+      if (cheatStrip) cheatStrip.style.display = "flex";
+      if (collapsedBadge) collapsedBadge.style.display = "none";
+    }
+  }
+
+  if (fullPlaybookBtn) {
+    fullPlaybookBtn.addEventListener("click", openFullPlaybook);
+  }
+
+  if (collapsedBadge) {
+    collapsedBadge.addEventListener("click", openFullPlaybook);
+  }
+
+  checkPlaybookCollapse();
+}

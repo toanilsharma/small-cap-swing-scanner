@@ -22,9 +22,12 @@
   <header class="app-header">
     <div class="page-container header-container">
       <div class="header-title-group">
-        <span style="font-size: 22px;">📊</span>
+        <span class="header-logo-icon" style="font-size: 22px;">📊</span>
         <div>
-          <h1 class="header-title">Smallcap Swing Terminal</h1>
+          <h1 class="header-title">
+            <span class="header-title-full">Smallcap Swing Terminal</span>
+            <span class="header-title-short">Smallcap Swing</span>
+          </h1>
           <div id="marketPulse" class="market-pulse-row">
             <span id="marketBadge" class="badge badge-neutral term-lookup" data-term="Market regime">Checking Market...</span>
             <span id="indexPriceChip" class="pulse-chip index-chip">Index: Loading...</span>
@@ -39,17 +42,31 @@
         </div>
       </div>
       <div class="header-actions">
-        <button id="globalSearchBtn" class="search-trigger-btn" title="Search terms and definitions (Press /)">
-          <span style="font-size: 14px;">🔍</span>
-          <span>Search</span>
-          <kbd class="search-shortcut-kbd">/</kbd>
-        </button>
-        <button id="refreshBtn" class="btn btn-secondary" title="Fetch fresh data">
-          🔄 Refresh
-        </button>
-        <button id="logoutBtn" class="btn btn-danger" title="Sign out">
-          Sign Out
-        </button>
+        <!-- Desktop buttons (>900px) -->
+        <div class="header-actions-desktop">
+          <button id="globalSearchBtn" class="search-trigger-btn" title="Search terms and definitions (Press /)">
+            <span style="font-size: 14px;">🔍</span>
+            <span>Search</span>
+            <kbd class="search-shortcut-kbd">/</kbd>
+          </button>
+          <button id="refreshBtn" class="btn btn-secondary" title="Fetch fresh data">
+            🔄 Refresh
+          </button>
+          <button id="logoutBtn" class="btn btn-danger" title="Sign out">
+            Sign Out
+          </button>
+        </div>
+        <!-- Mobile overflow menu (<=900px) -->
+        <div class="header-actions-overflow">
+          <button id="headerMoreBtn" class="btn btn-secondary header-more-btn" aria-label="More options" aria-expanded="false" title="Menu">
+            ⋯
+          </button>
+          <div id="headerDropdownMenu" class="header-dropdown-menu" style="display: none;">
+            <button id="mobileSearchBtn" class="dropdown-item">🔍 Search (/)</button>
+            <button id="mobileRefreshBtn" class="dropdown-item">🔄 Refresh</button>
+            <button id="mobileLogoutBtn" class="dropdown-item dropdown-item-danger">🚪 Sign Out</button>
+          </div>
+        </div>
       </div>
     </div>
   </header>
@@ -75,60 +92,57 @@
     <section id="tabNearBuy" class="tab-content active">
 
       <!-- ZONE 1: MARKET OVERVIEW (Pulse + Breadth + Sector Chips) -->
-      <div class="zone-card market-overview-zone" id="zoneMarketOverview">
-        <div class="zone-header">
-          <span class="zone-title">🌐 Zone 1: Market Overview &amp; Regime Pulse</span>
-        </div>
-
-        <!-- Tab Guide Banner -->
-        <div class="tab-guide-banner" id="bannerNearBuy" data-tab-banner="near_buy">
-          <div class="tab-guide-content">
-            <span class="tab-guide-icon">💡</span>
-            <span class="tab-guide-text">Stocks in uptrend closest to their breakout. Act only on Grade A/A+ when the market badge is green.</span>
-          </div>
-          <button class="tab-guide-dismiss" title="Dismiss banner" aria-label="Dismiss">×</button>
-        </div>
-
-        <!-- TODAY'S PLAN CARD -->
-        <div id="todaysPlanCard" class="todays-plan-card">
-          <div class="todays-plan-header">
-            <div class="todays-plan-title-group">
-              <span class="todays-plan-icon">📋</span>
-              <div>
-                <h3 class="todays-plan-title">Today's Action Plan</h3>
-                <span id="planMetaTime" class="todays-plan-meta">Updated: Today</span>
+      <!-- ZONE 1: MARKET OVERVIEW & ACTION PLAN HERO -->
+      <div class="zone-card market-overview-zone hero-zone" id="zoneMarketOverview">
+        <!-- Hero Header Row: Index Level & ±% and Market Regime Word in Large Type -->
+        <div class="hero-header-row">
+          <div class="hero-telemetry">
+            <div class="hero-index-group">
+              <span class="hero-index-label">NIFTY SMALLCAP 100</span>
+              <div class="hero-index-numbers">
+                <span id="heroIndexPrice" class="hero-index-price">--</span>
+                <span id="heroIndexChange" class="hero-index-change">--</span>
               </div>
             </div>
-            <span id="planStatusPill" class="badge badge-success">Active Strategy</span>
-          </div>
-          <ul id="todaysPlanBullets" class="todays-plan-list">
-            <li class="todays-plan-item">
-              <span class="todays-plan-bullet-icon">•</span>
-              <span class="todays-plan-bullet-text">Analyzing market regime and watchlist setups...</span>
-            </li>
-          </ul>
-        </div>
-
-        <div id="regimeBanner" class="regime-banner" style="display: none;">
-          <span id="regimeText">Market Regime: Checking...</span>
-          <span id="scannedMeta">100 constituents scanned</span>
-        </div>
-
-        <!-- SECTOR LEADERSHIP STRIP (Item #2) -->
-        <div id="sectorLeadershipStrip" class="sector-strip-card" style="display: none;">
-          <div class="sector-strip-header">
-            <div class="sector-strip-title-group">
-              <span style="font-size: 16px;">🧭</span>
-              <span class="sector-strip-title">Sector Leadership &amp; Rotation</span>
-              <span id="sectorActiveFilterBadge" class="badge badge-primary sector-filter-badge" style="display: none; cursor: pointer;" title="Click to clear sector filter">
-                Filtered: <strong id="sectorFilterName"></strong> &times;
-              </span>
+            <div class="hero-regime-group">
+              <span class="hero-regime-label">MARKET REGIME</span>
+              <span id="heroRegimeWord" class="hero-regime-word badge badge-neutral">CHECKING...</span>
             </div>
-            <span class="sector-strip-hint">Click a sector chip to filter setups</span>
           </div>
-          <div id="sectorChipsContainer" class="sector-chips-row"></div>
+          <div id="heroBreadthInline" class="hero-breadth-inline">
+            <span id="heroBreadthSMA50" class="breadth-pill">SMA 50: --%</span>
+            <span id="heroBreadthSMA200" class="breadth-pill">SMA 200: --%</span>
+          </div>
         </div>
 
+        <!-- Prominent "Today's Action Plan" Single Sentence -->
+        <div id="heroActionPlanBox" class="hero-action-plan-box">
+          <span class="hero-action-label">TODAY'S ACTION PLAN:</span>
+          <div id="heroActionPlanText" class="hero-action-plan-text">
+            Analyzing market regime and watchlist setups...
+          </div>
+        </div>
+
+        <!-- Inline Sector Leadership Chips -->
+        <div id="heroSectorChipsRow" class="hero-sector-chips-row" style="display: none;">
+          <span class="hero-sector-title">Top Sectors:</span>
+          <div id="heroSectorChipsList" class="hero-sector-chips-list"></div>
+        </div>
+
+        <!-- Hidden container for legacy bindings -->
+        <div id="todaysPlanCard" style="display: none;">
+          <ul id="todaysPlanBullets"></ul>
+          <span id="planStatusPill"></span>
+          <span id="planMetaTime"></span>
+        </div>
+        <div id="regimeBanner" style="display: none;">
+          <span id="regimeText"></span>
+          <span id="scannedMeta"></span>
+        </div>
+        <div id="sectorLeadershipStrip" style="display: none;">
+          <div id="sectorChipsContainer"></div>
+          <span id="sectorActiveFilterBadge" style="display: none;"><strong id="sectorFilterName"></strong></span>
+        </div>
         <!-- PORTFOLIO CORRELATION & CONCENTRATION CARD (SC-B) -->
         <div id="nearBuyCorrelationCard" class="correlation-card" style="display: none;">
           <div class="correlation-header">
@@ -145,6 +159,22 @@
           <div id="nearBuyCorrelationGrid" class="correlation-grid-wrapper"></div>
         </div>
       </div>
+
+      <!-- PLAYBOOK CHEAT-STRIP (Single slim line divider above Zone 2 & 3) -->
+      <div id="playbookCheatStrip" class="playbook-cheat-strip">
+        <div class="cheat-strip-content">
+          <span class="cheat-strip-icon">📖</span>
+          <span class="cheat-strip-text">
+            ① Verify A/A+ · &lt;1% · no event ≤3d &nbsp; ② Size = (Cap×1%)/(Entry−SL) &nbsp; ③ GTT at breakout, Limit +0.5% &nbsp; ④ Gap &gt;2%? Cancel
+          </span>
+        </div>
+        <button id="fullPlaybookBtn" class="btn btn-xs btn-outline-primary full-playbook-btn" title="Open full mechanical Playbook in Help Guide">
+          Full Playbook ▸
+        </button>
+      </div>
+      <button id="playbookCollapsedBadge" class="playbook-collapsed-badge" style="display: none;" title="Click to view Trader's Playbook cheat-strip">
+        📖 Playbook
+      </button>
 
       <!-- ZONE 2: ACTION INTELLIGENCE (Leaders + On Deck + Landmines) -->
       <div class="zone-card action-intelligence-zone" id="zoneActionIntelligence">
@@ -216,63 +246,19 @@
           <span class="zone-title">🎯 Zone 3: High-Probability Watchlist</span>
         </div>
 
-        <!-- 🛒 HOW TO BUY (GTT Strategy) PLAYBOOK CARD (Above Watchlist Table) -->
-        <div id="playbookBuyCard" class="playbook-card playbook-buy-card">
-          <button id="playbookBuyToggleBtn" class="playbook-toggle-btn" aria-expanded="true">
-            <div class="playbook-title-group">
-              <span class="playbook-icon">🛒</span>
-              <span class="playbook-title-text">HOW TO BUY (GTT Strategy)</span>
-              <span class="badge badge-success playbook-badge">Buy Playbook</span>
-            </div>
-            <span id="playbookBuyChevron" class="chevron">▼</span>
-          </button>
-          <div id="playbookBuyContent" class="playbook-content">
-            <div class="playbook-steps-grid">
-              <!-- Step 1 -->
-              <div class="playbook-step">
-                <div class="playbook-step-badge">Step 1</div>
-                <div class="playbook-step-title">Verify Signal</div>
-                <div class="playbook-step-desc">
-                  <code>verify Grade A/A+ &amp; dist&lt;1% &amp; no event&lt;=3d &amp; regime not Defensive unless exceptional;</code>
-                </div>
-              </div>
-              <!-- Step 2 -->
-              <div class="playbook-step">
-                <div class="playbook-step-badge">Step 2</div>
-                <div class="playbook-step-title">Size Position</div>
-                <div class="playbook-formula-box">
-                  <code>size=(CAPITAL*RISK_PCT)/(Entry-SL)</code>
-                  <button id="copyFormulaBtn" class="btn btn-xs btn-outline-success copy-formula-btn" title="Copy sizing formula to clipboard">
-                    📋 Copy Formula
-                  </button>
-                </div>
-                <div class="playbook-worked-example">
-                  <strong>Worked Example (Repo Rules):</strong><br>
-                  <code>CAPITAL=200000, RISK 1%, ATR 2.5x, gap 20%</code><br>
-                  • Capital = ₹200,000 | 1% Risk Budget = ₹2,000<br>
-                  • Entry = ₹100.00 | ATR = ₹2.00 &rarr; SL = Entry - (2.5 &times; ATR) = ₹95.00<br>
-                  • Risk per share = Entry - SL = ₹5.00<br>
-                  • Raw Sizing = (200000 &times; 0.01) / 5 = <code>400 shares</code><br>
-                  • Gap 20% Cap Check: 400 &times; ₹100 = ₹40,000 (&le; 20% cap of ₹40,000 &#10003;)<br>
-                  • Target (+2R) = ₹110.00 (+₹4,000 profit / 2R)
-                </div>
-              </div>
-              <!-- Step 3 -->
-              <div class="playbook-step">
-                <div class="playbook-step-badge">Step 3</div>
-                <div class="playbook-step-title">Place GTT / Smart Order</div>
-                <div class="playbook-step-desc">
-                  <code>place GTT/Smart BUY at dashboard breakout level, Limit=Trigger+0.5%, validity GTC/7d, NEVER market order;</code>
-                </div>
-              </div>
-              <!-- Step 4 -->
-              <div class="playbook-step">
-                <div class="playbook-step-badge">Step 4</div>
-                <div class="playbook-step-title">Morning Routine Check</div>
-                <div class="playbook-step-desc">
-                  <code>morning check: gap-up&gt;2% above trigger =&gt; CANCEL, opens near trigger =&gt; let fill, else rests.</code>
-                </div>
-              </div>
+        <!-- TEACHING EMPTY STATE + PREVIEW CTA (Item #11) -->
+        <div id="watchlistAwaitingNotice" class="watchlist-awaiting-card" style="display: none;">
+          <div class="awaiting-icon">☕</div>
+          <div class="awaiting-body">
+            <h3 class="awaiting-title">Awaiting first scan — runs weekday 4:15 PM IST</h3>
+            <p class="awaiting-desc">
+              Automated small-cap scanner executes every trading day after market close. Below is an example row demonstrating the setup anatomy (Grade, Dist%, Status, and GTT Copy).
+            </p>
+            <div class="awaiting-actions">
+              <a href="https://github.com/toanilsharma/small-cap-swing-scanner/actions/workflows/daily_scan.yml" target="_blank" rel="noopener noreferrer" class="btn btn-primary preview-scan-btn" title="Run workflow → branch main → wait ~2 min → refresh.">
+                ▶ Preview with a live scan
+              </a>
+              <span class="preview-tooltip-text">Run workflow &rarr; branch main &rarr; wait ~2 min &rarr; refresh.</span>
             </div>
           </div>
         </div>
@@ -1058,6 +1044,7 @@
             <h3 class="help-toc-title">Handbook Guide</h3>
             <nav class="help-toc-nav">
               <a href="#help-start" class="help-toc-link active"><span>🚀</span> Start Here</a>
+              <a href="#help-playbook" class="help-toc-link"><span>🛒</span> Trader's Playbook</a>
               <a href="#help-architecture" class="help-toc-link"><span>⚙️</span> How It Works</a>
               <a href="#help-glossary" class="help-toc-link"><span>📚</span> Indicator Glossary</a>
               <a href="#help-rules" class="help-toc-link"><span>🎨</span> Rules in Pictures</a>
@@ -1235,6 +1222,121 @@
                 <text x="400" y="386" fill="#cbd5e1" font-family="Inter, sans-serif" font-size="10" text-anchor="middle">Use Position Sizer -&gt; Send /buy</text>
                 <text x="400" y="402" fill="#cbd5e1" font-family="Inter, sans-serif" font-size="10" text-anchor="middle">Follow stop and 2R target mechanically.</text>
               </svg>
+            </div>
+          </article>
+
+          <!-- SECTION 1B: CANONICAL TRADER'S PLAYBOOK (SC-6 Canonical Copy) -->
+          <article id="help-playbook" class="help-section">
+            <div class="help-section-header">
+              <h2 class="help-section-title"><span>🛒</span> TRADER'S PLAYBOOK (Execution Blueprint)</h2>
+              <p class="help-section-subtitle">Complete mechanical rules for BUY orders, position sizing, worked numbers, and SELL risk management</p>
+            </div>
+
+            <!-- BUY PLAYBOOK CARD -->
+            <div class="playbook-card playbook-buy-card" style="margin-bottom: 24px;">
+              <div class="playbook-toggle-btn" style="cursor: default;">
+                <div class="playbook-title-group">
+                  <span class="playbook-icon">🛒</span>
+                  <span class="playbook-title-text">HOW TO BUY (GTT Strategy)</span>
+                  <span class="badge badge-success playbook-badge">Buy Playbook</span>
+                </div>
+              </div>
+              <div class="playbook-content">
+                <div class="playbook-steps-grid">
+                  <!-- Step 1 -->
+                  <div class="playbook-step">
+                    <div class="playbook-step-badge">Step 1</div>
+                    <div class="playbook-step-title">Verify Signal</div>
+                    <div class="playbook-step-desc">
+                      <code>verify Grade A/A+ &amp; dist&lt;1% &amp; no event&lt;=3d &amp; regime not Defensive unless exceptional;</code>
+                    </div>
+                  </div>
+                  <!-- Step 2 -->
+                  <div class="playbook-step">
+                    <div class="playbook-step-badge">Step 2</div>
+                    <div class="playbook-step-title">Size Position</div>
+                    <div class="playbook-formula-box">
+                      <code>size=(CAPITAL*RISK_PCT)/(Entry-SL)</code>
+                      <button id="copyHelpFormulaBtn" class="btn btn-xs btn-outline-success copy-formula-btn" title="Copy sizing formula to clipboard">
+                        📋 Copy Formula
+                      </button>
+                    </div>
+                    <div class="playbook-worked-example">
+                      <strong>Worked Example (Repo Rules):</strong><br>
+                      <code>CAPITAL=200000, RISK 1%, ATR 2.5x, gap 20%</code><br>
+                      • Capital = ₹200,000 | 1% Risk Budget = ₹2,000<br>
+                      • Entry = ₹100.00 | ATR = ₹2.00 &rarr; SL = Entry - (2.5 &times; ATR) = ₹95.00<br>
+                      • Risk per share = Entry - SL = ₹5.00<br>
+                      • Raw Sizing = (200000 &times; 0.01) / 5 = <code>400 shares</code><br>
+                      • Gap 20% Cap Check: 400 &times; ₹100 = ₹40,000 (&le; 20% cap of ₹40,000 &#10003;)<br>
+                      • Target (+2R) = ₹110.00 (+₹4,000 profit / 2R)
+                    </div>
+                  </div>
+                  <!-- Step 3 -->
+                  <div class="playbook-step">
+                    <div class="playbook-step-badge">Step 3</div>
+                    <div class="playbook-step-title">Place GTT / Smart Order</div>
+                    <div class="playbook-step-desc">
+                      <code>place GTT/Smart BUY at dashboard breakout level, Limit=Trigger+0.5%, validity GTC/7d, NEVER market order;</code>
+                    </div>
+                  </div>
+                  <!-- Step 4 -->
+                  <div class="playbook-step">
+                    <div class="playbook-step-badge">Step 4</div>
+                    <div class="playbook-step-title">Morning Routine Check</div>
+                    <div class="playbook-step-desc">
+                      <code>morning check: gap-up&gt;2% above trigger =&gt; CANCEL, opens near trigger =&gt; let fill, else rests.</code>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- SELL PLAYBOOK CARD -->
+            <div class="playbook-card playbook-sell-card">
+              <div class="playbook-toggle-btn" style="cursor: default;">
+                <div class="playbook-title-group">
+                  <span class="playbook-icon">💰</span>
+                  <span class="playbook-title-text">HOW TO SELL / MANAGE RISK</span>
+                  <span class="badge badge-warning playbook-badge">Sell Playbook</span>
+                </div>
+              </div>
+              <div class="playbook-content">
+                <div class="playbook-scenarios-grid">
+                  <!-- Scenario A -->
+                  <div class="playbook-scenario">
+                    <div class="scenario-badge scenario-a">Scenario A</div>
+                    <div class="scenario-title">Stop-Hit Discipline</div>
+                    <div class="scenario-desc">
+                      <code>A stop-hit (auto, log /sell, no revenge);</code>
+                    </div>
+                  </div>
+                  <!-- Scenario B -->
+                  <div class="playbook-scenario">
+                    <div class="scenario-badge scenario-b">Scenario B</div>
+                    <div class="scenario-title">+2R Profit Taking</div>
+                    <div class="scenario-desc">
+                      <code>B +2R (sell 50%, SL-&gt;breakeven, trail rest 20-EMA close);</code>
+                    </div>
+                  </div>
+                  <!-- Scenario C -->
+                  <div class="playbook-scenario">
+                    <div class="scenario-badge scenario-c">Scenario C</div>
+                    <div class="scenario-title">Time-Stop Rule</div>
+                    <div class="scenario-desc">
+                      <code>C time-stop &gt;8d not in profit (exit at close);</code>
+                    </div>
+                  </div>
+                  <!-- Scenario D -->
+                  <div class="playbook-scenario">
+                    <div class="scenario-badge scenario-d">Scenario D</div>
+                    <div class="scenario-title">Event Warning Protection</div>
+                    <div class="scenario-desc">
+                      <code>D event warning (close before event regardless of P&amp;L).</code>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </article>
 

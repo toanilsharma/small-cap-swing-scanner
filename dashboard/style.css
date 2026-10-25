@@ -600,7 +600,7 @@ body {
 
 .table-scroll table {
   width: 100%;
-  min-width: 600px;
+  min-width: min(600px, 100%);
   border-collapse: collapse;
   text-align: left;
   font-size: 13px;
@@ -3636,7 +3636,7 @@ th .term-lookup {
 
 .on-deck-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
   gap: 16px;
 }
 
@@ -3792,7 +3792,7 @@ th .term-lookup {
 
 .landmines-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
   gap: 12px;
 }
 
@@ -4001,7 +4001,7 @@ th .term-lookup {
 
 .bt-breakdown-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
   gap: 16px;
   margin-bottom: 24px;
 }
@@ -4130,7 +4130,7 @@ th .term-lookup {
 .playbook-steps-grid,
 .playbook-scenarios-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
   gap: 16px;
 }
 .playbook-step,
@@ -4449,8 +4449,8 @@ th .term-lookup {
 .skeleton-badge { width: 44px; border-radius: 9999px; }
 .skeleton-btn { width: 96px; height: 28px; border-radius: 6px; }
 
-/* 6. MOBILE RESPONSIVENESS (<768PX) */
-@media (max-width: 768px) {
+/* 6. RESPONSIVENESS & STACKED CARDS (<=900px) */
+@media (max-width: 900px) {
   .btn, .tab-btn, .playbook-toggle-btn, .copy-formula-btn, .wl-filter-chip, .sector-chip, select, input, .badge-gtt, .btn-mark-sell {
     min-height: 44px;
     touch-action: manipulation;
@@ -4475,7 +4475,8 @@ th .term-lookup {
   }
   #watchlistTable, #watchlistTable tbody {
     display: block;
-    width: 100%;
+    width: 100% !important;
+    min-width: 0 !important;
   }
   #watchlistTable thead {
     display: none;
@@ -4492,15 +4493,19 @@ th .term-lookup {
     padding: 12px 14px;
     margin-bottom: 8px;
     min-height: 48px;
+    width: 100% !important;
+    box-sizing: border-box;
   }
   .watchlist-row td {
     border: none !important;
     padding: 0 !important;
     display: inline-flex;
     align-items: center;
+    min-width: 0;
   }
-  /* Hide non-critical columns on mobile collapsed row */
-  .watchlist-row td.hide-mobile {
+  /* Hide non-critical columns on stacked card */
+  .watchlist-row td.hide-mobile,
+  .hide-mobile {
     display: none !important;
   }
   .accordion-drawer-row {
@@ -4903,3 +4908,371 @@ th .term-lookup {
   color: #fff;
   border-color: #ef4444;
 }
+
+/* =====================================================================
+   SC-UX1: RESPONSIVE HEADER, HERO ZONE 1, CHEAT-STRIP & EMPTY STATE
+   ===================================================================== */
+
+/* 1. Header Responsive Rules */
+.header-title-short {
+  display: none;
+}
+.header-actions-desktop {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.header-actions-overflow {
+  display: none;
+  position: relative;
+}
+.header-more-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-main);
+  font-size: 20px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.header-more-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border-color: var(--primary);
+}
+.header-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background: #1e1e1e;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  min-width: 190px;
+  z-index: 250;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.header-dropdown-menu .dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 14px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--text-main);
+  font-size: 13.5px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.header-dropdown-menu .dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+.header-dropdown-menu .dropdown-item-danger {
+  color: #f87171;
+}
+.header-dropdown-menu .dropdown-item-danger:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+}
+
+@media (max-width: 1100px) {
+  .header-title-full {
+    display: none !important;
+  }
+  .header-title-short {
+    display: inline !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .header-actions-desktop {
+    display: none !important;
+  }
+  .header-actions-overflow {
+    display: block !important;
+  }
+}
+
+/* 2. Hero Zone 1 Styles */
+.hero-zone {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.7) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  border-radius: var(--radius-lg);
+  padding: clamp(14px, 2vw, 20px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.hero-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.hero-telemetry {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: clamp(12px, 3vw, 24px);
+  width: 100%;
+}
+.hero-index-group, .hero-regime-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.hero-index-label, .hero-regime-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.hero-index-numbers {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.hero-index-price {
+  font-size: clamp(22px, 3vw, 28px);
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+.hero-index-change {
+  font-size: clamp(13px, 1.2vw, 15px);
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.hero-index-change.positive {
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.12);
+}
+.hero-index-change.negative {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.12);
+}
+.hero-regime-word {
+  font-size: clamp(18px, 2.5vw, 24px);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1.1;
+}
+.hero-regime-word.bullish {
+  color: #10b981;
+}
+.hero-regime-word.sideways, .hero-regime-word.neutral {
+  color: #f59e0b;
+}
+.hero-regime-word.defensive, .hero-regime-word.bearish {
+  color: #ef4444;
+}
+.hero-breadth-inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+@media (max-width: 900px) {
+  .hero-breadth-inline {
+    margin-left: 0;
+    width: 100%;
+  }
+}
+.hero-action-plan-box {
+  background: rgba(15, 23, 42, 0.85);
+  border-left: 4px solid var(--accent);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  padding: 12px 18px;
+}
+.hero-action-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--accent);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.hero-action-plan-text {
+  font-size: clamp(14px, 1.3vw, 16.5px);
+  font-weight: 600;
+  color: #f8fafc;
+  line-height: 1.45;
+  margin: 0;
+}
+.hero-sector-chips-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 12px;
+}
+
+/* 3. Playbook Cheat-Strip */
+.playbook-cheat-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(30, 41, 59, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  padding: 7px 12px;
+  margin-bottom: 14px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.cheat-strip-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+.cheat-strip-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.cheat-strip-text {
+  font-family: var(--font-mono);
+  font-size: clamp(11.5px, 0.85vw, 12.5px);
+  color: #cbd5e1;
+  line-height: 1.4;
+  white-space: normal;
+  word-break: break-word;
+}
+.full-playbook-btn {
+  background: rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  color: #38bdf8;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+.full-playbook-btn:hover {
+  background: rgba(56, 189, 248, 0.2);
+  color: #fff;
+  border-color: #38bdf8;
+}
+.playbook-collapsed-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+  margin-bottom: 12px;
+  transition: all 0.15s ease;
+}
+.playbook-collapsed-badge:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+/* 4. Awaiting Empty State & Teaching Mock Row */
+.watchlist-awaiting-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: rgba(30, 41, 59, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.awaiting-icon {
+  font-size: 28px;
+  flex-shrink: 0;
+}
+.awaiting-body {
+  flex: 1;
+  min-width: 220px;
+}
+.awaiting-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #e2e8f0;
+  margin-bottom: 2px;
+}
+.awaiting-desc {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin: 0;
+}
+.awaiting-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.preview-scan-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #2563eb;
+  color: #fff;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.preview-scan-btn:hover {
+  background: #1d4ed8;
+  color: #fff;
+}
+.mock-example-row {
+  opacity: 0.65;
+  background: rgba(255, 255, 255, 0.02) !important;
+  border: 1px dashed rgba(255, 255, 255, 0.15) !important;
+}
+.mock-example-row:hover {
+  opacity: 0.85;
+}
+.mock-tag {
+  display: inline-block;
+  font-size: 9.5px;
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  background: rgba(148, 163, 184, 0.15);
+  color: #94a3b8;
+  padding: 1px 6px;
+  border-radius: 4px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  margin-top: 2px;
+}
+

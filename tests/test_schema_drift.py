@@ -26,6 +26,7 @@ EXPECTED_TOP_LEVEL_KEYS = {
     "correlation",
     "sector_rotation",
     "hurst_summary",
+    "ofi_summary",
     "vol_regime",
 }
 
@@ -87,6 +88,7 @@ EXPECTED_SIGNAL_KEYS = {
     "mtf_confluence",
     "thesis_card",
     "hurst",
+    "ofi20",
     "sizing_source",
     "chosen_kelly_f",
     "effective_ATR_mult",
@@ -118,6 +120,7 @@ EXPECTED_WATCHLIST_KEYS = {
     "mtf_confluence",
     "thesis_card",
     "hurst",
+    "ofi20",
 }
 
 EXPECTED_ON_DECK_KEYS = {
@@ -134,6 +137,7 @@ EXPECTED_ON_DECK_KEYS = {
     "mtf_confluence",
     "thesis_card",
     "hurst",
+    "ofi20",
 }
 
 
@@ -172,6 +176,13 @@ def test_schema_keys_exact_match(tmp_cwd: Any, monkeypatch: pytest.MonkeyPatch):
     assert isinstance(data["hurst_summary"], dict)
     assert set(data["hurst_summary"].keys()) == {"trending", "random", "meanrev", "unknown"}
     for k, v in data["hurst_summary"].items():
+        assert isinstance(v, int)
+        assert v >= 0
+
+    assert "ofi_summary" in data
+    assert isinstance(data["ofi_summary"], dict)
+    assert set(data["ofi_summary"].keys()) == {"strong_buy", "buy", "neutral", "sell", "strong_sell"}
+    for k, v in data["ofi_summary"].items():
         assert isinstance(v, int)
         assert v >= 0
 
@@ -312,6 +323,108 @@ def test_hurst_graceful_short_history():
     assert h is not None
     assert isinstance(h, float)
     assert 0.0 <= h <= 1.0
+
+
+def test_ofi_graceful_short_history():
+    """
+    Hermetic test: calculate_ofi20 and compute_ofi_summary:
+    - <20-bar fixture => ofi20 None no crash
+    - None, empty, missing columns => ofi20 None
+    - exactly 19 bars => ofi20 None
+    - 20 bars zero range => 0.0 no crash
+    - 20 bars zero volume => 0.0 no crash
+    - 20 bars all-high close => 1.0 (strong_buy)
+    - 20 bars all-low close => -1.0 (strong_sell)
+    - compute_ofi_summary assigns correct bands across >=0.4, 0.1..0.4, -0.1..0.1, -0.4..-0.1, <=-0.4
+    """
+    import main
+    import pandas as pd
+    import numpy as np
+
+    # 1. <20 bars DataFrame
+    short_df = pd.DataFrame({
+        "High": [105.0] * 15,
+        "Low": [95.0] * 15,
+        "Close": [100.0] * 15,
+        "Volume": [10000.0] * 15,
+    })
+    assert main.calculate_ofi20(short_df) is None
+
+    # 2. None / empty / missing columns
+    assert main.calculate_ofi20(None) is None
+    assert main.calculate_ofi20(pd.DataFrame()) is None
+    assert main.calculate_ofi20(pd.DataFrame({"Close": [100.0] * 25})) is None
+
+    # 3. Exactly 19 bars
+    df_19 = pd.DataFrame({
+        "High": [105.0] * 19,
+        "Low": [95.0] * 19,
+        "Close": [100.0] * 19,
+        "Volume": [10000.0] * 19,
+    })
+    assert main.calculate_ofi20(df_19) is None
+
+    # 4. 20 bars with flat range (High == Low)
+    flat_df = pd.DataFrame({
+        "High": [100.0] * 20,
+        "Low": [100.0] * 20,
+        "Close": [100.0] * 20,
+        "Volume": [10000.0] * 20,
+    })
+    assert main.calculate_ofi20(flat_df) == 0.0
+
+    # 5. 20 bars with zero volume
+    zero_vol_df = pd.DataFrame({
+        "High": [105.0] * 20,
+        "Low": [95.0] * 20,
+        "Close": [100.0] * 20,
+        "Volume": [0.0] * 20,
+    })
+    assert main.calculate_ofi20(zero_vol_df) == 0.0
+
+    # 6. 20 bars bullish: close == high every day
+    bullish_df = pd.DataFrame({
+        "High": [110.0] * 20,
+        "Low": [90.0] * 20,
+        "Close": [110.0] * 20,
+        "Volume": [50000.0] * 20,
+    })
+    bull_ofi = main.calculate_ofi20(bullish_df)
+    assert bull_ofi == 1.0
+
+    # 7. 20 bars bearish: close == low every day
+    bearish_df = pd.DataFrame({
+        "High": [110.0] * 20,
+        "Low": [90.0] * 20,
+        "Close": [90.0] * 20,
+        "Volume": [50000.0] * 20,
+    })
+    bear_ofi = main.calculate_ofi20(bearish_df)
+    assert bear_ofi == -1.0
+
+    # 8. compute_ofi_summary bands check
+    test_items = [
+        {"ofi20": 0.55},   # strong_buy
+        {"ofi20": 0.40},   # strong_buy
+        {"ofi20": 0.25},   # buy
+        {"ofi20": 0.10},   # buy
+        {"ofi20": 0.05},   # neutral
+        {"ofi20": 0.0},    # neutral
+        {"ofi20": -0.10},  # neutral
+        {"ofi20": -0.25},  # sell
+        {"ofi20": -0.39},  # sell
+        {"ofi20": -0.40},  # strong_sell
+        {"ofi20": -0.80},  # strong_sell
+        {"ofi20": None},   # ignored
+    ]
+    summary = main.compute_ofi_summary(test_items)
+    assert summary == {
+        "strong_buy": 2,
+        "buy": 2,
+        "neutral": 3,
+        "sell": 2,
+        "strong_sell": 2,
+    }
 
 
 def test_backtest_schema_drift_and_empty_tolerance(tmp_cwd: Any):

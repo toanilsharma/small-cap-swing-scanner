@@ -67,6 +67,18 @@ const TERMS = {
     where_used: "Near Buy (Expandable Row), On Deck Card, Help Guide",
     anchor: "glossary-hurst"
   },
+  "Order-Flow Imbalance (CLV proxy)": {
+    short: "Volume-weighted Close Location Value proxy measuring buying vs selling pressure over 20 days.",
+    long: "approximation from daily bars, not true order-book depth; use alongside OBV + institutional footprint, never alone. Computes CLV = ((close-low)-(high-close))/(high-low) and sums CLV * volume over 20 days divided by total volume. Bands: >=0.4 (Strong Buy), 0.1..0.4 (Buy), -0.1..0.1 (Neutral), -0.4..-0.1 (Sell), <=-0.4 (Strong Sell).",
+    where_used: "Near Buy (Expandable Row), On Deck Card, Help Guide",
+    anchor: "glossary-ofi"
+  },
+  "OFI": {
+    short: "Order-Flow Imbalance proxy over 20 days.",
+    long: "approximation from daily bars, not true order-book depth; use alongside OBV + institutional footprint, never alone. Signed [-1, 1] read of whether volume clustered near session highs (accumulation) or lows (distribution).",
+    where_used: "Near Buy (Expandable Row), On Deck Card, Help Guide",
+    anchor: "glossary-ofi"
+  },
 
   // Moving Averages & Trend
   "SMA50": {
@@ -1465,6 +1477,25 @@ function formatHurstPill(hVal) {
   }
 }
 
+function formatOfiPill(ofiVal) {
+  if (ofiVal === null || ofiVal === undefined || isNaN(ofiVal)) {
+    return `<span class="ofi-pill ofi-na" title="Order-Flow Imbalance (CLV proxy): insufficient history (<20 bars)">OFI n/a</span>`;
+  }
+  const val = Number(ofiVal);
+  const formatted = (val >= 0 ? "+" : "") + val.toFixed(3);
+  if (val >= 0.4) {
+    return `<span class="ofi-pill ofi-strong-buy" title="OFI ${formatted}: Strong Buy pressure (CLV volume clustered near highs)">OFI ${formatted}</span>`;
+  } else if (val >= 0.1) {
+    return `<span class="ofi-pill ofi-buy" title="OFI ${formatted}: Buy pressure (CLV volume bias toward highs)">OFI ${formatted}</span>`;
+  } else if (val >= -0.1) {
+    return `<span class="ofi-pill ofi-neutral" title="OFI ${formatted}: Neutral order flow">OFI ${formatted}</span>`;
+  } else if (val > -0.4) {
+    return `<span class="ofi-pill ofi-sell" title="OFI ${formatted}: Sell pressure (CLV volume bias toward lows)">OFI ${formatted}</span>`;
+  } else {
+    return `<span class="ofi-pill ofi-strong-sell" title="OFI ${formatted}: Strong Sell pressure (CLV volume clustered near lows)">OFI ${formatted}</span>`;
+  }
+}
+
 function renderOnDeck(onDeckList) {
   const countBadge = document.getElementById("onDeckCountBadge");
   const grid = document.getElementById("onDeckCardsGrid");
@@ -1515,6 +1546,7 @@ function renderOnDeck(onDeckList) {
             <strong class="on-deck-symbol">${sym}</strong>
             <span class="badge badge-warning" style="font-size: 11px; font-weight: 700;">${dist}% to pivot</span>
             ${formatHurstPill(item.hurst)}
+            ${formatOfiPill(item.ofi20)}
             ${instBadge}
             ${eventChip}
           </div>
@@ -2784,6 +2816,7 @@ async function toggleWatchlistDetail(row, item, scanData) {
               <span class="badge badge-success">₹${item.Close || 0}</span>
               <span class="badge badge-warning">${dist.toFixed(2)}% to Breakout</span>
               ${formatHurstPill(item.hurst)}
+              ${formatOfiPill(item.ofi20)}
               <button class="btn btn-sm btn-primary size-trade-btn" data-symbol="${symbol}" title="Size this trade with Position Sizer (${sizingLabel})">
                 🎯 Size (${sizingLabel})
               </button>
@@ -2835,6 +2868,13 @@ async function toggleWatchlistDetail(row, item, scanData) {
               <div style="display: flex; align-items: center; gap: 8px;">
                 ${formatHurstPill(item.hurst)}
                 <span style="font-size: 12px; color: var(--text-dim);">${item.hurst != null ? (item.hurst >= 0.55 ? 'Trending (persistent momentum)' : (item.hurst <= 0.45 ? 'Choppy (mean-reverting whipsaw)' : 'Random walk')) : 'Need ≥100 bars'}</span>
+              </div>
+            </div>
+            <div class="accordion-card">
+              <div class="accordion-card-title">Order-Flow Imbalance (CLV Proxy)</div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                ${formatOfiPill(item.ofi20)}
+                <span style="font-size: 12px; color: var(--text-dim);">${item.ofi20 != null ? (item.ofi20 >= 0.4 ? 'Strong Buy pressure' : (item.ofi20 >= 0.1 ? 'Buy pressure' : (item.ofi20 >= -0.1 ? 'Neutral' : (item.ofi20 > -0.4 ? 'Sell pressure' : 'Strong Sell pressure')))) : 'Need ≥20 bars'}</span>
               </div>
             </div>
             <div class="accordion-card">

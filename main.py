@@ -1020,6 +1020,81 @@ def compute_hurst_summary(items: List[Dict[str, Any]]) -> Dict[str, int]:
     }
 
 
+def calculate_ofi20(df: Optional[pd.DataFrame]) -> Optional[float]:
+    """
+    Compute order-flow imbalance (OFI) proxy via Close Location Value (CLV)
+    weighted by volume over a fixed 20-day window.
+    CLV_day = ((close - low) - (high - close)) / (high - low) in [-1, 1] (0 if high == low).
+    MFI20 = sum(CLV_day * volume_day over 20 days) / sum(volume over 20 days).
+    Returns signed float in [-1.0, 1.0] rounded to 3 decimal places, or None if <20 bars.
+    Deterministic, fixed 20-day window, no randomness, zero division/crash risk.
+    """
+    if df is None or len(df) < 20:
+        return None
+    for col in ("High", "Low", "Close", "Volume"):
+        if col not in df.columns:
+            return None
+    try:
+        sub = df.tail(20)
+        highs = pd.to_numeric(sub["High"], errors="coerce").values
+        lows = pd.to_numeric(sub["Low"], errors="coerce").values
+        closes = pd.to_numeric(sub["Close"], errors="coerce").values
+        volumes = pd.to_numeric(sub["Volume"], errors="coerce").values
+
+        valid_mask = (~np.isnan(highs)) & (~np.isnan(lows)) & (~np.isnan(closes)) & (~np.isnan(volumes))
+        if np.sum(valid_mask) < 20:
+            return None
+
+        hl = highs - lows
+        hl_safe = np.where(hl == 0, 1.0, hl)
+        clv = np.where(hl == 0, 0.0, ((closes - lows) - (highs - closes)) / hl_safe)
+        clv = np.clip(clv, -1.0, 1.0)
+
+        tot_vol = float(np.sum(volumes))
+        if tot_vol <= 0:
+            return 0.0
+
+        mfi20 = float(np.sum(clv * volumes)) / tot_vol
+        mfi20 = max(-1.0, min(1.0, mfi20))
+        return round(mfi20, 3)
+    except Exception:
+        return None
+
+
+def compute_ofi_summary(items: List[Dict[str, Any]]) -> Dict[str, int]:
+    """
+    Compute top-level ofi_summary {strong_buy:n, buy:n, neutral:n, sell:n, strong_sell:n}.
+    Bands:
+      strong_buy: >= 0.4
+      buy: 0.1 <= ofi < 0.4
+      neutral: -0.1 <= ofi < 0.1
+      sell: -0.4 < ofi < -0.1
+      strong_sell: <= -0.4
+    """
+    summary = {
+        "strong_buy": 0,
+        "buy": 0,
+        "neutral": 0,
+        "sell": 0,
+        "strong_sell": 0,
+    }
+    for x in items:
+        val = x.get("ofi20")
+        if val is None:
+            continue
+        if val >= 0.4:
+            summary["strong_buy"] += 1
+        elif val >= 0.1:
+            summary["buy"] += 1
+        elif val >= -0.1:
+            summary["neutral"] += 1
+        elif val > -0.4:
+            summary["sell"] += 1
+        else:
+            summary["strong_sell"] += 1
+    return summary
+
+
 def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
     """
     Compute moving averages, volatility measures, trend filters,
@@ -2659,6 +2734,7 @@ def scan_symbol(symbol: str) -> Optional[Dict[str, Any]]:
         "warn_event": bool(get_next_event(symbol, curr_date) and 0 <= get_next_event(symbol, curr_date)["days_to_event"] <= 3),
         "mtf_confluence": calculate_mtf_confluence(df, daily_trend_ok=bool(last_row.get("TREND_OK", True))),
         "hurst": calculate_hurst_exponent(df),
+        "ofi20": calculate_ofi20(df),
         "sizing_source": sizing_source,
         "chosen_kelly_f": chosen_kelly_f,
         "effective_ATR_mult": effective_atr_mult,
@@ -2862,6 +2938,7 @@ def diagnose(symbol: str) -> Optional[Dict[str, Any]]:
         ),
         "mtf_confluence": calculate_mtf_confluence(df, daily_trend_ok=trend_ok),
         "hurst": calculate_hurst_exponent(df),
+        "ofi20": calculate_ofi20(df),
     }
     diag_dict["thesis_card"] = build_thesis_card(diag_dict)
     return diag_dict
@@ -3051,6 +3128,7 @@ def get_on_deck_candidates(symbols: Optional[List[str]] = None, history_map: Opt
                         "warn_event": bool(n_ev and 0 <= n_ev["days_to_event"] <= 3),
                         "mtf_confluence": calculate_mtf_confluence(df, daily_trend_ok=bool(last_row.get("TREND_OK", False))),
                         "hurst": calculate_hurst_exponent(df),
+                        "ofi20": calculate_ofi20(df),
                     }
                     od_item["thesis_card"] = build_thesis_card(od_item)
                     candidates.append(od_item)
@@ -4268,6 +4346,7 @@ if __name__ == "__main__":
         correlation = compute_open_positions_correlation(open_positions)
         sector_rotation = compute_sector_rotation(get_symbols(), on_deck=on_deck)
         hurst_summary = compute_hurst_summary(watchlist_candidates if watchlist_candidates else (signals + on_deck))
+        ofi_summary = compute_ofi_summary(watchlist_candidates if watchlist_candidates else (signals + on_deck))
 
         scan_results = {
             "updated_at": now_ist,
@@ -4285,6 +4364,7 @@ if __name__ == "__main__":
             "correlation": correlation,
             "sector_rotation": sector_rotation,
             "hurst_summary": hurst_summary,
+            "ofi_summary": ofi_summary,
         }
 
         with open(SCAN_RESULTS_FILE, "w", encoding="utf-8") as f:

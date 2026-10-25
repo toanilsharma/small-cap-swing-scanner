@@ -1255,7 +1255,7 @@
                     <div class="playbook-step-title">Verify Signal</div>
                     <div class="playbook-step-desc">
                       <div class="latex-display">
-                        $$ \text{SignalValid} \iff \Big( \text{Grade} \in \{\text{A}, \text{A}^+\} \Big) \land \Big( |\text{dist}_{\text{pivot}}| < 0.01 \Big) \land \Big( \Delta t_{\text{event}} > 3\,\text{days} \Big) \land \Big( \text{Regime} \neq \text{Defensive} \lor \text{Exceptional} = \top \Big) $$
+                        $$ \text{SignalValid} \iff \Big( \text{Grade} \in \{\text{A}, \text{A}^+\} \Big) \land \Big( |\text{dist}_{\text{pivot}}| \lt 0.01 \Big) \land \Big( \Delta t_{\text{event}} \gt 3\,\text{days} \Big) \land \Big( \text{Regime} \neq \text{Defensive} \lor \text{Exceptional} = \top \Big) $$
                       </div>
                     </div>
                   </div>
@@ -1305,7 +1305,7 @@
                     <div class="playbook-step-desc">
                       <div class="latex-display">
                         $$ \text{OrderAction}(P_{\text{open}}) = \begin{cases}
-                        \text{CANCEL}, & \text{if } \dfrac{P_{\text{open}} - P_{\text{trigger}}}{P_{\text{trigger}}} > 0.02 \\[8pt]
+                        \text{CANCEL}, & \text{if } \dfrac{P_{\text{open}} - P_{\text{trigger}}}{P_{\text{trigger}}} \gt 0.02 \\[8pt]
                         \text{LET\_FILL}, & \text{if } \left|\dfrac{P_{\text{open}} - P_{\text{trigger}}}{P_{\text{trigger}}}\right| \le 0.005 \\[8pt]
                         \text{REST}, & \text{otherwise}
                         \end{cases} $$
@@ -1353,7 +1353,7 @@
                     <div class="scenario-title">Time-Stop Rule</div>
                     <div class="scenario-desc">
                       <div class="latex-display">
-                        $$ (t - t_{\text{entry}} > 8\,\text{trading days}) \land (P_t \le \text{Entry}) \implies \text{EXIT\_AT\_CLOSE}(\text{Qty}_{\text{pos}}) $$
+                        $$ (t - t_{\text{entry}} \gt 8\,\text{trading days}) \land (P_t \le \text{Entry}) \implies \text{EXIT\_AT\_CLOSE}(\text{Qty}_{\text{pos}}) $$
                       </div>
                     </div>
                   </div>
@@ -1389,8 +1389,8 @@
                 <div class="math-rule-body">
                   <div class="latex-display">
                     $$ \text{Regime} = \begin{cases}
-                    \text{Confirmed Uptrend}, & \text{if } P_{\text{\textasciicircum NSEI}} > \text{SMA}_{50} > \text{SMA}_{200} \land \dfrac{d}{dt}\text{SMA}_{200} > 0 \\[6pt]
-                    \text{Uptrend Under Pressure}, & \text{if } P_{\text{\textasciicircum NSEI}} < \text{SMA}_{50} \land P_{\text{\textasciicircum NSEI}} > \text{SMA}_{200} \\[6pt]
+                    \text{Confirmed Uptrend}, & \text{if } P_{\text{\textasciicircum NSEI}} \gt \text{SMA}_{50} \gt \text{SMA}_{200} \land \dfrac{d}{dt}\text{SMA}_{200} \gt 0 \\[6pt]
+                    \text{Uptrend Under Pressure}, & \text{if } P_{\text{\textasciicircum NSEI}} \lt \text{SMA}_{50} \land P_{\text{\textasciicircum NSEI}} \gt \text{SMA}_{200} \\[6pt]
                     \text{Defensive / Cash}, & \text{if } P_{\text{\textasciicircum NSEI}} \le \text{SMA}_{200} \lor \text{DistributionDays}_{25d} \ge 5
                     \end{cases} $$
                     $$ \text{Regime} = \text{Defensive} \implies \text{Score}_{\max} \le 50 \land \text{NewBuysBlocked} = \top $$
@@ -1435,8 +1435,8 @@
                 <div class="math-rule-body">
                   <div class="latex-display">
                     $$ \begin{aligned}
-                    &1.\; P_t > \text{SMA}_{50}(t) > \text{SMA}_{150}(t) > \text{SMA}_{200}(t) \\
-                    &2.\; \text{SMA}_{200}(t) > \text{SMA}_{200}(t - 50\,\text{days}) \quad (\text{Ascending for } \ge 1\,\text{month}) \\
+                    &1.\; P_t \gt \text{SMA}_{50}(t) \gt \text{SMA}_{150}(t) \gt \text{SMA}_{200}(t) \\
+                    &2.\; \text{SMA}_{200}(t) \gt \text{SMA}_{200}(t - 50\,\text{days}) \quad (\text{Ascending for } \ge 1\,\text{month}) \\
                     &3.\; P_t \ge 1.30 \times \min_{i \in [0, 252]} P_{t-i} \quad (\ge +30\%\text{ above 52-week low}) \\
                     &4.\; P_t \ge 0.75 \times \max_{i \in [0, 252]} P_{t-i} \quad (\le 25\%\text{ below 52-week high})
                     \end{aligned} $$
@@ -1555,7 +1555,7 @@
                 <div class="math-rule-body">
                   <div class="latex-display">
                     $$ \text{For remainder runner shares } \left(\left\lceil \frac{\text{Qty}}{2} \right\rceil\right): $$
-                    $$ \text{TrailExitSignal}(t) \iff P_{\text{close}}(t) < \text{EMA}_{20}(t) \implies \text{EXIT\_RUNNER\_AT\_CLOSE} $$
+                    $$ \text{TrailExitSignal}(t) \iff P_{\text{close}}(t) \lt \text{EMA}_{20}(t) \implies \text{EXIT\_RUNNER\_AT\_CLOSE} $$
                   </div>
                 </div>
               </div>
@@ -1569,7 +1569,7 @@
                 <div class="math-rule-body">
                   <div class="latex-display">
                     $$ \Delta \tau_{\text{held}} = t - t_{\text{entry}} \quad (\text{Trading Days}) $$
-                    $$ \text{TimeStopTrigger} \iff \Big( \Delta \tau_{\text{held}} > 8 \Big) \land \Big( P_{\text{close}}(t) \le \text{Entry} \Big) \implies \text{EXIT\_POSITION\_AT\_CLOSE} $$
+                    $$ \text{TimeStopTrigger} \iff \Big( \Delta \tau_{\text{held}} \gt 8 \Big) \land \Big( P_{\text{close}}(t) \le \text{Entry} \Big) \implies \text{EXIT\_POSITION\_AT\_CLOSE} $$
                   </div>
                 </div>
               </div>
@@ -1601,8 +1601,8 @@
                     $$ N_{\text{smallcap\_open}} \le 3 \quad (\text{Max 3 Concurrent Small-Cap Positions}) $$
                     $$ \text{MeterStatus}(\text{Heat}) = \begin{cases}
                     \text{GREEN (Optimal)}, & \text{if } \text{Heat} \le 0.60 \times \text{Heat}_{\max} \quad (\le ₹6{,}000) \\[4pt]
-                    \text{AMBER (Caution)}, & \text{if } 0.60 < \dfrac{\text{Heat}}{\text{Heat}_{\max}} \le 0.90 \quad (₹6{,}000 - ₹9{,}000) \\[4pt]
-                    \text{RED (Locked)}, & \text{if } \text{Heat} > 0.90 \times \text{Heat}_{\max} \quad (> ₹9{,}000)
+                    \text{AMBER (Caution)}, & \text{if } 0.60 \lt \dfrac{\text{Heat}}{\text{Heat}_{\max}} \le 0.90 \quad (₹6{,}000 - ₹9{,}000) \\[4pt]
+                    \text{RED (Locked)}, & \text{if } \text{Heat} \gt 0.90 \times \text{Heat}_{\max} \quad (\gt ₹9{,}000)
                     \end{cases} $$
                   </div>
                 </div>
@@ -1633,7 +1633,7 @@
                   <div class="latex-display">
                     $$ \text{RS}_{\text{score}} = 0.40 \times \text{Ret}_{63d} + 0.20 \times \text{Ret}_{126d} + 0.20 \times \text{Ret}_{189d} + 0.20 \times \text{Ret}_{252d} $$
                     $$ \text{RS}_{\text{percentile}} = \text{PercentileRank}\big(\text{RS}_{\text{score}}, \; \mathcal{U}_{\text{smallcap}}\big) \ge 70 \quad (\text{Rank} \in [1, 99]) $$
-                    $$ \text{RS}_{\text{slope}} = \frac{d}{dt}\left(\frac{P_{\text{stock}}}{P_{\text{\textasciicircum NSEI}}}\right)_{\text{4-weeks}} > 0 \quad (\text{Positive Relative Momentum Slope}) $$
+                    $$ \text{RS}_{\text{slope}} = \frac{d}{dt}\left(\frac{P_{\text{stock}}}{P_{\text{\textasciicircum NSEI}}}\right)_{\text{4-weeks}} \gt 0 \quad (\text{Positive Relative Momentum Slope}) $$
                     $$ \text{MomentumRank} \in [1, 20] \quad (\text{Top 20 Universe Momentum Filter}) $$
                   </div>
                 </div>
@@ -2184,7 +2184,7 @@
                 <div class="glossary-section-row"><span class="glossary-label">Where used:</span><span class="glossary-example">Open Positions Tab (Portfolio HEAT Gauge).</span></div>
               </div>
 
-              <div class="glossary-card" id="glossary-expectancy">
+              <div class="glossary-card" id="glossary-expectancy-r">
                 <div class="glossary-card-header"><span class="glossary-term">Expectancy</span><span class="glossary-category">Edge Quantification</span></div>
                 <p class="glossary-meaning">Average statistical edge per trade in R-units or rupees. Positive expectancy mathematically guarantees long-term equity growth.</p>
                 <div class="glossary-section-row"><span class="glossary-label">Formula:</span><span class="glossary-threshold">Expectancy R = (Win Rate × Avg Win R) - (Loss Rate × |Avg Loss R|)</span></div>
@@ -2736,6 +2736,7 @@
         <div id="tvWidgetContainer" class="tv-widget-container"></div>
       </div>
     </div>
+  </div>
   <!-- TRADE POST-MORTEM & LESSON MODAL (Item #9) -->
   <div id="postMortemModal" class="tv-modal" style="display: none;">
     <div class="tv-modal-backdrop" id="postMortemBackdrop"></div>

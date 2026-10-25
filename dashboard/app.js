@@ -291,6 +291,12 @@ const TERMS = {
     where_used: "Performance Stats Tab, Help Guide",
     anchor: "glossary-expectancy"
   },
+  "Expectancy R": {
+    short: "Average statistical edge per trade in R-units.",
+    long: "Expectancy R = (Win Rate × Avg Win R) - (Loss Rate × |Avg Loss R|). Positive R-expectancy guarantees mathematical account compounding independent of stock price.",
+    where_used: "Performance Stats Tab, Help Guide",
+    anchor: "glossary-expectancy-r"
+  },
   "Win rate": {
     short: "The percentage of closed trades that resulted in a positive realized profit.",
     long: "Calculated as Winning Trades / Total Trades. Because our 2R target delivers twice what our stop loses, a 45-50% win rate generates steady capital growth.",

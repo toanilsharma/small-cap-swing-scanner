@@ -27,6 +27,8 @@ EXPECTED_TOP_LEVEL_KEYS = {
     "sector_rotation",
     "hurst_summary",
     "ofi_summary",
+    "market_internals",
+    "internals_history",
     "vol_regime",
 }
 
@@ -185,6 +187,21 @@ def test_schema_keys_exact_match(tmp_cwd: Any, monkeypatch: pytest.MonkeyPatch):
     for k, v in data["ofi_summary"].items():
         assert isinstance(v, int)
         assert v >= 0
+
+    assert "market_internals" in data
+    assert isinstance(data["market_internals"], dict)
+    assert set(data["market_internals"].keys()) == {"oscillator", "up_down_vol_ratio", "breadth_thrust", "confidence"}
+    assert data["market_internals"]["confidence"] in {"weak", "neutral", "strong"}
+    assert isinstance(data["market_internals"]["breadth_thrust"], bool)
+    assert isinstance(data["market_internals"]["oscillator"], (int, float))
+    assert isinstance(data["market_internals"]["up_down_vol_ratio"], (int, float))
+
+    assert "internals_history" in data
+    assert isinstance(data["internals_history"], list)
+    assert len(data["internals_history"]) <= 60
+    for entry in data["internals_history"]:
+        assert "net_advance" in entry
+        assert "up_down_vol_ratio" in entry
 
     assert "vol_regime" in data
     assert isinstance(data["vol_regime"], dict)
@@ -425,6 +442,79 @@ def test_ofi_graceful_short_history():
         "sell": 2,
         "strong_sell": 2,
     }
+
+
+def test_internals_failopen_first_scan(tmp_cwd: Any):
+    """
+    Hermetic test for market internals:
+    - First scan / empty history fixture => confidence neutral, thrust False, oscillator 0.0, no crash.
+    - None / absent arguments => safe fallback.
+    - Rolling history capped to 60 entries.
+    - Breadth thrust triggers when oscillator crosses from below 0 to above +threshold within last 3 scans and vol_ratio >= 1.2.
+    """
+    import main
+
+    # 1. Empty history fixture (first scan fail-open)
+    market_summary_sample = {"advancers": 50, "decliners": 50, "last_bar_date": "2026-10-25"}
+    internals, hist = main.compute_market_internals(
+        market_summary=market_summary_sample,
+        symbols=[],
+        history_map={},
+        prior_history=[],
+    )
+    assert isinstance(internals, dict)
+    assert set(internals.keys()) == {"oscillator", "up_down_vol_ratio", "breadth_thrust", "confidence"}
+    assert internals["oscillator"] == 0.0
+    assert internals["breadth_thrust"] is False
+    assert internals["confidence"] == "neutral"
+    assert isinstance(hist, list)
+    assert len(hist) == 1
+    assert hist[0]["net_advance"] == 0
+    assert hist[0]["oscillator"] == 0.0
+
+    # 2. None / absent arguments handling
+    internals_none, hist_none = main.compute_market_internals(
+        market_summary=None,
+        symbols=None,
+        history_map=None,
+        prior_history=None,
+    )
+    assert internals_none["confidence"] == "neutral"
+    assert internals_none["breadth_thrust"] is False
+    assert internals_none["oscillator"] == 0.0
+    assert len(hist_none) == 1
+
+    # 3. Rolling history capping at 60 entries
+    long_history = [
+        {"net_advance": 5, "up_down_vol_ratio": 1.0, "oscillator": 0.5, "date": f"2026-01-{i:02d}"}
+        for i in range(1, 75)
+    ]
+    _, capped_hist = main.compute_market_internals(
+        market_summary={"advancers": 60, "decliners": 40},
+        symbols=[],
+        history_map={},
+        prior_history=long_history,
+    )
+    assert len(capped_hist) == 60
+
+    # 4. Breadth thrust trigger:
+    # Prior scans had net_advance [10.0, -30.0] resulting in negative oscillator (-2.0),
+    # followed by large positive surge (+90 net advance) with up_down_vol_ratio = 1.5 >= 1.2
+    prior_thrust_hist = [
+        {"net_advance": 10.0, "up_down_vol_ratio": 1.0, "oscillator": 0.0, "date": "2026-10-19"},
+        {"net_advance": -30.0, "up_down_vol_ratio": 0.6, "oscillator": -2.0, "date": "2026-10-20"},
+    ]
+    adv_summary = {"advancers": 95, "decliners": 5, "last_bar_date": "2026-10-21"}
+    internals_thrust, hist_thrust = main.compute_market_internals(
+        market_summary=adv_summary,
+        symbols=[],
+        history_map={},
+        prior_history=prior_thrust_hist,
+        forced_vol_ratio=1.5,
+    )
+    assert internals_thrust["breadth_thrust"] is True
+    assert internals_thrust["confidence"] == "strong"
+    assert internals_thrust["oscillator"] >= 2.0
 
 
 def test_backtest_schema_drift_and_empty_tolerance(tmp_cwd: Any):

@@ -81,6 +81,12 @@ def execute_full_scan_pipeline() -> Tuple[List[Dict[str, Any]], List[Dict[str, A
     sector_rotation = main.compute_sector_rotation(main.get_symbols(), on_deck=on_deck)
     hurst_summary = main.compute_hurst_summary(watchlist if watchlist else (signals + on_deck))
     ofi_summary = main.compute_ofi_summary(watchlist if watchlist else (signals + on_deck))
+    prior_history = main.load_internals_history()
+    market_internals, internals_history = main.compute_market_internals(
+        market_summary=market_summary,
+        symbols=main.get_symbols(),
+        prior_history=prior_history,
+    )
 
     scan_data = {
         "updated_at": now_str,
@@ -98,6 +104,8 @@ def execute_full_scan_pipeline() -> Tuple[List[Dict[str, Any]], List[Dict[str, A
         "sector_rotation": sector_rotation,
         "hurst_summary": hurst_summary,
         "ofi_summary": ofi_summary,
+        "market_internals": market_internals,
+        "internals_history": internals_history,
         "vol_regime": main.get_volatility_regime(),
     }
     with open(main.SCAN_RESULTS_FILE, "w", encoding="utf-8") as f:
@@ -145,6 +153,8 @@ def test_hermetic_scan_unmuted(tmp_cwd: Any, spy_posts: list, pin_ist_time: Any,
         "sector_rotation",
         "hurst_summary",
         "ofi_summary",
+        "market_internals",
+        "internals_history",
         "vol_regime",
     }
     assert data["market_ok"] is True

@@ -79,6 +79,24 @@ const TERMS = {
     where_used: "Near Buy (Expandable Row), On Deck Card, Help Guide",
     anchor: "glossary-ofi"
   },
+  "Breadth Thrust / McClellan Oscillator": {
+    short: "Market internals oscillator (EMA 19 - EMA 39 of net advances) with 1.2x volume ratio breadth thrust filter.",
+    long: "Strengthens regime read with McClellan-style market internals. Net advance = advancers - decliners. Oscillator = EMA(net_advance, 19) - EMA(net_advance, 39). Breadth thrust confirms when oscillator crosses from below 0 to above +threshold within the last 3 scans AND advancing/declining volume ratio >= 1.2x. Upgrades regime label with a confidence modifier ('strong', 'neutral', 'weak/fragile').",
+    where_used: "Market Pulse Header, Market Overview Hero, Help Guide",
+    anchor: "glossary-mcclellan-thrust"
+  },
+  "McClellan Oscillator": {
+    short: "Difference between 19-day and 39-day EMAs of net advances.",
+    long: "Tracks net breadth momentum over fixed 19 and 39 spans. Positive values indicate expanding participation; negative values indicate internal weakness.",
+    where_used: "Market Overview Hero, Help Guide",
+    anchor: "glossary-mcclellan-thrust"
+  },
+  "Breadth Thrust": {
+    short: "Rapid expansion from negative breadth to positive breadth with >=1.2x volume ratio.",
+    long: "Confirms authentic institutional accumulation across the broader small-cap universe within 3 scans.",
+    where_used: "Market Pulse Header, Market Overview Hero, Help Guide",
+    anchor: "glossary-mcclellan-thrust"
+  },
 
   // Moving Averages & Trend
   "SMA50": {
@@ -1234,6 +1252,53 @@ function updateIstLiveChip() {
   }
 }
 
+function drawInternalsSparkline(canvas, values) {
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  const w = canvas.width || 180;
+  const h = canvas.height || 28;
+  ctx.clearRect(0, 0, w, h);
+  if (!values || values.length === 0) return;
+
+  const vals = values.slice(-30);
+  const minVal = Math.min(-2, ...vals);
+  const maxVal = Math.max(2, ...vals);
+  const range = (maxVal - minVal) || 1;
+
+  // Zero baseline
+  const zeroY = h - ((0 - minVal) / range) * (h - 6) - 3;
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
+  ctx.lineWidth = 1;
+  ctx.setLineDash([2, 2]);
+  ctx.beginPath();
+  ctx.moveTo(0, zeroY);
+  ctx.lineTo(w, zeroY);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Sparkline path
+  const step = w / Math.max(1, vals.length - 1);
+  ctx.beginPath();
+  vals.forEach((v, i) => {
+    const x = i * step;
+    const y = h - ((v - minVal) / range) * (h - 6) - 3;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  const lastVal = vals[vals.length - 1];
+  ctx.strokeStyle = lastVal >= 0 ? "#10b981" : "#f59e0b";
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Highlight dot on latest bar
+  const lastX = (vals.length - 1) * step;
+  const lastY = h - ((lastVal - minVal) / range) * (h - 6) - 3;
+  ctx.fillStyle = lastVal >= 0 ? "#34d399" : "#fbbf24";
+  ctx.beginPath();
+  ctx.arc(lastX, lastY, 3, 0, Math.PI * 2);
+  ctx.fill();
+}
+
 function renderMarketPulse(scanData) {
   const marketBadge = document.getElementById("marketBadge");
   const indexChip = document.getElementById("indexPriceChip");
@@ -1410,6 +1475,70 @@ function renderMarketPulse(scanData) {
   if (dealsStaleChip) {
     const isDealsStale = Boolean(scanData && scanData.deals_stale);
     dealsStaleChip.style.display = isDealsStale ? "inline-flex" : "none";
+  }
+
+  // 8. Market Internals, Confidence Modifier & McClellan Sparkline (M5)
+  const internals = (scanData && scanData.market_internals) ? scanData.market_internals : null;
+  const conf = internals ? (internals.confidence || "neutral").toLowerCase() : "neutral";
+  const volRatio = internals && internals.up_down_vol_ratio != null ? internals.up_down_vol_ratio : 1.0;
+  const osc = internals && internals.oscillator != null ? internals.oscillator : 0.0;
+  const thrust = Boolean(internals && internals.breadth_thrust);
+
+  let confLabel = "NEUTRAL";
+  let confStyle = "background: rgba(100, 116, 139, 0.2); color: #94a3b8; border: 1px solid rgba(100, 116, 139, 0.4);";
+  if (conf === "strong") {
+    confLabel = thrust ? "STRONG ⚡ (THRUST)" : "STRONG";
+    confStyle = "background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.5);";
+  } else if (conf === "weak") {
+    confLabel = "FRAGILE / WEAK";
+    confStyle = "background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.5);";
+  }
+
+  const heroConf = document.getElementById("heroConfidenceChip");
+  if (heroConf) {
+    heroConf.textContent = `CONF: ${confLabel}`;
+    heroConf.setAttribute("style", `font-size: 11px; padding: 3px 8px; font-weight: 700; ${confStyle}`);
+    heroConf.title = `Regime Confidence Modifier: ${conf.toUpperCase()}. McClellan Oscillator: ${osc >= 0 ? '+' : ''}${osc}, Up/Dn Vol Ratio: ${volRatio}x`;
+  }
+  const heroVolRatio = document.getElementById("heroVolRatioChip");
+  if (heroVolRatio) {
+    heroVolRatio.textContent = `UP/DN VOL: ${Number(volRatio).toFixed(2)}x`;
+    heroVolRatio.title = `Advancing / Declining Volume Ratio: ${volRatio}x (≥1.2 confirms genuine thrust).`;
+  }
+
+  const marketConf = document.getElementById("marketConfidenceChip");
+  if (marketConf) {
+    marketConf.style.display = "inline-flex";
+    marketConf.textContent = `Conf: ${confLabel}`;
+    marketConf.setAttribute("style", `font-size: 11px; ${confStyle}`);
+  }
+  const marketVolRatio = document.getElementById("marketVolRatioChip");
+  if (marketVolRatio) {
+    marketVolRatio.style.display = "inline-flex";
+    marketVolRatio.textContent = `Vol: ${Number(volRatio).toFixed(2)}x`;
+  }
+
+  const thrustBadge = document.getElementById("internalsThrustBadge");
+  if (thrustBadge) {
+    thrustBadge.style.display = thrust ? "inline-flex" : "none";
+  }
+  const oscValElem = document.getElementById("internalsOscVal");
+  if (oscValElem) {
+    oscValElem.textContent = (osc >= 0 ? "+" : "") + Number(osc).toFixed(2);
+    oscValElem.style.color = osc >= 0 ? "var(--success)" : "var(--danger)";
+  }
+  const vrValElem = document.getElementById("internalsVolRatioVal");
+  if (vrValElem) {
+    vrValElem.textContent = `${Number(volRatio).toFixed(2)}x`;
+    vrValElem.style.color = volRatio >= 1.2 ? "var(--success)" : (volRatio < 0.8 ? "var(--warning)" : "var(--text-main)");
+  }
+
+  const sparklineCanvas = document.getElementById("internalsSparklineCanvas");
+  if (sparklineCanvas && scanData && scanData.internals_history) {
+    const oscVals = scanData.internals_history
+      .map(x => (x && x.oscillator != null ? Number(x.oscillator) : 0.0))
+      .slice(-30);
+    drawInternalsSparkline(sparklineCanvas, oscVals);
   }
 }
 

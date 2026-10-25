@@ -35,6 +35,8 @@
           </h1>
           <div id="marketPulse" class="market-pulse-row">
             <span id="marketBadge" class="badge badge-neutral term-lookup" data-term="Market regime">Checking Market...</span>
+            <span id="marketConfidenceChip" class="pulse-chip confidence-chip" style="display: none;" title="Market Internals Confidence">Conf: Neutral</span>
+            <span id="marketVolRatioChip" class="pulse-chip vol-ratio-chip" style="display: none;" title="Advancing / Declining Volume Ratio">Vol: 1.0x</span>
             <span id="indexPriceChip" class="pulse-chip index-chip">Index: Loading...</span>
             <span id="lastCloseChip" class="pulse-chip date-chip">Last close: Loading...</span>
             <span id="istLiveChip" class="pulse-chip live-chip">IST Status</span>
@@ -115,6 +117,10 @@
                 <span id="heroRegimeWord" class="hero-regime-word badge badge-neutral">CHECKING...</span>
                 <span id="heroVolRegimeWord" class="badge badge-neutral" style="font-size: 11px; padding: 4px 8px; font-weight: 600;" title="Market Volatility Regime (EWMA RiskMetrics lambda=0.94)">VOL: --</span>
               </div>
+              <div id="heroInternalsRow" style="display: flex; align-items: center; gap: 6px; margin-top: 5px; flex-wrap: wrap;">
+                <span id="heroConfidenceChip" class="badge badge-neutral confidence-chip" style="font-size: 11px; padding: 3px 8px; font-weight: 700;" title="Market Internals Confidence Modifier (McClellan + Volume Ratio)">CONFIDENCE: NEUTRAL</span>
+                <span id="heroVolRatioChip" class="badge badge-neutral vol-ratio-chip" style="font-size: 11px; padding: 3px 8px; font-weight: 600;" title="Advancing Volume / Declining Volume Ratio (≥1.2 confirms thrust)">UP/DN VOL: --</span>
+              </div>
             </div>
           </div>
           <div id="heroBreadthInline" class="hero-breadth-inline">
@@ -135,6 +141,24 @@
         <div id="heroSectorChipsRow" class="hero-sector-chips-row" style="display: none;">
           <span class="hero-sector-title">Top Sectors:</span>
           <div id="heroSectorChipsList" class="hero-sector-chips-list"></div>
+        </div>
+
+        <!-- Market Internals & McClellan Sparkline -->
+        <div id="heroInternalsBox" class="hero-internals-box" style="margin-top: 12px; padding: 10px 14px; background: rgba(15, 23, 42, 0.4); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 6px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 13px; font-weight: 700; color: var(--text-main);">📊 Market Internals (McClellan Lens)</span>
+              <span id="internalsThrustBadge" class="badge badge-success" style="display: none; font-size: 10px; font-weight: 700; background: rgba(16, 185, 129, 0.25); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.5);">⚡ BREADTH THRUST</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px; font-size: 12px;">
+              <span>Oscillator: <strong id="internalsOscVal">0.0</strong></span>
+              <span>Up/Dn Vol: <strong id="internalsVolRatioVal">1.0x</strong></span>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
+            <span style="font-size: 11px; color: var(--text-dim);">30-Scan Trend (EMA 19 − EMA 39):</span>
+            <canvas id="internalsSparklineCanvas" width="180" height="28" style="height: 28px; width: 180px; display: block; border-radius: 4px; background: rgba(0, 0, 0, 0.2);"></canvas>
+          </div>
         </div>
 
         <!-- Hidden container for legacy bindings -->
@@ -2242,6 +2266,16 @@
                 <div class="glossary-section-row"><span class="glossary-label">main.py Bands:</span><span class="glossary-threshold">&ge; +0.4 (Strong Buy / Green); +0.1 to +0.4 (Buy / Lime); -0.1 to +0.1 (Neutral / Gray); -0.4 to -0.1 (Sell / Orange); &le; -0.4 (Strong Sell / Red).</span></div>
                 <div class="glossary-section-row"><span class="glossary-label">Limitation &amp; Honesty:</span><span class="glossary-example">approximation from daily bars, not true order-book depth; use alongside OBV + institutional footprint, never alone.</span></div>
                 <div class="glossary-section-row"><span class="glossary-label">Where used:</span><span class="glossary-example">Near Buy (Expandable Row), On Deck Card, Help Guide.</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-mcclellan-thrust">
+                <div class="glossary-card-header"><span class="glossary-term">Breadth Thrust / McClellan Oscillator</span><span class="glossary-category">Market Internals</span></div>
+                <p class="glossary-meaning">Market-internals momentum oscillator measuring the difference between 19-day EMA and 39-day EMA of daily net advancing issues (advancers − decliners), modified by advancing-to-declining volume ratio.</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Upgrades regime confidence to "strong" on authentic institutional breadth thrusts, or flags "weak/fragile" when price rises on negative or deteriorating internals.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Formula &amp; Spans:</span><span class="glossary-threshold">Net Advance = Advancers − Decliners; Oscillator = EMA(Net Advance, 19) − EMA(Net Advance, 39).</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Thrust Trigger:</span><span class="glossary-threshold">Breadth Thrust = True when oscillator crosses from below 0 to above +threshold (&ge; +2.0) within the last 3 scans AND Up/Down Volume Ratio &ge; 1.2x.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Confidence Modifiers:</span><span class="glossary-example">Strong (green): Thrust or (Oscillator &gt; 0 and Vol Ratio &ge; 1.2); Fragile/Weak (amber): Oscillator &lt; 0 and Vol Ratio &lt; 0.8; Neutral (gray): otherwise or first scan.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Where used:</span><span class="glossary-example">Market Pulse Header, Market Overview Hero, Help Guide.</span></div>
               </div>
 
               <div class="glossary-card" id="glossary-half-kelly">

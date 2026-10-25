@@ -89,6 +89,7 @@ ENABLE_SQUEEZE = True
 TIME_STOP_DAYS = 8
 MOMENTUM_RANK_TOP = 20
 RS_SLOPE_WEEKS = 4
+BREADTH_THRUST_THRESHOLD = 2.0
 
 # File paths & sources
 SYMBOL_SOURCE_URL = "https://www.niftyindices.com/IndexConstituent/ind_niftysmallcap100list.csv"
@@ -3071,6 +3072,140 @@ def compute_market_summary(symbols: Optional[List[str]] = None, history_map: Opt
     }
 
 
+def compute_mcclellan_oscillator_series(net_advances: List[float]) -> List[float]:
+    """
+    Computes McClellan-like oscillator = EMA(net_advance, 19) - EMA(net_advance, 39).
+    Fixed spans 19 and 39 with alpha_19 = 2/20 = 0.10, alpha_39 = 2/40 = 0.05.
+    Returns list of float oscillator values rounded to 2 decimal places.
+    Deterministic, fixed spans, zero randomness.
+    """
+    if not net_advances:
+        return []
+    if len(net_advances) == 1:
+        return [0.0]
+
+    alpha_19 = 2.0 / 20.0  # 0.10
+    alpha_39 = 2.0 / 40.0  # 0.05
+
+    ema19 = float(net_advances[0])
+    ema39 = float(net_advances[0])
+    oscillators = [0.0]
+
+    for val in net_advances[1:]:
+        v = float(val)
+        ema19 = alpha_19 * v + (1.0 - alpha_19) * ema19
+        ema39 = alpha_39 * v + (1.0 - alpha_39) * ema39
+        oscillators.append(round(ema19 - ema39, 2))
+
+    return oscillators
+
+
+def load_internals_history() -> List[Dict[str, Any]]:
+    """
+    Load rolling internals_history from existing scan_results.json, if present.
+    Fail-open: returns empty list if file absent, corrupt, or empty.
+    """
+    if os.path.exists(SCAN_RESULTS_FILE):
+        try:
+            with open(SCAN_RESULTS_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                hist = data.get("internals_history", [])
+                if isinstance(hist, list):
+                    return hist
+        except Exception:
+            pass
+    return []
+
+
+def compute_market_internals(
+    market_summary: Optional[Dict[str, Any]] = None,
+    symbols: Optional[List[str]] = None,
+    history_map: Optional[Dict[str, pd.DataFrame]] = None,
+    prior_history: Optional[List[Dict[str, Any]]] = None,
+    forced_vol_ratio: Optional[float] = None,
+) -> Tuple[Dict[str, Any], List[Dict[str, Any]]]:
+    """
+    Computes McClellan-like market internals and confidence modifier.
+    - net_advance = advancers - decliners
+    - up_down_vol_ratio = advancing volume / declining volume
+    - oscillator = EMA(net_advance, 19) - EMA(net_advance, 39)
+    - breadth_thrust = True when oscillator crossed from <0 to >= +threshold (+2.0) within last 3 scans and vol_ratio >= 1.2
+    - confidence = 'strong' | 'neutral' | 'weak'
+    - updates rolling internals_history capped to last 60 entries
+    Fail-open: first scan with empty history => oscillator 0.0, thrust False, confidence 'neutral'.
+    """
+    ms = market_summary or {}
+    advancers = int(ms.get("advancers", 0))
+    decliners = int(ms.get("decliners", 0))
+    net_advance = advancers - decliners
+
+    if forced_vol_ratio is not None:
+        up_down_vol_ratio = float(forced_vol_ratio)
+    else:
+        adv_vol = 0.0
+        dec_vol = 0.0
+        sym_list = symbols if symbols is not None else (get_symbols() or [])
+        for sym in sym_list:
+            df = history_map.get(sym) if history_map else get_history(sym)
+            if df is None or len(df) < 2:
+                continue
+            c_last = float(df["Close"].iloc[-1])
+            c_prev = float(df["Close"].iloc[-2])
+            v_last = float(df["Volume"].iloc[-1]) if "Volume" in df.columns else 0.0
+            if c_last > c_prev:
+                adv_vol += v_last
+            elif c_last < c_prev:
+                dec_vol += v_last
+
+        if dec_vol > 0:
+            up_down_vol_ratio = round(adv_vol / dec_vol, 2)
+        elif adv_vol > 0:
+            up_down_vol_ratio = round(adv_vol / 1.0, 2)
+        else:
+            up_down_vol_ratio = 1.0
+
+    hist = list(prior_history) if prior_history else []
+    net_adv_series = [float(entry.get("net_advance", 0)) for entry in hist] + [float(net_advance)]
+    osc_series = compute_mcclellan_oscillator_series(net_adv_series)
+
+    curr_osc = osc_series[-1] if osc_series else 0.0
+
+    # Breadth thrust condition:
+    # Crossed from below 0 to above +threshold within the last 3 scans AND up_down_vol_ratio >= 1.2
+    breadth_thrust = False
+    if len(osc_series) >= 2 and curr_osc >= BREADTH_THRUST_THRESHOLD and up_down_vol_ratio >= 1.2:
+        lookback_start = max(0, len(osc_series) - 4)
+        prior_vals = osc_series[lookback_start : len(osc_series) - 1]
+        if any(v < 0 for v in prior_vals):
+            breadth_thrust = True
+
+    # Regime confidence modifier:
+    if breadth_thrust or (curr_osc > 0 and up_down_vol_ratio >= 1.2):
+        confidence = "strong"
+    elif curr_osc < 0 and up_down_vol_ratio < 0.8:
+        confidence = "weak"
+    else:
+        confidence = "neutral"
+
+    today_str = ms.get("last_bar_date") or datetime.date.today().strftime("%Y-%m-%d")
+    new_entry = {
+        "date": today_str,
+        "net_advance": net_advance,
+        "up_down_vol_ratio": up_down_vol_ratio,
+        "ratio": up_down_vol_ratio,
+        "oscillator": curr_osc,
+    }
+    updated_history = (hist + [new_entry])[-60:]
+
+    market_internals = {
+        "oscillator": curr_osc,
+        "up_down_vol_ratio": up_down_vol_ratio,
+        "breadth_thrust": breadth_thrust,
+        "confidence": confidence,
+    }
+    return market_internals, updated_history
+
+
 def get_on_deck_candidates(symbols: Optional[List[str]] = None, history_map: Optional[Dict[str, pd.DataFrame]] = None) -> List[Dict[str, Any]]:
     """
     Identify up-to-5 symbols passing TREND_OK & SETUP_OK & sector_ok but failing BREAKOUT or VOL_SPIKE.
@@ -4347,6 +4482,12 @@ if __name__ == "__main__":
         sector_rotation = compute_sector_rotation(get_symbols(), on_deck=on_deck)
         hurst_summary = compute_hurst_summary(watchlist_candidates if watchlist_candidates else (signals + on_deck))
         ofi_summary = compute_ofi_summary(watchlist_candidates if watchlist_candidates else (signals + on_deck))
+        prior_history = load_internals_history()
+        market_internals, internals_history = compute_market_internals(
+            market_summary=market_summary,
+            symbols=get_symbols(),
+            prior_history=prior_history,
+        )
 
         scan_results = {
             "updated_at": now_ist,
@@ -4365,6 +4506,8 @@ if __name__ == "__main__":
             "sector_rotation": sector_rotation,
             "hurst_summary": hurst_summary,
             "ofi_summary": ofi_summary,
+            "market_internals": market_internals,
+            "internals_history": internals_history,
         }
 
         with open(SCAN_RESULTS_FILE, "w", encoding="utf-8") as f:

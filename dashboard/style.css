@@ -4487,6 +4487,170 @@ th .term-lookup {
   }
 }
 
+/* =====================================================================
+   SC-B DECISION INTELLIGENCE: CORRELATION, GTT, THESIS CARD
+   ===================================================================== */
+.correlation-card {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.8) 100%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: clamp(12px, 2vw, 16px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+  width: 100%;
+}
 
+.correlation-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
 
+.correlation-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
 
+.correlation-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.correlation-hint {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.concentration-alert-banner {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid #ef4444;
+  color: #fca5a5;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.correlation-grid-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.corr-grid-table {
+  border-collapse: collapse;
+  font-size: 11.5px;
+  text-align: center;
+}
+
+.corr-grid-table th, .corr-grid-table td {
+  padding: 6px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.corr-grid-table th {
+  background: rgba(15, 23, 42, 0.9);
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.corr-cell {
+  font-weight: 700;
+  border-radius: 4px;
+}
+
+.corr-high {
+  background: rgba(239, 68, 68, 0.25);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.corr-med {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fde68a;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.corr-low {
+  background: rgba(16, 185, 129, 0.18);
+  color: #a7f3d0;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+/* Mobile Scroll Chip List for Correlation */
+.corr-mobile-chips {
+  display: none;
+  gap: 8px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 4px;
+}
+
+.corr-chip-item {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  font-size: 11.5px;
+}
+
+@media (max-width: 640px) {
+  .corr-grid-table {
+    display: none;
+  }
+  .corr-mobile-chips {
+    display: flex;
+  }
+}
+
+.badge-gtt {
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  color: #38bdf8;
+  font-weight: 600;
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.badge-gtt:hover {
+  background: rgba(56, 189, 248, 0.25);
+  color: #fff;
+  border-color: #38bdf8;
+}
+
+.badge-gtt.copied {
+  background: rgba(16, 185, 129, 0.25);
+  border-color: #10b981;
+  color: #34d399;
+}
+
+.thesis-card-block {
+  font-family: 'Consolas', 'Courier New', monospace;
+  white-space: pre-wrap;
+  background: #060b13;
+  border: 1px solid #1e293b;
+  border-left: 3px solid #38bdf8;
+  padding: 12px 14px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  color: #38bdf8;
+  margin: 12px 0;
+  line-height: 1.6;
+}

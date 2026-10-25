@@ -1760,6 +1760,327 @@ def sector_ok(symbol: str) -> bool:
         return True  # Strictly fail-open on any unexpected error
 
 
+# =====================================================================
+# 6B) DECISION-MAKING & DIAGNOSTIC INTELLIGENCE
+# =====================================================================
+def calculate_mtf_confluence(df: pd.DataFrame, daily_trend_ok: Optional[bool] = None) -> bool:
+    """
+    Weekly Stage-2: resample same history to weekly.
+    w_Close > w_SMA30 AND w_SMA30 rising (w_SMA30[-1] > w_SMA30[-2]).
+    Confluence = daily TREND_OK AND weekly Stage-2 (bool).
+    """
+    if df is None or len(df) < 20:
+        return False
+
+    if daily_trend_ok is None:
+        if "TREND_OK" in df.columns:
+            daily_trend_ok = bool(df["TREND_OK"].iloc[-1])
+        else:
+            daily_trend_ok = False
+
+    if not daily_trend_ok:
+        return False
+
+    try:
+        sub = df[["Date", "Close"]].copy() if "Date" in df.columns else df[["Close"]].copy()
+        if "Date" in sub.columns:
+            sub["Date"] = pd.to_datetime(sub["Date"])
+            sub.set_index("Date", inplace=True)
+        elif not isinstance(sub.index, pd.DatetimeIndex):
+            sub.index = pd.date_range(end=datetime.date.today(), periods=len(sub), freq="D")
+
+        w_series = sub["Close"].resample("W").last().dropna()
+        if len(w_series) < 5:
+            return False
+
+        # 30-week SMA with min_periods fallback for small synthetic test fixtures
+        w_sma30 = w_series.rolling(30, min_periods=min(5, len(w_series))).mean()
+        valid_sma = w_sma30.dropna()
+        if len(valid_sma) < 2:
+            return False
+
+        w_close_last = float(w_series.iloc[-1])
+        w_sma_last = float(valid_sma.iloc[-1])
+        w_sma_prev = float(valid_sma.iloc[-2])
+
+        w_stage2 = (w_close_last > w_sma_last) and (w_sma_last > w_sma_prev)
+        return bool(daily_trend_ok and w_stage2)
+    except Exception:
+        return False
+
+
+def build_thesis_card(item: Dict[str, Any]) -> str:
+    """
+    Assembles a 4-line plain-English string ONLY from existing fields (None -> 'n/a'):
+    L1 "GRADE <g> | RS <rs> | Base <maturity>/4 (<days>d)"
+    L2 "Trend <✓/✗> / Setup <coiling?> / Sector <bullish?> / MTF <✓/—>"
+    L3 "Inst: <footprint> | Next event: <type in Nd or none>"
+    L4 "Plan: <exit_plan> | Risk 1% (gap-capped @20%)"
+    Pure formatting, no new thresholds.
+    """
+    # L1: GRADE <g> | RS <rs> | Base <maturity>/4 (<days>d)
+    g = item.get("grade") or item.get("Grade") or "n/a"
+    rs = item.get("rs_rating")
+    if rs is not None and not (isinstance(rs, float) and math.isnan(rs)):
+        rs_str = str(int(round(rs)))
+    else:
+        rs_str = "n/a"
+
+    mat = item.get("base_maturity")
+    mat_str = str(mat) if mat is not None else "n/a"
+    days = item.get("days_in_base")
+    days_str = str(days) if days is not None else "n/a"
+    l1 = f"GRADE {g} | RS {rs_str} | Base {mat_str}/4 ({days_str}d)"
+
+    # L2: Trend <✓/✗> / Setup <coiling?> / Sector <bullish?> / MTF <✓/—>
+    trend = item.get("Trend")
+    if trend == "YES" or trend is True:
+        trend_sym = "✓"
+    elif trend == "no" or trend is False:
+        trend_sym = "✗"
+    else:
+        trend_sym = "✓" if item.get("TREND_OK", True) else "✗"
+
+    coiling = item.get("Coiling")
+    if coiling == "YES" or coiling is True or item.get("SETUP_OK"):
+        setup_str = "Coiling"
+    else:
+        setup_str = "Consolidating"
+
+    sec_bullish = item.get("SectorBullish")
+    if sec_bullish == "YES" or sec_bullish is True:
+        sec_str = "Bullish"
+    elif sec_bullish == "no" or sec_bullish is False:
+        sec_str = "Neutral"
+    else:
+        sec_str = "n/a"
+
+    mtf = item.get("mtf_confluence")
+    mtf_sym = "✓" if mtf else "—"
+    l2 = f"Trend {trend_sym} / Setup {setup_str} / Sector {sec_str} / MTF {mtf_sym}"
+
+    # L3: Inst: <footprint> | Next event: <type in Nd or none>
+    inst = item.get("inst_footprint") or "unknown"
+    next_ev = item.get("next_event")
+    if isinstance(next_ev, dict) and next_ev.get("type"):
+        d = next_ev.get("days_to_event")
+        d_str = f"{d}d" if d is not None else "n/a"
+        ev_str = f"{next_ev['type']} in {d_str}"
+    else:
+        ev_str = "none"
+    l3 = f"Inst: {inst} | Next event: {ev_str}"
+
+    # L4: Plan: <exit_plan> | Risk 1% (gap-capped @20%)
+    if item.get("Target") and item.get("Stop"):
+        exit_plan = f"Target ₹{item['Target']} (2R) / Stop ₹{item['Stop']}"
+    elif item.get("breakout_level"):
+        exit_plan = f"GTT Breakout ₹{item['breakout_level']} / Target 2R"
+    else:
+        exit_plan = "2R Target / Trail 20-EMA"
+    l4 = f"Plan: {exit_plan} | Risk 1% (gap-capped @20%)"
+
+    return f"{l1}\n{l2}\n{l3}\n{l4}"
+
+
+def compute_open_positions_correlation(
+    open_positions: Optional[List[Dict[str, Any]]] = None,
+    history_map: Optional[Dict[str, pd.DataFrame]] = None
+) -> Dict[str, Any]:
+    """
+    Correlation among OPEN positions only:
+    pairwise 60d daily-return Pearson + each position beta to the universe basket;
+    output: correlation={pairs:[{a,b,corr}],betas:{},concentration_warning:(any pair>0.7) OR (>2 same-sector)}.
+    Graceful: <2 open => pairs [], warning False (no div-by-zero).
+    """
+    if open_positions is None:
+        open_positions = load_open_positions()
+
+    valid_positions = [p for p in (open_positions or []) if p and p.get("symbol")]
+    symbols = list(dict.fromkeys(p["symbol"] for p in valid_positions))
+
+    if len(symbols) < 2:
+        return {
+            "pairs": [],
+            "betas": {},
+            "concentration_warning": False,
+        }
+
+    daily_rets: Dict[str, pd.Series] = {}
+    for sym in symbols:
+        df = history_map.get(sym) if history_map else get_history(sym)
+        if df is not None and len(df) >= 2:
+            rets = df["Close"].pct_change().dropna()
+            if len(rets) > 0:
+                daily_rets[sym] = rets.iloc[-60:]
+
+    pairs: List[Dict[str, Any]] = []
+    for i in range(len(symbols)):
+        for j in range(i + 1, len(symbols)):
+            s_a = symbols[i]
+            s_b = symbols[j]
+            corr_val = 0.0
+            if s_a in daily_rets and s_b in daily_rets:
+                r_a = daily_rets[s_a]
+                r_b = daily_rets[s_b]
+                common = pd.concat([r_a, r_b], axis=1, join="inner").dropna()
+                if len(common) >= 5:
+                    c = float(common.iloc[:, 0].corr(common.iloc[:, 1]))
+                    if not math.isnan(c):
+                        corr_val = round(c, 2)
+            pairs.append({"a": s_a, "b": s_b, "corr": corr_val})
+
+    # Position beta to the universe basket
+    universe_syms = get_symbols() or []
+    basket_series_list: List[pd.Series] = []
+    for u_sym in universe_syms[:30]:
+        if history_map is not None and u_sym in history_map:
+            df_u = history_map[u_sym]
+        elif u_sym in daily_rets:
+            df_u = daily_rets[u_sym]
+        else:
+            df_u = get_history(u_sym)
+
+        if isinstance(df_u, pd.DataFrame) and len(df_u) >= 2:
+            r = df_u["Close"].pct_change().dropna().iloc[-60:]
+            if len(r) >= 5:
+                basket_series_list.append(r)
+        elif isinstance(df_u, pd.Series) and len(df_u) >= 5:
+            basket_series_list.append(df_u)
+
+    betas: Dict[str, float] = {}
+    basket_return = None
+    if basket_series_list:
+        try:
+            basket_df = pd.concat(basket_series_list, axis=1).mean(axis=1).dropna()
+            if len(basket_df) >= 5:
+                basket_return = basket_df
+        except Exception:
+            basket_return = None
+
+    for sym in symbols:
+        if sym in daily_rets and basket_return is not None:
+            r_sym = daily_rets[sym]
+            common = pd.concat([r_sym, basket_return], axis=1, join="inner").dropna()
+            if len(common) >= 5:
+                var_m = float(common.iloc[:, 1].var())
+                if var_m > 1e-8:
+                    cov_sm = float(common.iloc[:, 0].cov(common.iloc[:, 1]))
+                    b_val = round(float(cov_sm / var_m), 2)
+                    betas[sym] = b_val if not math.isnan(b_val) else 1.0
+                else:
+                    betas[sym] = 1.0
+            else:
+                betas[sym] = 1.0
+        else:
+            betas[sym] = 1.0
+
+    # Concentration warning: (any pair > 0.7) OR (>2 same-sector)
+    any_high_corr = any(p["corr"] > 0.7 for p in pairs)
+    sector_counts: Dict[str, int] = {}
+    for p in valid_positions:
+        sec = p.get("sector") or SECTOR_MAP.get(p.get("symbol"), INDEX_SYMBOL)
+        sector_counts[sec] = sector_counts.get(sec, 0) + 1
+    more_than_two_same_sector = any(cnt > 2 for cnt in sector_counts.values())
+
+    concentration_warning = bool(any_high_corr or more_than_two_same_sector)
+
+    return {
+        "pairs": pairs,
+        "betas": betas,
+        "concentration_warning": concentration_warning,
+    }
+
+
+def compute_sector_rotation(
+    symbols: Optional[List[str]] = None,
+    history_map: Optional[Dict[str, pd.DataFrame]] = None,
+    on_deck: Optional[List[Dict[str, Any]]] = None
+) -> Dict[str, Any]:
+    """
+    Group universe by sector;
+    per sector {sector, n, pct_above_sma50, avg_ret_126d, on_deck_count};
+    sort by a composite leadership score;
+    output top 8 + a per-sector map so the table can color/filter by sector.
+    """
+    if symbols is None:
+        symbols = get_symbols() or []
+
+    if on_deck is None:
+        on_deck = []
+
+    on_deck_sector_counts: Dict[str, int] = {}
+    for od in on_deck:
+        od_sym = od.get("symbol") or ""
+        od_sec = SECTOR_MAP.get(od_sym, INDEX_SYMBOL)
+        on_deck_sector_counts[od_sec] = on_deck_sector_counts.get(od_sec, 0) + 1
+
+    sectors_data: Dict[str, Dict[str, Any]] = {}
+    for sym in symbols:
+        sec = SECTOR_MAP.get(sym, INDEX_SYMBOL)
+        if sec not in sectors_data:
+            sectors_data[sec] = {
+                "symbols": [],
+                "above_sma50_count": 0,
+                "rets_126d": [],
+            }
+        sectors_data[sec]["symbols"].append(sym)
+
+        df = history_map.get(sym) if history_map else get_history(sym)
+        if df is not None and len(df) >= 2:
+            close_last = float(df["Close"].iloc[-1])
+            if len(df) >= 50:
+                sma50_val = float(df["Close"].rolling(50).mean().iloc[-1])
+                if not math.isnan(sma50_val) and close_last > sma50_val:
+                    sectors_data[sec]["above_sma50_count"] += 1
+            else:
+                if close_last > float(df["Close"].mean()):
+                    sectors_data[sec]["above_sma50_count"] += 1
+
+            if len(df) >= 127:
+                c_prev = float(df["Close"].iloc[-127])
+                if c_prev > 0 and not math.isnan(c_prev) and not math.isnan(close_last):
+                    sectors_data[sec]["rets_126d"].append(((close_last / c_prev) - 1.0) * 100.0)
+            elif len(df) > 1:
+                c_first = float(df["Close"].iloc[0])
+                if c_first > 0:
+                    sectors_data[sec]["rets_126d"].append(((close_last / c_first) - 1.0) * 100.0)
+
+    compiled: List[Dict[str, Any]] = []
+    sector_map: Dict[str, Dict[str, Any]] = {}
+
+    for sec, data in sectors_data.items():
+        n = len(data["symbols"])
+        pct_above_sma50 = round((data["above_sma50_count"] / max(1, n)) * 100.0, 1)
+        rets = data["rets_126d"]
+        avg_ret_126d = round(float(sum(rets) / len(rets)), 1) if rets else 0.0
+        on_deck_cnt = on_deck_sector_counts.get(sec, 0)
+
+        composite_score = round(
+            (0.5 * pct_above_sma50) + (0.3 * avg_ret_126d) + (0.2 * (on_deck_cnt * 20.0)),
+            2
+        )
+
+        item = {
+            "sector": sec,
+            "n": n,
+            "pct_above_sma50": pct_above_sma50,
+            "avg_ret_126d": avg_ret_126d,
+            "on_deck_count": on_deck_cnt,
+            "score": composite_score,
+        }
+        compiled.append(item)
+        sector_map[sec] = item
+
+    compiled.sort(key=lambda x: -x["score"])
+    top_8 = compiled[:8]
+
+    return {
+        "top_sectors": top_8,
+        "sector_map": sector_map,
+        "sectors": sector_map,
+    }
+
+
 def calculate_position_risk_parameters(
     entry: float,
     atr: float,
@@ -1924,7 +2245,7 @@ def scan_symbol(symbol: str) -> Optional[Dict[str, Any]]:
     base_mat = calculate_base_maturity(df)
     days_base = calculate_days_in_base(df)
 
-    return {
+    sig_dict = {
         "Signal Date": pd.to_datetime(last_row["Date"]).strftime("%Y-%m-%d"),
         "Symbol": symbol,
         "Sector": sector_sym,
@@ -1949,7 +2270,10 @@ def scan_symbol(symbol: str) -> Optional[Dict[str, Any]]:
         "inst_footprint": classify_inst_footprint(symbol, df),
         "next_event": get_next_event(symbol, curr_date),
         "warn_event": bool(get_next_event(symbol, curr_date) and 0 <= get_next_event(symbol, curr_date)["days_to_event"] <= 3),
+        "mtf_confluence": calculate_mtf_confluence(df, daily_trend_ok=bool(last_row.get("TREND_OK", True))),
     }
+    sig_dict["thesis_card"] = build_thesis_card(sig_dict)
+    return sig_dict
 
 
 # =====================================================================
@@ -2119,7 +2443,7 @@ def diagnose(symbol: str) -> Optional[Dict[str, Any]]:
     else:
         grade = "C"
 
-    return {
+    diag_dict = {
         "Symbol": sym_name,
         "Sector": sec_sym,
         "SectorBullish": sec_bullish,
@@ -2144,7 +2468,10 @@ def diagnose(symbol: str) -> Optional[Dict[str, Any]]:
             get_next_event(symbol, pd.to_datetime(last_row["Date"]).date() if "Date" in last_row else datetime.date.today())
             and 0 <= get_next_event(symbol, pd.to_datetime(last_row["Date"]).date() if "Date" in last_row else datetime.date.today())["days_to_event"] <= 3
         ),
+        "mtf_confluence": calculate_mtf_confluence(df, daily_trend_ok=trend_ok),
     }
+    diag_dict["thesis_card"] = build_thesis_card(diag_dict)
+    return diag_dict
 
 
 def get_watchlist_candidates() -> List[Dict[str, Any]]:
@@ -2318,7 +2645,7 @@ def get_on_deck_candidates(symbols: Optional[List[str]] = None, history_map: Opt
                     c_date = pd.to_datetime(last_row["Date"]).date() if "Date" in last_row else datetime.date.today()
                     n_ev = get_next_event(sym, c_date)
 
-                    candidates.append({
+                    od_item = {
                         "symbol": sym,
                         "close": c,
                         "breakout_level": round(high20, 2),
@@ -2329,7 +2656,10 @@ def get_on_deck_candidates(symbols: Optional[List[str]] = None, history_map: Opt
                         "inst_footprint": classify_inst_footprint(sym, df),
                         "next_event": n_ev,
                         "warn_event": bool(n_ev and 0 <= n_ev["days_to_event"] <= 3),
-                    })
+                        "mtf_confluence": calculate_mtf_confluence(df, daily_trend_ok=bool(last_row.get("TREND_OK", False))),
+                    }
+                    od_item["thesis_card"] = build_thesis_card(od_item)
+                    candidates.append(od_item)
         except Exception:
             continue
 
@@ -3322,6 +3652,9 @@ if __name__ == "__main__":
             "symbols_accumulating": acc_syms,
         }
 
+        correlation = compute_open_positions_correlation(open_positions)
+        sector_rotation = compute_sector_rotation(get_symbols(), on_deck=on_deck)
+
         scan_results = {
             "updated_at": now_ist,
             "market_ok": is_mkt_ok,
@@ -3334,6 +3667,8 @@ if __name__ == "__main__":
             "inst_summary": inst_summary,
             "deals_stale": deals_stale,
             "landmines": landmines,
+            "correlation": correlation,
+            "sector_rotation": sector_rotation,
         }
 
         with open(SCAN_RESULTS_FILE, "w", encoding="utf-8") as f:

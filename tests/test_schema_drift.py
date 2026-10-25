@@ -23,6 +23,8 @@ EXPECTED_TOP_LEVEL_KEYS = {
     "inst_summary",
     "deals_stale",
     "landmines",
+    "correlation",
+    "sector_rotation",
 }
 
 EXPECTED_BACKTEST_RESULTS_KEYS = {
@@ -80,6 +82,8 @@ EXPECTED_SIGNAL_KEYS = {
     "inst_footprint",
     "next_event",
     "warn_event",
+    "mtf_confluence",
+    "thesis_card",
 }
 
 EXPECTED_WATCHLIST_KEYS = {
@@ -104,6 +108,8 @@ EXPECTED_WATCHLIST_KEYS = {
     "inst_footprint",
     "next_event",
     "warn_event",
+    "mtf_confluence",
+    "thesis_card",
 }
 
 EXPECTED_ON_DECK_KEYS = {
@@ -117,6 +123,8 @@ EXPECTED_ON_DECK_KEYS = {
     "inst_footprint",
     "next_event",
     "warn_event",
+    "mtf_confluence",
+    "thesis_card",
 }
 
 
@@ -140,6 +148,16 @@ def test_schema_keys_exact_match(tmp_cwd: Any, monkeypatch: pytest.MonkeyPatch):
         f"Missing: {EXPECTED_TOP_LEVEL_KEYS - actual_top_keys}\n"
         f"Unexpected: {actual_top_keys - EXPECTED_TOP_LEVEL_KEYS}"
     )
+    assert "correlation" in data
+    assert isinstance(data["correlation"], dict)
+    assert "pairs" in data["correlation"]
+    assert "concentration_warning" in data["correlation"]
+    assert isinstance(data["correlation"]["concentration_warning"], bool)
+
+    assert "sector_rotation" in data
+    assert isinstance(data["sector_rotation"], dict)
+    assert "top_sectors" in data["sector_rotation"]
+    assert "sector_map" in data["sector_rotation"]
 
     # 2. Signals schema
     assert len(data["signals"]) > 0, "Expected at least one signal in hermetic scan"
@@ -152,6 +170,8 @@ def test_schema_keys_exact_match(tmp_cwd: Any, monkeypatch: pytest.MonkeyPatch):
         )
         # rs_rating may be None at N=2 in small universes
         assert "rs_rating" in sig
+        assert isinstance(sig["thesis_card"], str) and len(sig["thesis_card"]) > 0
+        assert isinstance(sig["mtf_confluence"], bool)
 
     # 3. Watchlist schema
     assert len(data["watchlist"]) > 0, "Expected at least one watchlist candidate in hermetic scan"
@@ -163,6 +183,8 @@ def test_schema_keys_exact_match(tmp_cwd: Any, monkeypatch: pytest.MonkeyPatch):
             f"Unexpected: {actual_wl_keys - EXPECTED_WATCHLIST_KEYS}"
         )
         assert "rs_rating" in wl
+        assert isinstance(wl["thesis_card"], str) and len(wl["thesis_card"]) > 0
+        assert isinstance(wl["mtf_confluence"], bool)
 
     # 4. Market summary schema
     assert isinstance(data["market_summary"], dict)
@@ -182,6 +204,8 @@ def test_schema_keys_exact_match(tmp_cwd: Any, monkeypatch: pytest.MonkeyPatch):
             f"Missing: {EXPECTED_ON_DECK_KEYS - actual_od_keys}\n"
             f"Unexpected: {actual_od_keys - EXPECTED_ON_DECK_KEYS}"
         )
+        assert isinstance(od["thesis_card"], str) and len(od["thesis_card"]) > 0
+        assert isinstance(od["mtf_confluence"], bool)
     assert isinstance(data["leaders_board"], list)
 
 
@@ -280,5 +304,74 @@ def test_archive_ohlcv_append_and_deduplicate(tmp_cwd: Any):
     assert len(df2) == 3
     test1_june15 = df2[(df2["symbol"] == "TEST1.NS") & (df2["date"] == "2025-06-15")].iloc[0]
     assert test1_june15["close"] == 104.0
+
+
+def test_correlation_and_mtf_diagnostics():
+    """
+    Hermetic 2-symbol fixture:
+    - correlation pairs 0/1 entry no crash
+    - thesis_card non-empty string
+    - mtf_confluence bool
+    - sector_rotation key present
+    """
+    import main
+    # 0 open
+    corr_0 = main.compute_open_positions_correlation([])
+    assert corr_0["pairs"] == []
+    assert corr_0["concentration_warning"] is False
+
+    # 1 open
+    corr_1 = main.compute_open_positions_correlation([{"symbol": "AAA.NS", "sector": "NIFTY_IT"}])
+    assert corr_1["pairs"] == []
+    assert corr_1["concentration_warning"] is False
+
+    # 2 open
+    corr_2 = main.compute_open_positions_correlation([
+        {"symbol": "AAA.NS", "sector": "NIFTY_IT"},
+        {"symbol": "BBB.NS", "sector": "NIFTY_IT"}
+    ])
+    assert isinstance(corr_2["pairs"], list)
+    assert len(corr_2["pairs"]) == 1
+    assert corr_2["pairs"][0]["a"] == "AAA.NS"
+    assert corr_2["pairs"][0]["b"] == "BBB.NS"
+    assert isinstance(corr_2["concentration_warning"], bool)
+
+    # sector rotation
+    sec_rot = main.compute_sector_rotation(["AAA.NS", "BBB.NS"])
+    assert "top_sectors" in sec_rot
+    assert "sector_map" in sec_rot
+    assert len(sec_rot["top_sectors"]) > 0
+
+    # mtf confluence
+    from tests.test_rules_golden import build_scenario_dataframe
+    df_tb = build_scenario_dataframe("textbook")
+    mtf_tb = main.calculate_mtf_confluence(df_tb, daily_trend_ok=True)
+    assert isinstance(mtf_tb, bool)
+
+    # thesis card
+    dummy_item = {
+        "Symbol": "TEST.NS",
+        "grade": "A",
+        "rs_rating": 88,
+        "base_maturity": 3,
+        "days_in_base": 42,
+        "Trend": "YES",
+        "Coiling": "YES",
+        "SectorBullish": "YES",
+        "mtf_confluence": True,
+        "inst_footprint": "accumulation",
+        "next_event": {"type": "EARNINGS", "days_to_event": 6},
+        "Target": 250.0,
+        "Stop": 200.0,
+    }
+    tc = main.build_thesis_card(dummy_item)
+    assert isinstance(tc, str)
+    assert len(tc) > 0
+    lines = tc.split("\n")
+    assert len(lines) == 4
+    assert "GRADE A | RS 88 | Base 3/4 (42d)" in lines[0]
+    assert "Trend ✓ / Setup Coiling / Sector Bullish / MTF ✓" in lines[1]
+    assert "Inst: accumulation | Next event: EARNINGS in 6d" in lines[2]
+    assert "Risk 1% (gap-capped @20%)" in lines[3]
 
 

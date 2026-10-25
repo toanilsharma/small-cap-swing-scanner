@@ -128,6 +128,22 @@
           </div>
           <div id="sectorChipsContainer" class="sector-chips-row"></div>
         </div>
+
+        <!-- PORTFOLIO CORRELATION & CONCENTRATION CARD (SC-B) -->
+        <div id="nearBuyCorrelationCard" class="correlation-card" style="display: none;">
+          <div class="correlation-header">
+            <div class="correlation-title-group">
+              <span style="font-size: 16px;">🔗</span>
+              <span class="correlation-title">Portfolio Correlation &amp; Concentration Risk</span>
+              <span id="nearBuyConcentrationPill" class="badge badge-success">Normal Risk</span>
+            </div>
+            <span class="correlation-hint">Pairwise 60d returns Pearson corr &bull; universe beta</span>
+          </div>
+          <div id="nearBuyConcentrationAlert" class="concentration-alert-banner" style="display: none;">
+            ⚠️ <strong>Concentration Warning:</strong> Elevated portfolio risk (pairwise correlation &gt; 0.70 or &gt;2 positions in the same sector). Diversify small-cap exposure.
+          </div>
+          <div id="nearBuyCorrelationGrid" class="correlation-grid-wrapper"></div>
+        </div>
       </div>
 
       <!-- ZONE 2: ACTION INTELLIGENCE (Playbook + Landmines + Leaders + On Deck) -->
@@ -299,10 +315,10 @@
             <div class="watchlist-sort-group">
               <label for="watchlistSortSelect">Sort:</label>
               <select id="watchlistSortSelect" class="form-select-sm">
-                <option value="score_desc">Setup Score (High &rarr; Low)</option>
-                <option value="dist_asc">Dist to Breakout (Closest)</option>
-                <option value="price_desc">Price (High &rarr; Low)</option>
-                <option value="price_asc">Price (Low &rarr; High)</option>
+                <option value="score_desc">Setup Score</option>
+                <option value="dist_asc">Dist to Breakout</option>
+                <option value="rs_desc">RS Rating</option>
+                <option value="price_desc">Close</option>
                 <option value="symbol_asc">Symbol (A &rarr; Z)</option>
               </select>
             </div>
@@ -310,6 +326,7 @@
               <label for="watchlistDateSelect">📅 Scan:</label>
               <select id="watchlistDateSelect" class="form-select-sm" title="Select today's live scan or view past cached daily scans">
                 <option value="latest">Latest (Live)</option>
+                <option value="previous">Previous (Cached)</option>
               </select>
             </div>
           </div>
@@ -488,6 +505,22 @@
 
       <!-- EVENT RADAR DISCIPLINE CARD / ALERT BANNER -->
       <div id="openPositionsEventAlert" class="positions-alert-banner positions-event-banner" style="display: none;"></div>
+
+      <!-- OPEN POSITIONS CORRELATION & CONCENTRATION CARD (SC-B) -->
+      <div id="openPositionsCorrelationCard" class="correlation-card" style="margin-bottom: 20px;">
+        <div class="correlation-header">
+          <div class="correlation-title-group">
+            <span style="font-size: 16px;">🔗</span>
+            <span class="correlation-title">Open Positions Correlation &amp; Concentration</span>
+            <span id="openConcentrationPill" class="badge badge-success">Normal Risk</span>
+          </div>
+          <span class="correlation-hint">Pairwise 60d Pearson corr &bull; universe beta</span>
+        </div>
+        <div id="openConcentrationAlert" class="concentration-alert-banner" style="display: none;">
+          ⚠️ <strong>Concentration Warning:</strong> Elevated portfolio risk (pairwise correlation &gt; 0.70 or &gt;2 positions in the same sector).
+        </div>
+        <div id="openCorrelationGrid" class="correlation-grid-wrapper"></div>
+      </div>
 
       <div class="table-scroll" tabindex="0">
         <table id="openPositionsTable">
@@ -1581,6 +1614,46 @@
                 <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Fail-open design: Scanner never crashes on missing NSE data, but transparently warns when institutional footprints are using older snapshots.</span></div>
                 <div class="glossary-section-row"><span class="glossary-label">main.py Threshold:</span><span class="glossary-threshold">deals_stale = true when bulk/block data fetch fails or snapshot is older than 3 days.</span></div>
                 <div class="glossary-section-row"><span class="glossary-label">Example:</span><span class="glossary-example">Flashing amber DEALS STALE badge in header pulse row.</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-mtf-confluence">
+                <div class="glossary-card-header"><span class="glossary-term">Multi-Timeframe Confluence</span><span class="glossary-category">Trend Quality</span></div>
+                <p class="glossary-meaning">Validation that daily Minervini Stage 2 criteria and weekly resampled Stage 2 (w_Close &gt; w_SMA30 and rising 30-week SMA) align in the same bullish direction.</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Trading daily breakouts without weekly trend alignment frequently leads to whipsaws. MTF confluence confirms multi-quarter institutional sponsorship.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">main.py Formula:</span><span class="glossary-threshold">mtf_confluence = daily TREND_OK and (w_Close &gt; w_SMA30) and (w_SMA30[-1] &gt; w_SMA30[-2]).</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Where used:</span><span class="glossary-example">Near Buy Table (MTF ✅/— chip), Thesis Card, Signals.</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-thesis-card">
+                <div class="glossary-card-header"><span class="glossary-term">Thesis Card</span><span class="glossary-category">Executive Intelligence</span></div>
+                <p class="glossary-meaning">A dense 4-line plain-English synthesis of Grade, RS rating, Base maturity, Trend, Institutional footprint, Upcoming events, and GTT Risk Plan.</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Enables instant, objective trade evaluation without manual indicator cross-checking before order placement.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">main.py Schema:</span><span class="glossary-threshold">L1: Grade/RS/Base; L2: Trend/Setup/Sector/MTF; L3: Inst/Event; L4: Plan/Risk.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Where used:</span><span class="glossary-example">Watchlist expanded accordion drawer, Active Signals.</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-correlation-concentration">
+                <div class="glossary-card-header"><span class="glossary-term">Correlation / Concentration</span><span class="glossary-category">Portfolio Risk</span></div>
+                <p class="glossary-meaning">Pairwise 60-day Pearson return correlation matrix among open positions and universe beta tracking to prevent correlated drawdowns.</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Holding multiple small caps with correlation &gt; 0.70 or &gt;2 positions in the same sector magnifies drawdowns during sector rotations.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">main.py Rule:</span><span class="glossary-threshold">concentration_warning = (any pairwise Pearson corr &gt; 0.70) or (&gt;2 positions in identical sector).</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Where used:</span><span class="glossary-example">Open Positions Tab, Near Buy Market Overview.</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-sector-rotation">
+                <div class="glossary-card-header"><span class="glossary-term">Sector Rotation</span><span class="glossary-category">Macro Theme</span></div>
+                <p class="glossary-meaning">Composite ranking of universe sectors by percentage of constituents above 50 SMA, 6-month trailing returns, and near-buy setup density.</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Institutional breakouts have 3x higher follow-through when backed by a top-ranking sector theme.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">main.py Score:</span><span class="glossary-threshold">Score = 0.40 * (% &gt; SMA50) + 0.35 * (Norm 6M Ret) + 0.25 * (On-Deck Count).</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Where used:</span><span class="glossary-example">Market Overview Zone (Clickable Sector Chips strip).</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-gtt-copy">
+                <div class="glossary-card-header"><span class="glossary-term">GTT Copy</span><span class="glossary-category">Execution Blueprint</span></div>
+                <p class="glossary-meaning">One-click clipboard export of exact Zerodha Kite / Groww GTT order parameters: Trigger, Limit (+0.5%), and 1% risk position size.</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Eliminates manual calculation errors during market opens and prevents market order slippage.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Format:</span><span class="glossary-threshold">BUY &lt;SYM&gt; | Trigger &lt;breakout&gt; | Limit &lt;+0.5%&gt; | Qty=(CAPITAL*0.01)/(Entry-SL) | GTC</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Where used:</span><span class="glossary-example">Near Buy Table (.badge-gtt Action button).</span></div>
               </div>
             </div>
           </article>

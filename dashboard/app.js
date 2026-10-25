@@ -23,6 +23,38 @@ let _isViewingArchive = false;
 // SITE-WIDE TERMS & DEFINITIONS DICTIONARY
 // =====================================================================
 const TERMS = {
+  // Decision-Making Intelligence (SC-B)
+  "Multi-Timeframe Confluence": {
+    short: "Validation that daily trend and weekly Stage-2 (w_Close > w_SMA30 and rising) align.",
+    long: "Ensures higher-timeframe institutional tailwinds. Evaluates daily Minervini Stage 2 criteria alongside weekly resampled Stage 2 (w_Close > w_SMA30 and rising 30-week SMA). When both align, odds of breakout continuation increase substantially.",
+    where_used: "Near Buy (MTF Chip), Watchlist Diagnosis, Help Guide",
+    anchor: "glossary-mtf-confluence"
+  },
+  "Thesis Card": {
+    short: "4-line plain-English synthesis of Grade, RS, Base Maturity, Trend, Inst Footprint, and GTT Risk Plan.",
+    long: "A structured executive summary for every setup candidate: L1 covers Grade, RS rating, and Base maturity; L2 details Trend, Coiling, Sector, and MTF confluence; L3 reveals institutional footprint and upcoming events; L4 defines mechanical exit targets and 1% risk allocation.",
+    where_used: "Near Buy (Accordion Detail), Signals, Help Guide",
+    anchor: "glossary-thesis-card"
+  },
+  "Correlation / Concentration": {
+    short: "Pairwise 60-day Pearson correlation and sector clustering metrics to prevent correlated portfolio drawdowns.",
+    long: "Calculates rolling 60-day daily return correlation across open positions and beta against the small-cap universe basket. Triggers a red concentration warning if any pair exceeds 0.70 correlation or if more than 2 open positions cluster in the same sector.",
+    where_used: "Open Positions, Near Buy Overview, Help Guide",
+    anchor: "glossary-correlation-concentration"
+  },
+  "Sector Rotation": {
+    short: "Composite ranking of universe sectors by % above 50 SMA, 6-month returns, and setup density.",
+    long: "Tracks institutional capital flow by grouping all small-caps by industry sector. Highlights top leading sectors, enabling traders to filter for breakout setups exclusively within the market's strongest momentum themes.",
+    where_used: "Market Overview Zone, Sector Chips Strip, Help Guide",
+    anchor: "glossary-sector-rotation"
+  },
+  "GTT Copy": {
+    short: "One-click clipboard export of pre-calculated GTT Trigger, Limit, and Position Size parameters.",
+    long: "Generates a broker-ready order instruction: BUY <SYM> | Trigger <breakout_level> | Limit <+0.5%> | Qty=(CAPITAL*0.01)/(Entry-SL) | GTC. Facilitates rapid, error-free order placement on Zerodha Kite, Groww, or Upstox without market order slippage.",
+    where_used: "Near Buy (Action Column), Trade Blueprint, Help Guide",
+    anchor: "glossary-gtt-copy"
+  },
+
   // Moving Averages & Trend
   "SMA50": {
     short: "50-day Simple Moving Average representing 10 weeks of institutional price trend.",
@@ -1314,11 +1346,16 @@ function renderLandmines(landmines) {
 
 // 1. Render Tab: Near Buy (Watchlist & Active Signals)
 function renderNearBuy(scanData, openPositions) {
+  _cachedScanData = scanData;
+
   // Render Market Pulse row (SC-3 diagnostic telemetry)
   renderMarketPulse(scanData);
 
   // Render Today's Plan box
   renderTodaysPlan(scanData, openPositions);
+
+  // Render Correlation & Concentration card (SC-B)
+  renderCorrelationCards(scanData ? scanData.correlation : null, openPositions);
 
   if (!scanData) {
     document.getElementById("watchlistBody").innerHTML = `
@@ -1374,7 +1411,7 @@ function renderNearBuy(scanData, openPositions) {
   // Render Sector Leadership Strip & Watchlist Filters (Phase 1)
   const watchlist = scanData.watchlist || [];
   initWatchlistFilterListeners();
-  renderSectorLeadership(watchlist);
+  renderSectorLeadership(watchlist, scanData);
   applyWatchlistFiltering(watchlist, scanData);
 
   // Render On Deck candidates (SC-3)
@@ -1391,14 +1428,68 @@ let _wlSearchQuery = "";
 let _wlSortMode = "score_desc";
 let _wlFiltersInitialized = false;
 
-// 1. Render Sector Leadership & Rotation Strip (Item #2)
-function renderSectorLeadership(watchlist) {
+// 1. Render Sector Leadership & Rotation Strip (Item #2 / SC-B)
+function renderSectorLeadership(watchlist, scanData) {
   const strip = document.getElementById("sectorLeadershipStrip");
   const container = document.getElementById("sectorChipsContainer");
   const badge = document.getElementById("sectorActiveFilterBadge");
   const filterName = document.getElementById("sectorFilterName");
   if (!strip || !container) return;
 
+  const currentScan = scanData || _cachedScanData;
+  const secRotation = currentScan && currentScan.sector_rotation ? currentScan.sector_rotation : null;
+
+  if (secRotation && secRotation.top_sectors && secRotation.top_sectors.length > 0) {
+    strip.style.display = "block";
+
+    if (_wlSelectedSector && badge && filterName) {
+      filterName.textContent = _wlSelectedSector;
+      badge.style.display = "inline-flex";
+    } else if (badge) {
+      badge.style.display = "none";
+    }
+
+    container.innerHTML = secRotation.top_sectors.map(secItem => {
+      const secName = secItem.sector;
+      const isSelected = _wlSelectedSector === secName;
+      const dot = secItem.pct_above_sma50 >= 50.0 ? "🟢" : "🔴";
+      const onDeckTag = secItem.on_deck_count > 0 ? `<span class="sec-chip-grade">${secItem.on_deck_count} on-deck</span>` : "";
+      const retSign = secItem.avg_ret_126d >= 0 ? "+" : "";
+      return `
+        <button class="sector-chip ${isSelected ? 'active' : ''}" data-sector="${escapeHtml(secName)}" title="${secItem.pct_above_sma50}% > 50SMA | ${retSign}${secItem.avg_ret_126d}% (6M) | Leadership: ${secItem.score}">
+          <span class="sec-chip-dot">${dot}</span>
+          <span class="sec-chip-name">${escapeHtml(secName)}</span>
+          <span class="sec-chip-count">${secItem.pct_above_sma50}% > 50MA</span>
+          <span class="sec-chip-count">${retSign}${secItem.avg_ret_126d}%</span>
+          ${onDeckTag}
+        </button>
+      `;
+    }).join("");
+
+    container.querySelectorAll(".sector-chip").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const sec = btn.getAttribute("data-sector");
+        if (_wlSelectedSector === sec) {
+          _wlSelectedSector = null;
+        } else {
+          _wlSelectedSector = sec;
+        }
+        renderSectorLeadership(watchlist, currentScan);
+        applyWatchlistFiltering(watchlist, currentScan);
+      });
+    });
+
+    if (badge) {
+      badge.onclick = () => {
+        _wlSelectedSector = null;
+        renderSectorLeadership(watchlist, currentScan);
+        applyWatchlistFiltering(watchlist, currentScan);
+      };
+    }
+    return;
+  }
+
+  // Fallback to client-side aggregation from watchlist if sector_rotation is absent
   if (!watchlist || watchlist.length === 0) {
     strip.style.display = "none";
     return;
@@ -1465,16 +1556,16 @@ function renderSectorLeadership(watchlist) {
       } else {
         _wlSelectedSector = sec;
       }
-      renderSectorLeadership(watchlist);
-      applyWatchlistFiltering(watchlist, _cachedScanData);
+      renderSectorLeadership(watchlist, currentScan);
+      applyWatchlistFiltering(watchlist, currentScan);
     });
   });
 
   if (badge) {
     badge.onclick = () => {
       _wlSelectedSector = null;
-      renderSectorLeadership(watchlist);
-      applyWatchlistFiltering(watchlist, _cachedScanData);
+      renderSectorLeadership(watchlist, currentScan);
+      applyWatchlistFiltering(watchlist, currentScan);
     };
   }
 }
@@ -1541,6 +1632,12 @@ function applyWatchlistFiltering(watchlist, scanData) {
         return closeA - closeB;
       case "symbol_asc":
         return symA.localeCompare(symB);
+      case "rs_desc": {
+        const rsA = Number(a.rs_rating ?? a.RS_RATING ?? 0);
+        const rsB = Number(b.rs_rating ?? b.RS_RATING ?? 0);
+        if (rsB !== rsA) return rsB - rsA;
+        return distA - distB;
+      }
       case "score_desc":
       default:
         if (scoreB !== scoreA) return scoreB - scoreA;
@@ -1638,6 +1735,11 @@ function applyWatchlistFiltering(watchlist, scanData) {
       eventChip = `<span class="badge ${isBlocked ? 'badge-danger' : 'badge-warning'} warn-event-chip" style="font-size: 10px;" title="${isBlocked ? 'ENTRY GATE: Event within 5d blackout window' : 'Upcoming Event'}: ${t} in ${d}d">🔔 ${t} ${d}d</span>`;
     }
 
+    // Multi-Timeframe Confluence Chip (SC-B)
+    const mtfChip = item.mtf_confluence
+      ? `<span class="badge badge-success term-lookup" data-term="Multi-Timeframe Confluence" title="MTF Confluence: Daily Trend OK & Weekly Stage-2 Confirmed">MTF ✅</span>`
+      : `<span class="badge badge-neutral term-lookup" data-term="Multi-Timeframe Confluence" title="Weekly Stage-2 not aligned">MTF —</span>`;
+
     // SC-6: Color Pills with WCAG-AA Contrast
     let gradePillClass = "pill-grade-c";
     if (grade === "A+") gradePillClass = "pill-grade-aplus";
@@ -1665,6 +1767,14 @@ function applyWatchlistFiltering(watchlist, scanData) {
       statusPill = `<span class="pill pill-neutral">⚪ Watchlist (${dist.toFixed(1)}%)</span>`;
     }
 
+    // GTT Order parameters calculation (SC-B)
+    const boLevel = item.Breakout ? parseFloat(item.Breakout) : (item.Entry ? parseFloat(item.Entry) : Number(((parseFloat(item.Close) || 0) * (1 + dist / 100)).toFixed(2)));
+    const limPrice = Number((boLevel * 1.005).toFixed(2));
+    const slPrice = item.Stop ? parseFloat(item.Stop) : Number(Math.max(1, boLevel - 1.5 * (parseFloat(item.ATR14) || ((parseFloat(item.Close) || 0) * 0.025))).toFixed(2));
+    const riskDiff = Math.max(0.01, boLevel - slPrice);
+    const gttQty = Math.max(1, Math.floor((200000 * 0.01) / riskDiff));
+    const gttOrderStr = `BUY ${item.Symbol} | Trigger ${boLevel.toFixed(2)} | Limit ${limPrice.toFixed(2)} | Qty=${gttQty} | GTC`;
+
     return `
       <tr class="watchlist-row ${rowClass}" data-symbol="${item.Symbol}" title="Click to expand diagnosis, 6-month chart & GTT plan">
         <td data-label="Symbol">
@@ -1672,16 +1782,21 @@ function applyWatchlistFiltering(watchlist, scanData) {
             <strong style="font-size: 13.5px; color: #fff;">${item.Symbol}</strong>
           </div>
         </td>
-        <td data-label="Grade"><div style="display: flex; align-items: center; gap: 4px; flex-wrap: wrap;">${gradePill} ${rsBadge} ${instBadge} ${eventChip}</div></td>
+        <td data-label="Grade"><div style="display: flex; align-items: center; gap: 4px; flex-wrap: wrap;">${gradePill} ${rsBadge} ${instBadge} ${eventChip} ${mtfChip}</div></td>
         <td data-label="Close"><strong>${formatINR(item.Close)}</strong></td>
         <td data-label="Dist %">${distPill}</td>
         <td data-label="Status">${statusPill}</td>
         <td data-label="Score" class="hide-mobile">${scoreBadge}</td>
         <td data-label="Sector" class="hide-mobile"><span class="pill pill-neutral">${item.Sector || "^NSEI"}</span></td>
         <td data-label="Action">
-          <button class="btn btn-xs btn-outline-primary size-trade-btn" data-symbol="${item.Symbol}" title="Size this trade with Position Sizer">
-            Size
-          </button>
+          <div style="display: flex; align-items: center; gap: 4px; flex-wrap: nowrap;">
+            <button class="badge-gtt copy-gtt-btn" data-symbol="${item.Symbol}" data-gtt="${escapeHtml(gttOrderStr)}" title="Copy GTT order instruction to clipboard">
+              📋 Copy GTT
+            </button>
+            <button class="btn btn-xs btn-outline-primary size-trade-btn" data-symbol="${item.Symbol}" title="Size this trade with Position Sizer">
+              Size
+            </button>
+          </div>
         </td>
         <td style="text-align: right; width: 44px;">
           <span class="chevron" style="font-size: 11px; color: var(--text-dim); padding: 8px;">▼</span>
@@ -1709,6 +1824,29 @@ function applyWatchlistFiltering(watchlist, scanData) {
       const item = filtered.find(w => w.Symbol === sym);
       if (item) {
         openPositionSizerFor(item);
+      }
+    });
+  });
+
+  // Attach click listeners for "Copy GTT" buttons on rows (SC-B)
+  watchlistBody.querySelectorAll(".copy-gtt-btn").forEach(btn => {
+    btn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      const gttText = btn.getAttribute("data-gtt");
+      if (gttText) {
+        try {
+          await navigator.clipboard.writeText(gttText);
+          const origHtml = btn.innerHTML;
+          btn.innerHTML = "✓ Copied!";
+          btn.classList.add("copied");
+          showToast(`Copied GTT order:\n${gttText}`, "📋");
+          setTimeout(() => {
+            btn.innerHTML = origHtml;
+            btn.classList.remove("copied");
+          }, 1500);
+        } catch (err) {
+          showToast("Clipboard copy failed: permission denied", "❌");
+        }
       }
     });
   });
@@ -1770,6 +1908,33 @@ function initWatchlistFilterListeners() {
     sortSelect.addEventListener("change", () => {
       _wlSortMode = sortSelect.value;
       if (_cachedScanData) applyWatchlistFiltering(_cachedScanData.watchlist || [], _cachedScanData);
+    });
+  }
+
+  const dateSelect = document.getElementById("watchlistDateSelect");
+  if (dateSelect) {
+    dateSelect.addEventListener("change", () => {
+      const mode = dateSelect.value;
+      if (mode === "cached") {
+        const rawCached = localStorage.getItem("cached_scan_results.json");
+        if (rawCached) {
+          try {
+            const cachedData = JSON.parse(rawCached);
+            showToast("Viewing previous cached scan from localStorage", "📁");
+            renderNearBuy(cachedData, _cachedOpenPositions);
+            return;
+          } catch (e) {
+            console.warn("Failed parsing cached scan data:", e);
+          }
+        }
+        showToast("No cached scan found in localStorage", "⚠️");
+        dateSelect.value = "live";
+      } else {
+        if (_liveScanData) {
+          showToast("Viewing latest live scan", "🟢");
+          renderNearBuy(_liveScanData, _cachedOpenPositions);
+        }
+      }
     });
   }
 
@@ -2297,23 +2462,29 @@ async function toggleWatchlistDetail(row, item, scanData) {
               </div>
             </div>
             <div class="accordion-card">
-              <div class="accordion-card-title">Base Maturity &amp; Stage</div>
-              <div style="display: flex; align-items: center; gap: 8px;">
-                ${basePill}
-                <span style="font-size: 12px; color: var(--text-dim);">20D Range: ${isCoiling ? 'Tight Compression' : 'Developing'}</span>
+              <div class="accordion-card-title">Base Maturity &amp; Tightening</div>
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                <span class="pill ${isCoiling ? 'pill-success' : 'pill-primary'}">Base ${item.base_maturity != null ? item.base_maturity : (isCoiling ? 3 : 2)}/4 (${item.days_in_base != null ? item.days_in_base : 25}d)</span>
+                <span style="font-size: 11px; color: var(--text-dim);">${isCoiling ? 'Tight Vol Coil ⚡' : 'Consolidating'}</span>
+              </div>
+              <div style="margin-top: 8px; width: 100%; height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden;">
+                <div style="width: ${Math.max(15, Math.min(100, ((item.base_maturity != null ? item.base_maturity : (isCoiling ? 3 : 2)) / 4) * 100))}%; height: 100%; background: linear-gradient(90deg, #38bdf8, #10b981);"></div>
               </div>
             </div>
           </div>
 
-          <!-- SC-6 Trade Thesis Card -->
-          <div class="card" style="margin-bottom: 16px; padding: 12px 16px; background: rgba(255, 255, 255, 0.02); border-left: 3px solid var(--primary); border-radius: 8px;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
-              <span style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-main);">💡 Trade Thesis &amp; Catalyst</span>
+          <!-- SC-B Trade Thesis Card (Monospace Block) -->
+          <div class="card" style="margin-bottom: 16px; padding: 12px 16px; background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(56, 189, 248, 0.25); border-left: 3px solid var(--primary); border-radius: 8px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+              <span style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-main);">💡 Trade Thesis Card (SC-B)</span>
               <span class="pill ${dist <= 1.0 ? 'pill-success' : 'pill-primary'}">${dist <= 1.0 ? 'Ready for Trigger' : 'Resting GTT Setup'}</span>
             </div>
-            <p style="font-size: 12.5px; color: var(--text-muted); margin: 0; line-height: 1.55;">
-              ${escapeHtml(item.thesis || `${symbol} is in a confirmed Stage 2 uptrend with RS ${rawRs !== null ? Math.round(rawRs) : 'solid'} relative momentum in the ${item.Sector || 'Small-Cap'} sector. Price is coiling ${dist.toFixed(1)}% below the 20-day high trigger at ₹${breakoutLevel.toFixed(2)}. ${item.VolDryup === 'YES' ? 'Volume has dried up significantly below the 50-day average, signaling supply exhaustion.' : 'Monitoring for institutional breakout volume print.'}`)}
-            </p>
+            <pre class="thesis-card-block">${escapeHtml(item.thesis_card || (
+              `GRADE ${grade} | RS ${rawRs !== null ? Math.round(rawRs) : 'n/a'} | Base ${item.base_maturity ?? 2}/4 (${item.days_in_base ?? 25}d)\n` +
+              `Trend ${trendPass ? '✓' : '✗'} / Setup ${setupPass ? 'coiling' : 'n/a'} / Sector ${secPass ? 'bullish' : 'n/a'} / MTF ${item.mtf_confluence ? '✓' : '—'}\n` +
+              `Inst: ${instFp} | Next event: ${item.next_event ? `${item.next_event.type} in ${item.next_event.days_to_event}d` : 'none'}\n` +
+              `Plan: 2R trail EMA20 | Risk 1% (gap-capped @20%)`
+            ))}</pre>
           </div>
 
           <!-- Event Radar Timeline Strip (SC-4) -->
@@ -2810,6 +2981,138 @@ function initPositionSizer() {
   updatePositionSizer();
 }
 
+// =====================================================================
+// PORTFOLIO CORRELATION & CONCENTRATION HEATMAP (SC-B)
+// =====================================================================
+function renderCorrelationCards(correlationData, openPositions) {
+  const currentPositions = openPositions || _cachedOpenPositions || [];
+  renderCorrelationSection(
+    "nearBuyCorrelationCard",
+    "nearBuyConcentrationPill",
+    "nearBuyConcentrationAlert",
+    "nearBuyCorrelationGrid",
+    correlationData,
+    currentPositions
+  );
+  renderCorrelationSection(
+    "openPositionsCorrelationCard",
+    "openConcentrationPill",
+    "openConcentrationAlert",
+    "openCorrelationGrid",
+    correlationData,
+    currentPositions
+  );
+}
+
+function renderCorrelationSection(cardId, pillId, alertId, gridId, corrData, openPositions) {
+  const card = document.getElementById(cardId);
+  const pill = document.getElementById(pillId);
+  const alertEl = document.getElementById(alertId);
+  const grid = document.getElementById(gridId);
+  if (!card) return;
+
+  if (!openPositions || openPositions.length === 0) {
+    card.style.display = "block";
+    if (pill) {
+      pill.className = "badge badge-neutral";
+      pill.textContent = "0 Open Trades";
+    }
+    if (alertEl) alertEl.style.display = "none";
+    if (grid) {
+      grid.innerHTML = '<div style="font-size: 12px; color: var(--text-dim); padding: 8px;">No active open positions. Pairwise 60d Pearson correlation matrix activates when &ge;2 positions are open.</div>';
+    }
+    return;
+  }
+
+  card.style.display = "block";
+
+  if (openPositions.length === 1) {
+    if (pill) {
+      pill.className = "badge badge-success";
+      pill.textContent = "1 Position (0 Overlap)";
+    }
+    if (alertEl) alertEl.style.display = "none";
+    const sym = openPositions[0].symbol;
+    const beta = corrData && corrData.betas && corrData.betas[sym] != null ? corrData.betas[sym] : 1.0;
+    if (grid) {
+      grid.innerHTML = `<div style="font-size: 12.5px; color: var(--text-muted); padding: 6px 0;"><strong>${escapeHtml(sym)}</strong>: Beta to Small-Cap Universe Basket = <strong>${beta}</strong> (Single position, 0 portfolio concentration risk).</div>`;
+    }
+    return;
+  }
+
+  // 2 or more open positions
+  const isWarning = Boolean(corrData && corrData.concentration_warning);
+  if (pill) {
+    pill.className = isWarning ? "badge badge-danger" : "badge badge-success";
+    pill.textContent = isWarning ? "⚠️ Concentration Alert" : "Diversified";
+  }
+  if (alertEl) {
+    alertEl.style.display = isWarning ? "block" : "none";
+  }
+
+  const symbols = openPositions.map(p => p.symbol);
+  const pairMap = {};
+  if (corrData && corrData.pairs) {
+    for (const p of corrData.pairs) {
+      pairMap[p.a + "_" + p.b] = p.corr;
+      pairMap[p.b + "_" + p.a] = p.corr;
+    }
+  }
+
+  function getCorr(s1, s2) {
+    if (s1 === s2) return 1.0;
+    const val = pairMap[s1 + "_" + s2];
+    return val != null ? val : 0.0;
+  }
+
+  function getCorrClass(c) {
+    if (c >= 0.70) return "corr-high";
+    if (c >= 0.40) return "corr-med";
+    return "corr-low";
+  }
+
+  const tableHtml = `
+    <div class="corr-grid-scroll">
+      <table class="corr-grid-table">
+        <thead>
+          <tr>
+            <th>Symbol</th>
+            ${symbols.map(s => `<th>${escapeHtml(s)}</th>`).join("")}
+            <th>Universe Beta</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${symbols.map(s1 => {
+            const beta = (corrData && corrData.betas && corrData.betas[s1] != null) ? corrData.betas[s1] : "1.00";
+            return `
+              <tr>
+                <td style="font-weight: 700; color: #fff;">${escapeHtml(s1)}</td>
+                ${symbols.map(s2 => {
+                  const c = getCorr(s1, s2);
+                  const isSelf = s1 === s2;
+                  const cls = isSelf ? 'corr-self' : getCorrClass(c);
+                  return `<td class="corr-cell ${cls}" title="${escapeHtml(s1)} vs ${escapeHtml(s2)}: ${c.toFixed(2)}">${c.toFixed(2)}</td>`;
+                }).join("")}
+                <td style="font-weight: 600; text-align: center; color: var(--text-main);">${beta}</td>
+              </tr>
+            `;
+          }).join("")}
+        </tbody>
+      </table>
+    </div>
+    <div class="corr-mobile-chips">
+      ${(corrData && corrData.pairs && corrData.pairs.length > 0) ? corrData.pairs.map(p => {
+        const cls = getCorrClass(p.corr);
+        return `<div class="corr-chip ${cls}"><strong>${escapeHtml(p.a)}</strong> &harr; <strong>${escapeHtml(p.b)}</strong>: ${p.corr >= 0 ? '+' : ''}${p.corr.toFixed(2)}</div>`;
+      }).join("") : '<div style="font-size: 11px; color: var(--text-dim);">No pairwise correlation data.</div>'}
+    </div>
+  `;
+
+  if (grid) {
+    grid.innerHTML = tableHtml;
+  }
+}
+
 // 2. Render Tab: Open Positions
 async function renderOpenPositions(positions) {
   const countBadge = document.getElementById("openCountBadge");
@@ -2820,6 +3123,9 @@ async function renderOpenPositions(positions) {
   const heatSub = document.getElementById("openPortfolioHeatSub");
   const sectorAlert = document.getElementById("openPositionsSectorAlert");
   const tableBody = document.getElementById("openPositionsBody");
+
+  // Render Open Positions Correlation card (SC-B)
+  renderCorrelationCards(_cachedScanData ? _cachedScanData.correlation : null, positions);
 
   if (!positions || positions.length === 0) {
     if (countBadge) countBadge.textContent = "0";

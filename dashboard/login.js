@@ -1,4 +1,4 @@
-const PASSWORD_HASH = "ad15418e84fe6e94ec8dd2c22e7f952fc90457256ffbc0f59dcffdef0509366d"; // COPY THIS EXACT STRING TO NETLIFY ENV VAR DASH_KEY_HASH
+const PASSWORD_HASH = "11d78380af03a111ef3e0607b9b4b2ae7a4d4de17b8c2ea00cf2069b5b565417"; // COPY THIS EXACT STRING TO NETLIFY ENV VAR DASH_KEY_HASH
 
 // Check if already authenticated
 if (localStorage.getItem("auth") === "1") {

@@ -3,35 +3,61 @@
    ===================================================================== */
 
 :root {
-  --bg-main: #121212;
-  --bg-card: #1E1E1E;
-  --bg-card-hover: #262626;
-  --card-bg: #1E1E1E;
-  --bg-surface: #1E1E1E;
-  --border: rgba(255, 255, 255, 0.1);
+  /* SC-A Design System Tokens */
+  --bg: #121212;
+  --surface: #1E1E1E;
+  --surface-2: #242424;
+  --border: rgba(255, 255, 255, 0.10);
+  --text: #E0E0E0;
+  --muted: #9AA0A6;
+  --ok: #10b981;
+  --warn: #f59e0b;
+  --bad: #ef4444;
+  --info: #38bdf8;
+
+  /* Spacing Scale */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 16px;
+  --sp-4: 24px;
+  --sp-5: 32px;
+
+  /* Radii & Shadows */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+
+  /* Compatibility Aliases */
+  --bg-main: var(--bg);
+  --bg-card: var(--surface);
+  --bg-card-hover: var(--surface-2);
+  --card-bg: var(--surface);
+  --bg-surface: var(--surface);
   --border-light: rgba(255, 255, 255, 0.16);
-  --text-main: #E0E0E0;
-  --text-muted: #9e9e9e;
+  --text-main: var(--text);
+  --text-muted: var(--muted);
   --text-dim: #757575;
-  --muted: #9e9e9e;
-  --accent: #38bdf8;
+  --accent: var(--info);
   --primary: #4f46e5;
   --primary-hover: #4338ca;
-  --success: #10b981;
+  --success: var(--ok);
   --success-bg: rgba(16, 185, 129, 0.15);
-  --warning: #f59e0b;
+  --warning: var(--warn);
   --warning-bg: rgba(245, 158, 11, 0.15);
-  --danger: #ef4444;
+  --danger: var(--bad);
   --danger-bg: rgba(239, 68, 68, 0.15);
   --font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
-  --radius: 12px;
-  --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
-  --space-xs: 4px;
-  --space-sm: 8px;
-  --space-md: 16px;
-  --space-lg: 24px;
-  --space-xl: 32px;
+  --radius: var(--radius-lg);
+  --shadow: var(--shadow-lg);
+  --space-xs: var(--sp-1);
+  --space-sm: var(--sp-2);
+  --space-md: var(--sp-3);
+  --space-lg: var(--sp-4);
+  --space-xl: var(--sp-5);
 }
 
 /* 1. GLOBAL RESETS */
@@ -4211,22 +4237,22 @@ th .term-lookup {
   line-height: 1.3;
   white-space: nowrap;
 }
-.pill-success {
+.pill.pill-ok, .pill-success {
   background: rgba(16, 185, 129, 0.18);
   color: #34d399;
   border: 1px solid rgba(16, 185, 129, 0.45);
 }
-.pill-danger {
+.pill.pill-danger, .pill.pill-bad {
   background: rgba(239, 68, 68, 0.18);
   color: #f87171;
   border: 1px solid rgba(239, 68, 68, 0.45);
 }
-.pill-warning {
+.pill.pill-warning, .pill.pill-warn {
   background: rgba(245, 158, 11, 0.18);
   color: #fbbf24;
   border: 1px solid rgba(245, 158, 11, 0.45);
 }
-.pill-primary {
+.pill.pill-primary, .pill.pill-info {
   background: rgba(56, 189, 248, 0.18);
   color: #38bdf8;
   border: 1px solid rgba(56, 189, 248, 0.45);
@@ -4258,15 +4284,78 @@ th .term-lookup {
   border: 1px solid rgba(255, 255, 255, 0.14);
 }
 
-/* 4. EXPANDABLE ACCORDION ROWS & TRANSITIONS */
+/* Clickable Filter Token (.chip) */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+  user-select: none;
+}
+.chip:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
+}
+.chip.active {
+  background: var(--primary);
+  border-color: var(--info);
+  color: #fff;
+  font-weight: 600;
+}
+
+/* Stat Grid Container (.stat-grid) */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-4);
+}
+
+/* Per-Row Action Button (.badge-gtt) */
+.badge-gtt {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.45);
+  color: var(--info);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 32px;
+}
+.badge-gtt:hover {
+  background: rgba(56, 189, 248, 0.3);
+  border-color: var(--info);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+/* 4. EXPANDABLE ACCORDION ROWS & TRANSITIONS (.accordion-row) */
+.accordion-row,
 .watchlist-row {
   cursor: pointer;
   transition: background 0.15s ease, transform 0.15s ease;
 }
+.accordion-row:hover,
 .watchlist-row:hover {
   background: rgba(255, 255, 255, 0.04);
   transform: translateY(-1px);
 }
+.accordion-row.expanded,
 .watchlist-row.expanded {
   background: rgba(255, 255, 255, 0.06);
 }
@@ -4311,19 +4400,22 @@ th .term-lookup {
   margin-bottom: 8px;
 }
 
-/* 5. SKELETON LOADERS (ANTI-CLS) */
+/* 5. SKELETON LOADERS (ANTI-CLS) (.skeleton) */
 @keyframes shimmer {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
 }
-.skeleton-row td {
-  padding: 14px 12px;
-}
+.skeleton,
 .skeleton-pill {
   background: linear-gradient(90deg, rgba(255, 255, 255, 0.03) 25%, rgba(255, 255, 255, 0.09) 50%, rgba(255, 255, 255, 0.03) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
   border-radius: 6px;
+}
+.skeleton-row td {
+  padding: 14px 12px;
+}
+.skeleton-pill {
   height: 22px;
 }
 .skeleton-sm { width: 50px; }

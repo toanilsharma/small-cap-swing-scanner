@@ -1,3 +1,5 @@
+const PASSWORD_HASH = "ad15418e84fe6e94ec8dd2c22e7f952fc90457256ffbc0f59dcffdef0509366d"; // COPY THIS EXACT STRING TO NETLIFY ENV VAR DASH_KEY_HASH
+
 // Check if already authenticated
 if (localStorage.getItem("auth") === "1") {
   window.location.href = "app.html";

@@ -146,68 +146,10 @@
         </div>
       </div>
 
-      <!-- ZONE 2: ACTION INTELLIGENCE (Playbook + Landmines + Leaders + On Deck) -->
+      <!-- ZONE 2: ACTION INTELLIGENCE (Leaders + On Deck + Landmines) -->
       <div class="zone-card action-intelligence-zone" id="zoneActionIntelligence">
         <div class="zone-header">
-          <span class="zone-title">⚡ Zone 2: Action Intelligence &amp; Playbook</span>
-        </div>
-
-        <!-- 🛒 HOW TO BUY (GTT Strategy) PLAYBOOK CARD -->
-        <div id="playbookBuyCard" class="playbook-card playbook-buy-card">
-          <button id="playbookBuyToggleBtn" class="playbook-toggle-btn" aria-expanded="true">
-            <div class="playbook-title-group">
-              <span class="playbook-icon">🛒</span>
-              <span class="playbook-title-text">HOW TO BUY (GTT Strategy)</span>
-              <span class="badge badge-success playbook-badge">Buy Playbook</span>
-            </div>
-            <span id="playbookBuyChevron" class="chevron">▼</span>
-          </button>
-          <div id="playbookBuyContent" class="playbook-content">
-            <div class="playbook-steps-grid">
-              <!-- Step 1 -->
-              <div class="playbook-step">
-                <div class="playbook-step-badge">Step 1</div>
-                <div class="playbook-step-title">Verify Signal</div>
-                <div class="playbook-step-desc">
-                  Grade A/A+, dist &lt; 1%, no event within 3d, regime not Defensive unless exceptional.
-                </div>
-              </div>
-              <!-- Step 2 -->
-              <div class="playbook-step">
-                <div class="playbook-step-badge">Step 2</div>
-                <div class="playbook-step-title">Size Position</div>
-                <div class="playbook-formula-box">
-                  <code>size = (CAPITAL * RISK_PCT) / (Entry - SL)</code>
-                  <button id="copyFormulaBtn" class="btn btn-xs btn-outline-success copy-formula-btn" title="Copy sizing formula to clipboard">
-                    📋 Copy Formula
-                  </button>
-                </div>
-                <div class="playbook-worked-example">
-                  <strong>Worked Example (Repo Numbers):</strong><br>
-                  Capital = ₹2,00,000 | 1% Risk = ₹2,000<br>
-                  Entry = ₹100.00 | ATR(14) = ₹5.00 | Stop = ₹91.00 (9% floor cap)<br>
-                  Risk/Unit = ₹9.00 &rarr; <code>Qty = floor(2,000 / 9) = 222 units</code><br>
-                  Target (2R) = ₹118.00 (₹4,000 profit potential)
-                </div>
-              </div>
-              <!-- Step 3 -->
-              <div class="playbook-step">
-                <div class="playbook-step-badge">Step 3</div>
-                <div class="playbook-step-title">Place GTT Order</div>
-                <div class="playbook-step-desc">
-                  Place a GTT/Smart/Conditional BUY at the dashboard breakout level with <code>Limit = Trigger + 0.5%</code>, validity <code>GTC / 7d</code>, <strong>NEVER a market order</strong>.
-                </div>
-              </div>
-              <!-- Step 4 -->
-              <div class="playbook-step">
-                <div class="playbook-step-badge">Step 4</div>
-                <div class="playbook-step-title">Morning Check</div>
-                <div class="playbook-step-desc">
-                  If gap-up &gt; 2% above trigger <strong>CANCEL</strong>, if opens near trigger let GTT fill, else order rests.
-                </div>
-              </div>
-            </div>
-          </div>
+          <span class="zone-title">⚡ Zone 2: Action Intelligence</span>
         </div>
 
         <!-- 🏆 LEADERS BOARD STRIP (Collapsible) -->
@@ -272,6 +214,67 @@
       <div class="zone-card watchlist-zone" id="zoneWatchlist">
         <div class="zone-header">
           <span class="zone-title">🎯 Zone 3: High-Probability Watchlist</span>
+        </div>
+
+        <!-- 🛒 HOW TO BUY (GTT Strategy) PLAYBOOK CARD (Above Watchlist Table) -->
+        <div id="playbookBuyCard" class="playbook-card playbook-buy-card">
+          <button id="playbookBuyToggleBtn" class="playbook-toggle-btn" aria-expanded="true">
+            <div class="playbook-title-group">
+              <span class="playbook-icon">🛒</span>
+              <span class="playbook-title-text">HOW TO BUY (GTT Strategy)</span>
+              <span class="badge badge-success playbook-badge">Buy Playbook</span>
+            </div>
+            <span id="playbookBuyChevron" class="chevron">▼</span>
+          </button>
+          <div id="playbookBuyContent" class="playbook-content">
+            <div class="playbook-steps-grid">
+              <!-- Step 1 -->
+              <div class="playbook-step">
+                <div class="playbook-step-badge">Step 1</div>
+                <div class="playbook-step-title">Verify Signal</div>
+                <div class="playbook-step-desc">
+                  <code>verify Grade A/A+ &amp; dist&lt;1% &amp; no event&lt;=3d &amp; regime not Defensive unless exceptional;</code>
+                </div>
+              </div>
+              <!-- Step 2 -->
+              <div class="playbook-step">
+                <div class="playbook-step-badge">Step 2</div>
+                <div class="playbook-step-title">Size Position</div>
+                <div class="playbook-formula-box">
+                  <code>size=(CAPITAL*RISK_PCT)/(Entry-SL)</code>
+                  <button id="copyFormulaBtn" class="btn btn-xs btn-outline-success copy-formula-btn" title="Copy sizing formula to clipboard">
+                    📋 Copy Formula
+                  </button>
+                </div>
+                <div class="playbook-worked-example">
+                  <strong>Worked Example (Repo Rules):</strong><br>
+                  <code>CAPITAL=200000, RISK 1%, ATR 2.5x, gap 20%</code><br>
+                  • Capital = ₹200,000 | 1% Risk Budget = ₹2,000<br>
+                  • Entry = ₹100.00 | ATR = ₹2.00 &rarr; SL = Entry - (2.5 &times; ATR) = ₹95.00<br>
+                  • Risk per share = Entry - SL = ₹5.00<br>
+                  • Raw Sizing = (200000 &times; 0.01) / 5 = <code>400 shares</code><br>
+                  • Gap 20% Cap Check: 400 &times; ₹100 = ₹40,000 (&le; 20% cap of ₹40,000 &#10003;)<br>
+                  • Target (+2R) = ₹110.00 (+₹4,000 profit / 2R)
+                </div>
+              </div>
+              <!-- Step 3 -->
+              <div class="playbook-step">
+                <div class="playbook-step-badge">Step 3</div>
+                <div class="playbook-step-title">Place GTT / Smart Order</div>
+                <div class="playbook-step-desc">
+                  <code>place GTT/Smart BUY at dashboard breakout level, Limit=Trigger+0.5%, validity GTC/7d, NEVER market order;</code>
+                </div>
+              </div>
+              <!-- Step 4 -->
+              <div class="playbook-step">
+                <div class="playbook-step-badge">Step 4</div>
+                <div class="playbook-step-title">Morning Routine Check</div>
+                <div class="playbook-step-desc">
+                  <code>morning check: gap-up&gt;2% above trigger =&gt; CANCEL, opens near trigger =&gt; let fill, else rests.</code>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div id="signalsContainer" style="margin-bottom: 24px; display: none;">
@@ -575,7 +578,7 @@
         </table>
       </div>
 
-      <!-- 💰 HOW TO SELL / MANAGE RISK PLAYBOOK CARD -->
+      <!-- 💰 HOW TO SELL / MANAGE RISK PLAYBOOK CARD (Below Open Positions List) -->
       <div id="playbookSellCard" class="playbook-card playbook-sell-card">
         <button id="playbookSellToggleBtn" class="playbook-toggle-btn" aria-expanded="true">
           <div class="playbook-title-group">
@@ -590,33 +593,33 @@
             <!-- Scenario A -->
             <div class="playbook-scenario">
               <div class="scenario-badge scenario-a">Scenario A</div>
-              <div class="scenario-title">Stop-Hit (Discipline)</div>
+              <div class="scenario-title">Stop-Hit Discipline</div>
               <div class="scenario-desc">
-                Broker auto-executes, log <code>/sell</code>, no revenge.
+                <code>A stop-hit (auto, log /sell, no revenge);</code>
               </div>
             </div>
             <!-- Scenario B -->
             <div class="playbook-scenario">
               <div class="scenario-badge scenario-b">Scenario B</div>
-              <div class="scenario-title">+2R Target</div>
+              <div class="scenario-title">+2R Profit Taking</div>
               <div class="scenario-desc">
-                Sell 50%, <code>SL &rarr; breakeven</code>, trail rest on 20-EMA.
+                <code>B +2R (sell 50%, SL-&gt;breakeven, trail rest 20-EMA close);</code>
               </div>
             </div>
             <!-- Scenario C -->
             <div class="playbook-scenario">
               <div class="scenario-badge scenario-c">Scenario C</div>
-              <div class="scenario-title">Time-Stop &gt;8d</div>
+              <div class="scenario-title">Time-Stop Rule</div>
               <div class="scenario-desc">
-                Time-stop &gt;8d not in profit (exit at close).
+                <code>C time-stop &gt;8d not in profit (exit at close);</code>
               </div>
             </div>
             <!-- Scenario D -->
             <div class="playbook-scenario">
               <div class="scenario-badge scenario-d">Scenario D</div>
-              <div class="scenario-title">Event Warning</div>
+              <div class="scenario-title">Event Warning Protection</div>
               <div class="scenario-desc">
-                Close before event regardless of P&amp;L.
+                <code>D event warning (close before event regardless of P&amp;L).</code>
               </div>
             </div>
           </div>
@@ -1503,11 +1506,11 @@
               </div>
 
               <div class="glossary-card" id="glossary-timestop">
-                <div class="glossary-card-header"><span class="glossary-term">5-Day Time Stop</span><span class="glossary-category">Opportunity Cost</span></div>
-                <p class="glossary-meaning">Exiting a breakout trade if the stock makes no upward progress within 5 trading sessions.</p>
-                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">True momentum breakouts follow through immediately. Stagnant trades tie up capital and usually fail.</span></div>
-                <div class="glossary-section-row"><span class="glossary-label">main.py Threshold:</span><span class="glossary-threshold">Discipline rule: Cut trade after 5 days without progress</span></div>
-                <div class="glossary-section-row"><span class="glossary-label">Example:</span><span class="glossary-example">Bought breakout on Monday; by next Monday price is hovering flat around entry -&gt; close trade.</span></div>
+                <div class="glossary-card-header"><span class="glossary-term">Time Stop (&gt;8d Rule)</span><span class="glossary-category">Opportunity Cost</span></div>
+                <p class="glossary-meaning">Mechanical discipline rule to close a stagnant breakout after 8 trading days without profit.</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Genuine small-cap momentum breakouts follow through swiftly. Stagnant positions tie up capital and increase downside risk.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">main.py Rule:</span><span class="glossary-threshold">Scenario C: Time-stop &gt;8d not in profit =&gt; Exit at market close.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Example:</span><span class="glossary-example">Stock bought on breakout hovers flat around entry for 8 sessions: mechanically exit at session close to free up capital.</span></div>
               </div>
 
               <div class="glossary-card" id="glossary-gradescore">
@@ -1797,6 +1800,22 @@
                 <p class="glossary-meaning">Distinction between Live results (actual filled trades in trades.json) versus Backtest (zero-slippage rules-replay across OHLCV history).</p>
                 <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Validates whether real execution discipline and broker slippage align with theoretical edge.</span></div>
                 <div class="glossary-section-row"><span class="glossary-label">Where used:</span><span class="glossary-example">Performance Stats Tab &amp; Backtest Tab headers.</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-gtt">
+                <div class="glossary-card-header"><span class="glossary-term">GTT (Good-Till-Triggered)</span><span class="glossary-category">Execution Blueprint</span></div>
+                <p class="glossary-meaning">Conditional pending order resting at broker until breakout price triggers execution. Validity GTC / 7 days.</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Avoids emotional execution during market hours, removes manual hesitation, and prevents market order slippage.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Playbook Rule:</span><span class="glossary-threshold">Place GTT BUY at breakout level, Limit = Trigger + 0.5%, validity GTC/7d. NEVER a market order.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Where used:</span><span class="glossary-example">Trader's Playbook, Watchlist GTT Generator, Help Guide.</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-bracketorder">
+                <div class="glossary-card-header"><span class="glossary-term">Bracket Order</span><span class="glossary-category">Risk Execution</span></div>
+                <p class="glossary-meaning">Multi-leg conditional order linking limit entry with automated stop-loss and profit target legs (One-Cancels-Other).</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Automatically enforces stop loss execution and target scaling without manual intervention.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Playbook Rule:</span><span class="glossary-threshold">Entry Trigger + Stop Loss (Entry - 2.5×ATR) + Profit Target (+2R).</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Where used:</span><span class="glossary-example">Trader's Playbook, Position Sizer, Help Guide.</span></div>
               </div>
             </div>
           </article>

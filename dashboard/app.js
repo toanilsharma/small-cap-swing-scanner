@@ -5327,7 +5327,7 @@ function initPlaybookListeners() {
   const copyFormulaBtn = document.getElementById("copyFormulaBtn");
   if (copyFormulaBtn) {
     copyFormulaBtn.addEventListener("click", async () => {
-      const formula = "size = (CAPITAL * RISK_PCT) / (Entry - SL)";
+      const formula = "size=(CAPITAL*RISK_PCT)/(Entry-SL)";
       try {
         if (navigator.clipboard && navigator.clipboard.writeText) {
           await navigator.clipboard.writeText(formula);

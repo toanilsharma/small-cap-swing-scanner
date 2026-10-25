@@ -80,6 +80,8 @@ pre {
 
 html {
   -webkit-text-size-adjust: 100%;
+  overflow-x: hidden;
+  max-width: 100vw;
 }
 
 /* 2. BODY TYPOGRAPHY WITH FLUID SCALING */
@@ -92,12 +94,14 @@ body {
   line-height: 1.55;
   word-break: break-word;
   overflow-wrap: anywhere;
+  overflow-x: hidden;
+  max-width: 100vw;
   -webkit-font-smoothing: antialiased;
 }
 
 /* Accessible focus-visible outlines */
 :focus-visible {
-  outline: 2px solid var(--primary);
+  outline: 2px solid #38bdf8;
   outline-offset: 2px;
 }
 
@@ -4065,21 +4069,23 @@ th .term-lookup {
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 .playbook-buy-card {
-  border: 1px solid rgba(16, 185, 129, 0.4);
+  border: 1px solid rgba(16, 185, 129, 0.45);
+  border-left: 4px solid #10b981;
   box-shadow: 0 4px 16px rgba(16, 185, 129, 0.08);
 }
 .playbook-buy-card:hover {
-  border-color: rgba(16, 185, 129, 0.65);
-  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.14);
+  border-color: rgba(16, 185, 129, 0.7);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.15);
 }
 .playbook-sell-card {
-  border: 1px solid rgba(245, 158, 11, 0.4);
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  border-left: 4px solid #f59e0b;
   box-shadow: 0 4px 16px rgba(245, 158, 11, 0.08);
   margin-top: var(--space-lg);
 }
 .playbook-sell-card:hover {
-  border-color: rgba(245, 158, 11, 0.65);
-  box-shadow: 0 6px 20px rgba(245, 158, 11, 0.14);
+  border-color: rgba(245, 158, 11, 0.7);
+  box-shadow: 0 6px 20px rgba(245, 158, 11, 0.15);
 }
 .playbook-toggle-btn {
   width: 100%;
@@ -4191,38 +4197,57 @@ th .term-lookup {
   color: var(--text-main);
   line-height: 1.55;
 }
+.playbook-step-desc code,
+.scenario-desc code {
+  display: block;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+  color: #bae6fd;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: 6px;
+  padding: 8px 10px;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
 .playbook-formula-box {
   background: #0d1117;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 6px;
   padding: 8px 12px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 8px;
-  font-family: var(--font-mono);
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
   font-size: 12px;
   color: #38bdf8;
 }
 .playbook-formula-box code {
   color: #38bdf8;
   font-weight: 600;
+  font-family: inherit;
+  font-size: 12px;
 }
 .copy-formula-btn {
-  font-size: 11px;
-  padding: 3px 8px;
+  font-size: 11.5px;
+  padding: 6px 12px;
   white-space: nowrap;
   font-family: inherit;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .playbook-worked-example {
-  background: rgba(0, 0, 0, 0.35);
+  background: rgba(0, 0, 0, 0.4);
   border-left: 3px solid #10b981;
-  padding: 8px 10px;
+  padding: 10px 12px;
   border-radius: 0 6px 6px 0;
   font-size: 11.5px;
   color: #cbd5e1;
-  line-height: 1.55;
-  font-family: var(--font-mono);
+  line-height: 1.6;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
 }
 
 /* 3. COLOR PILLS (WCAG-AA CONTRAST) */
@@ -4426,8 +4451,13 @@ th .term-lookup {
 
 /* 6. MOBILE RESPONSIVENESS (<768PX) */
 @media (max-width: 768px) {
-  .btn, .tab-btn, .playbook-toggle-btn, .wl-filter-chip, .sector-chip, select, input {
+  .btn, .tab-btn, .playbook-toggle-btn, .copy-formula-btn, .wl-filter-chip, .sector-chip, select, input, .badge-gtt, .btn-mark-sell {
     min-height: 44px;
+    touch-action: manipulation;
+  }
+  .page-container, .tab-content, .zone-card {
+    max-width: 100%;
+    overflow-x: hidden;
   }
   .watchlist-controls-top {
     flex-direction: column;
@@ -4439,7 +4469,9 @@ th .term-lookup {
 
   /* Transform table into stacked touch cards */
   .table-scroll {
-    overflow-x: visible;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
   }
   #watchlistTable, #watchlistTable tbody {
     display: block;

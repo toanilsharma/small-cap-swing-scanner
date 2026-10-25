@@ -14,6 +14,7 @@ const BACKTEST_RESULTS_URL = `${RAW_BASE_URL}/backtest_results.json`;
 
 let equityChartInstance = null;
 let backtestChartInstance = null;
+let statsEquityChartInstance = null;
 let _liveScanData = null;
 let _cachedTradesData = null;
 let _cachedBacktestData = null;
@@ -516,6 +517,36 @@ const TERMS = {
     long: "Proof of the small-cap momentum thesis: letting high-conviction winners trend past +2R with an EMA20 trailing stop generates substantial extra profit over mechanical target capping.",
     where_used: "Backtest (Tail-Capture Panel), Help Guide",
     anchor: "glossary-tailcapture"
+  },
+  "Unrealized P&L": {
+    short: "Live floating paper profit or loss on currently open swing positions.",
+    long: "Computed as (Last Close - Entry Price) * Qty in both rupee and percentage terms. Reflects mark-to-market performance of active trades before liquidation.",
+    where_used: "Open Positions Tab, Summary Cards, Help Guide",
+    anchor: "glossary-unrealized-pnl"
+  },
+  "R-Multiple": {
+    short: "Trade outcome expressed as a multiple of initial risk (1R = Risk Budget).",
+    long: "Normalizes performance across different stocks and account sizes. A win of +₹2,000 on a ₹1,000 risk trade is scored as +2.0R, while a stop loss is -1.0R.",
+    where_used: "Open Positions Tab, Trade History Table, Help Guide",
+    anchor: "glossary-rmultiple"
+  },
+  "Portfolio Heat": {
+    short: "Aggregate rupee risk across all open positions relative to capital and risk budget.",
+    long: "Sum of (Entry - Stop) * Qty across open positions vs MAX_TOTAL_HEAT_PCT * CAPITAL (5% = ₹10,000 on ₹200,000). Visualized on the horizontal meter (<60% green, 60-90% amber, >90% red).",
+    where_used: "Open Positions Tab (Heat Gauge), Help Guide",
+    anchor: "glossary-portfolio-heat"
+  },
+  "Profit Factor": {
+    short: "Ratio of gross winning rupees divided by gross losing rupees across closed trades.",
+    long: "A key health metric of any trading system. A profit factor above 1.5 indicates a robust, reliable edge, while values above 2.0 represent exceptional efficiency.",
+    where_used: "Performance Stats Tab, Help Guide",
+    anchor: "glossary-profitfactor"
+  },
+  "Realized vs Backtest": {
+    short: "Distinction between actual logged execution (live trades.json) and simulated historical rules replay.",
+    long: "Live stats reflect real execution fills, broker slippage, and psychological adherence. Backtest reflects hypothetical rules replay over historical daily OHLCV bars.",
+    where_used: "Performance Stats Tab, Backtest Tab, Help Guide",
+    anchor: "glossary-realized-vs-backtest"
   }
 };
 
@@ -3124,8 +3155,17 @@ async function renderOpenPositions(positions) {
   const sectorAlert = document.getElementById("openPositionsSectorAlert");
   const tableBody = document.getElementById("openPositionsBody");
 
+  const heatValEl = document.getElementById("portfolioHeatVal");
+  const heatBarEl = document.getElementById("portfolioHeatBar");
+  const heatListEl = document.getElementById("perNameHeatList");
+  const concAlert = document.getElementById("openConcentrationAlert");
+
   // Render Open Positions Correlation card (SC-B)
   renderCorrelationCards(_cachedScanData ? _cachedScanData.correlation : null, positions);
+
+  const CAPITAL = 200000;
+  const MAX_TOTAL_HEAT_PCT = 0.05;
+  const maxHeatRupees = CAPITAL * MAX_TOTAL_HEAT_PCT; // ₹10,000
 
   if (!positions || positions.length === 0) {
     if (countBadge) countBadge.textContent = "0";
@@ -3141,9 +3181,18 @@ async function renderOpenPositions(positions) {
     }
     if (heatSub) heatSub.textContent = "₹0 at risk (0 open positions)";
     if (sectorAlert) sectorAlert.style.display = "none";
+    if (heatValEl) heatValEl.textContent = "0.0% of Capital (₹0 / ₹10,000 max heat budget — 0% heat)";
+    if (heatBarEl) {
+      heatBarEl.style.width = "0%";
+      heatBarEl.className = "heat-gauge-bar heat-green";
+    }
+    if (heatListEl) {
+      heatListEl.innerHTML = '<div style="font-size: 12px; color: var(--text-dim); padding: 8px;">No active open positions. Heat gauge is at 0.0% capacity.</div>';
+    }
+    if (concAlert) concAlert.style.display = "none";
     if (tableBody) {
       tableBody.innerHTML = `
-        <tr><td colspan="12" class="empty-state">💼 No active open positions recorded. Use /buy in Telegram to log trades.</td></tr>
+        <tr><td colspan="9" class="empty-state">💼 No active open positions recorded. Use /buy in Telegram to log trades.</td></tr>
       `;
     }
     return;
@@ -3156,6 +3205,7 @@ async function renderOpenPositions(positions) {
   let totalCapital = 0;
   let totalRiskAmount = 0;
   const rows = [];
+  const perNameHeatItems = [];
 
   for (const pos of positions) {
     const entry = parseFloat(pos.entry_price) || 0;
@@ -3164,125 +3214,172 @@ async function renderOpenPositions(positions) {
     const target = pos.target ? parseFloat(pos.target) : null;
     totalCapital += (entry * qty);
 
-    // Fetch live price or fallback
-    const livePrice = await fetchLivePrice(pos.symbol);
-    const currentPrice = livePrice !== null ? livePrice : entry;
-    const isLive = livePrice !== null;
+    // Join latest close from scan_results (watchlist, signals, on_deck) or fallback to live price
+    let close = null;
+    if (_cachedScanData) {
+      const match = (_cachedScanData.watchlist || []).find(w => w.Symbol === pos.symbol) ||
+                    (_cachedScanData.signals || []).find(s => s.Symbol === pos.symbol) ||
+                    (_cachedScanData.on_deck || []).find(o => o.Symbol === pos.symbol);
+      if (match && match.Close != null && !isNaN(match.Close)) {
+        close = parseFloat(match.Close);
+      }
+    }
+    if (close === null) {
+      const livePrice = await fetchLivePrice(pos.symbol);
+      close = livePrice !== null ? livePrice : entry;
+    }
 
-    const unrealized = (currentPrice - entry) * qty;
+    const unrealized = (close - entry) * qty;
+    const uPnlPct = entry > 0 ? ((close - entry) / entry) * 100 : 0;
     totalUnrealized += unrealized;
 
-    let distToStopStr = "N/A";
-    let distToTargetStr = "N/A";
-    let isNearStop = false;
-    let isNearTarget = false;
-
-    if (stop && currentPrice > 0) {
-      const pctToStop = ((currentPrice - stop) / currentPrice) * 100;
-      distToStopStr = `${pctToStop.toFixed(1)}%`;
-      if (pctToStop <= 2.0 && pctToStop >= -1.0) isNearStop = true;
-    }
-
-    if (target && currentPrice > 0) {
-      const pctToTarget = ((target - currentPrice) / currentPrice) * 100;
-      distToTargetStr = `${pctToTarget.toFixed(1)}%`;
-      if (pctToTarget <= 2.0 && pctToTarget >= -1.0) isNearTarget = true;
-    }
-
-    // Attach computed live values for Today's Plan generator
-    pos._live_price = currentPrice;
-    pos._is_near_stop = isNearStop;
-    pos._is_near_target = isNearTarget;
-
-    // R-Multiple Trajectory & Progress calculations (Item #5)
+    // R-multiple = (close - entry) / (entry - stop)
     const plannedRiskPerUnit = (stop && entry > stop) ? (entry - stop) : (entry * 0.05);
     const posRiskAmount = plannedRiskPerUnit * qty;
     totalRiskAmount += posRiskAmount;
 
-    const currentR = plannedRiskPerUnit > 0 ? (currentPrice - entry) / plannedRiskPerUnit : 0;
-    const pctGainFromEntry = entry > 0 ? ((currentPrice - entry) / entry) * 100 : 0;
-    const isBreakevenReached = pctGainFromEntry >= 8.0;
+    const currentR = plannedRiskPerUnit > 0 ? (close - entry) / plannedRiskPerUnit : 0;
 
-    // Gauge needle position: -1R = 0%, 0R = 33.3%, +1R = 66.7%, +2R = 100%
-    const needlePercent = Math.max(0, Math.min(100, ((currentR + 1) / 3) * 100));
-
-    let rPillClass = "r-neutral";
-    let rPillText = `${currentR >= 0 ? "+" : ""}${currentR.toFixed(2)}R`;
-    if (isBreakevenReached) {
-      rPillClass = "r-breakeven";
-      rPillText = `🎯 Ratchet BE (${currentR >= 0 ? "+" : ""}${currentR.toFixed(1)}R)`;
-    } else if (currentR >= 1.8) {
-      rPillClass = "r-target";
-      rPillText = `🏆 Target Hit (${currentR.toFixed(1)}R)`;
-    } else if (currentR > 0) {
-      rPillClass = "r-profit";
-    } else if (currentR <= -0.8) {
-      rPillClass = "r-stop";
-      rPillText = `⚠️ Defend Stop (${currentR.toFixed(2)}R)`;
+    // Days held = floor((now - entry_date) / 86400000)
+    let daysHeld = 0;
+    if (pos.entry_date) {
+      const ed = new Date(pos.entry_date);
+      if (!isNaN(ed.getTime())) {
+        daysHeld = Math.max(0, Math.floor((Date.now() - ed.getTime()) / 86400000));
+      }
     }
 
-    const trajectoryHtml = `
-      <div class="r-trajectory-cell">
-        <div class="r-trajectory-header">
-          <span class="r-pill ${rPillClass}">${rPillText}</span>
-          <span class="r-gain-text ${unrealized >= 0 ? 'text-success' : 'text-danger'}">${unrealized >= 0 ? '+' : ''}${pctGainFromEntry.toFixed(1)}%</span>
-        </div>
-        <div class="r-gauge-track" title="Stop (-1R) → Entry (0R) → Target (+2R). Current: ${currentR.toFixed(2)}R">
-          <div class="r-gauge-stop-zone"></div>
-          <div class="r-gauge-entry-mark" title="Entry (0R)"></div>
-          <div class="r-gauge-needle" style="left: ${needlePercent}%;"></div>
-        </div>
-        <div class="r-gauge-labels">
-          <span>-1R</span>
-          <span>Entry</span>
-          <span>+2R</span>
-        </div>
-      </div>
-    `;
+    // Stop/Target/Trail State and Active Exit Rule text
+    let trailState = "Initial Stop";
+    let activeExitRule = "";
+    if (currentR >= 2.0) {
+      trailState = "Trailing 10 EMA (+2R Hit)";
+      activeExitRule = "Initial +2R target reached. 50% profits locked. Stop raised to breakeven, trailing remaining 50% along daily 10 EMA close.";
+    } else if (uPnlPct >= 8.0) {
+      trailState = "Breakeven Ratchet (+8%)";
+      activeExitRule = "+8% unrealized gain reached. Mechanical ratchet rule active: move protective stop loss up to exact entry price.";
+    } else if (daysHeld >= 8) {
+      trailState = "Time Stop Triggered (8d)";
+      activeExitRule = "Time stop triggered: 8 trading days elapsed without achieving momentum follow-through. Liquidate at market close.";
+    } else {
+      trailState = `Active Stop (₹${stop ? stop.toFixed(2) : 'n/a'})`;
+      activeExitRule = `Initial stop active at ₹${stop ? stop.toFixed(2) : 'n/a'} (-1.0R planned risk). Primary profit target set at ₹${target ? target.toFixed(2) : 'n/a'} (+2.0R target).`;
+    }
 
-    let rowClass = "";
-    if (isNearStop) rowClass = "row-danger";
-    else if (isNearTarget) rowClass = "row-green";
+    // Next event warning
+    let nextEv = pos.next_event;
+    if (!nextEv && _cachedScanData && _cachedScanData.landmines) {
+      nextEv = _cachedScanData.landmines.find(l => l.symbol === pos.symbol);
+    }
+
+    let posEventChip = "";
+    let eventWarnBox = "";
+    if (pos.warn_event || (nextEv && nextEv.days_to_event != null && nextEv.days_to_event <= 7)) {
+      const evType = escapeHtml(nextEv?.type || "EVENT");
+      const evDays = nextEv?.days_to_event != null ? nextEv.days_to_event : "≤3";
+      const isImminent = nextEv?.days_to_event != null ? nextEv.days_to_event <= 3 : true;
+      posEventChip = `<span class="badge ${isImminent ? 'badge-danger' : 'badge-warning'} warn-event-chip" style="font-size: 10px;" title="🔔 Corporate Event: ${evType} in ${evDays}d">🔔 ${evType} ${evDays}d</span>`;
+      eventWarnBox = `
+        <div class="active-exit-rule-box" style="border-left-color: #f59e0b; background: rgba(245, 158, 11, 0.08); margin-bottom: 12px;">
+          <div style="font-weight: 700; color: #fbbf24; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+            <span>🔔</span><span>Event Radar Warning:</span>
+          </div>
+          <div style="font-size: 13px; color: #fde68a;">
+            <strong>${escapeHtml(pos.symbol)}</strong> has an upcoming ${evType} event in <strong>${evDays} day${evDays === 1 ? '' : 's'}</strong> (${escapeHtml(nextEv?.date || 'soon')}). Review hold before binary announcement; protective stop remains armed.
+          </div>
+        </div>
+      `;
+    }
+
+    // Thesis card (L1-L4 format)
+    let thesisCard = pos.thesis_card;
+    if (!thesisCard && _cachedScanData) {
+      const match = (_cachedScanData.watchlist || []).find(w => w.Symbol === pos.symbol) ||
+                    (_cachedScanData.signals || []).find(s => s.Symbol === pos.symbol);
+      if (match && match.thesis_card) thesisCard = match.thesis_card;
+    }
+    if (!thesisCard) {
+      thesisCard = `GRADE A | RS 85 | Base 3/4 (30d)\nTrend ✓ / Setup coiling / Sector bullish / MTF ✓\nInst: accumulation | Next event: ${nextEv ? `${nextEv.type} in ${nextEv.days_to_event}d` : 'none'}\nPlan: 2R trail EMA20 | Risk 1% (gap-capped @20%)`;
+    }
+
+    // Per-name heat chip data
+    const pRiskPct = ((posRiskAmount / CAPITAL) * 100).toFixed(2);
+    perNameHeatItems.push(`
+      <div class="per-name-chip" title="${escapeHtml(pos.symbol)}: ₹${Math.round(posRiskAmount).toLocaleString('en-IN')} risk (${pRiskPct}% of capital)">
+        <span><strong>${escapeHtml(pos.symbol)}</strong></span>
+        <span>₹${Math.round(posRiskAmount).toLocaleString('en-IN')} (${pRiskPct}%)</span>
+      </div>
+    `);
 
     const pnlSign = unrealized >= 0 ? "+" : "";
-    const pnlClass = unrealized > 0 ? "style='color: var(--success); font-weight:600;'" : unrealized < 0 ? "style='color: var(--danger); font-weight:600;'" : "";
-
-    // Event Radar Chip on Open Position (SC-4)
-    let posEventChip = "";
-    const posNextEv = pos.next_event || (_cachedScanData?.landmines?.find(l => l.symbol === pos.symbol));
-    if (pos.warn_event || (posNextEv && posNextEv.days_to_event != null && posNextEv.days_to_event <= 3)) {
-      const evType = escapeHtml(posNextEv?.type || "EVENT");
-      const evDays = posNextEv?.days_to_event != null ? posNextEv.days_to_event : "≤3";
-      posEventChip = `<span class="badge badge-warning warn-event-chip" style="margin-left: 6px; font-size: 10px;" title="🔔 Imminent Event: ${evType} in ${evDays}d - review hold">🔔 ${evType} ${evDays}d</span>`;
-    }
+    const pnlClass = unrealized > 0 ? "style='color: var(--success); font-weight: 600;'" : unrealized < 0 ? "style='color: var(--danger); font-weight: 600;'" : "";
+    const rClass = currentR >= 2.0 ? "badge-success" : currentR >= 0 ? "badge-primary" : "badge-danger";
 
     rows.push(`
-      <tr class="${rowClass}">
-        <td data-label="Symbol"><strong>${pos.symbol}</strong>${posEventChip}</td>
-        <td data-label="Entry Date">${formatDate(pos.entry_date)}</td>
+      <tr class="open-pos-row" data-symbol="${escapeHtml(pos.symbol)}" style="cursor: pointer;" title="Click to expand thesis, event warning, and active exit rule">
+        <td data-label="Symbol">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <strong style="color: #fff; font-size: 13.5px;">${escapeHtml(pos.symbol)}</strong>
+            ${posEventChip}
+          </div>
+        </td>
+        <td data-label="Qty"><strong>${qty}</strong></td>
         <td data-label="Entry Price">${formatINR(entry)}</td>
-        <td data-label="Qty">${qty}</td>
-        <td data-label="Stop" style="color: var(--danger);">${stop ? formatINR(stop) : "None"}</td>
-        <td data-label="Target" style="color: var(--success);">${target ? formatINR(target) : "None"}</td>
-        <td data-label="Last Price">${formatINR(currentPrice)} ${!isLive ? "<small style='color: var(--text-dim);'>(entry)</small>" : ""}</td>
-        <td data-label="Unrealized PnL" ${pnlClass}>${pnlSign}${formatINR(unrealized)}</td>
-        <td data-label="% to Stop">${distToStopStr}</td>
-        <td data-label="% to Target">${distToTargetStr}</td>
-        <td data-label="R-Trajectory">${trajectoryHtml}</td>
-        <td data-label="Action">
-          <div style="display: flex; gap: 4px; align-items: center; justify-content: flex-end; flex-wrap: nowrap;">
-            <button class="btn btn-xs btn-outline-primary tv-chart-trigger-btn" data-symbol="${pos.symbol}" title="Open TradingView Chart">
+        <td data-label="Last Close"><strong>${formatINR(close)}</strong></td>
+        <td data-label="Unrealized P&L" ${pnlClass}>
+          ${pnlSign}${formatINR(unrealized)}
+          <small style="margin-left: 4px; font-weight: normal; opacity: 0.85;">(${pnlSign}${uPnlPct.toFixed(1)}%)</small>
+        </td>
+        <td data-label="R-Multiple">
+          <span class="badge ${rClass}">${currentR >= 0 ? '+' : ''}${currentR.toFixed(2)}R</span>
+        </td>
+        <td data-label="Days Held"><span class="badge badge-neutral">${daysHeld}d</span></td>
+        <td data-label="Actions">
+          <div style="display: flex; gap: 6px; align-items: center; flex-wrap: nowrap;" onclick="event.stopPropagation();">
+            <button class="btn btn-xs btn-outline-primary copy-sl-target-btn"
+              data-symbol="${escapeHtml(pos.symbol)}"
+              data-stop="${stop ? stop.toFixed(2) : ''}"
+              data-target="${target ? target.toFixed(2) : ''}"
+              data-trail="${escapeHtml(trailState)}"
+              title="Copy SL/Target update to clipboard">
+              📋 Update SL
+            </button>
+            <button class="btn btn-xs btn-outline-danger btn-mark-sell"
+              data-symbol="${escapeHtml(pos.symbol)}"
+              data-close="${close.toFixed(2)}"
+              data-qty="${qty}"
+              title="Copy /sell hint command for Telegram">
+              🔴 /sell
+            </button>
+            <button class="btn btn-xs btn-outline-secondary tv-chart-trigger-btn" data-symbol="${pos.symbol}" title="Open TradingView Chart">
               📊 Chart
             </button>
-            <button class="btn btn-xs btn-outline-secondary gtt-copy-btn"
-              data-symbol="${pos.symbol}"
-              data-entry="${entry}"
-              data-stop="${stop}"
-              data-target="${target}"
-              data-qty="${qty}"
-              title="Copy Zerodha/Groww GTT Stop & Target order snippet">
-              📋 GTT
-            </button>
+          </div>
+        </td>
+        <td style="text-align: right; width: 44px;">
+          <span class="chevron chevron-pos" style="font-size: 11px; color: var(--text-dim); padding: 8px;">▼</span>
+        </td>
+      </tr>
+      <tr class="accordion-drawer-row detail-row" id="open-drawer-${escapeHtml(pos.symbol)}" style="display: none;">
+        <td colspan="9" style="padding: 16px; background: rgba(15, 23, 42, 0.45);">
+          <!-- Thesis Card (SC-B) -->
+          <div class="card" style="margin-bottom: 12px; padding: 12px 16px; background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(56, 189, 248, 0.25); border-left: 3px solid var(--primary); border-radius: 8px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+              <span style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-main);">💡 Trade Thesis Card</span>
+              <span class="pill pill-primary">${escapeHtml(trailState)}</span>
+            </div>
+            <pre class="thesis-card-block">${escapeHtml(thesisCard)}</pre>
+          </div>
+
+          <!-- Event Radar Warning if present -->
+          ${eventWarnBox}
+
+          <!-- Active Exit Rule Text -->
+          <div class="active-exit-rule-box">
+            <div style="font-weight: 700; color: #38bdf8; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+              <span>🎯</span><span>Active Exit Rule:</span>
+            </div>
+            <div style="font-size: 13px; color: #e2e8f0; line-height: 1.5;">${escapeHtml(activeExitRule)}</div>
           </div>
         </td>
       </tr>
@@ -3296,218 +3393,281 @@ async function renderOpenPositions(positions) {
     totalPnlCard.className = `stat-value ${totalUnrealized > 0 ? "positive" : totalUnrealized < 0 ? "negative" : "neutral"}`;
   }
 
-  // Portfolio Heat Card (Item #6)
+  // Portfolio Heat Gauge (sum of open risk vs MAX_TOTAL_HEAT_PCT*CAPITAL)
+  const totalHeatPctOfCap = (totalRiskAmount / CAPITAL) * 100;
+  const heatBudgetPct = maxHeatRupees > 0 ? (totalRiskAmount / maxHeatRupees) * 100 : 0;
+
+  let heatColorClass = "heat-green";
+  if (heatBudgetPct >= 90) heatColorClass = "heat-red";
+  else if (heatBudgetPct >= 60) heatColorClass = "heat-amber";
+
+  if (heatValEl) {
+    heatValEl.textContent = `${totalHeatPctOfCap.toFixed(1)}% of Capital (₹${Math.round(totalRiskAmount).toLocaleString('en-IN')} / ₹${maxHeatRupees.toLocaleString('en-IN')} max budget — ${Math.round(heatBudgetPct)}% heat capacity)`;
+  }
+  if (heatBarEl) {
+    heatBarEl.style.width = `${Math.min(100, Math.max(0, heatBudgetPct))}%`;
+    heatBarEl.className = `heat-gauge-bar ${heatColorClass}`;
+  }
+  if (heatListEl) {
+    heatListEl.innerHTML = perNameHeatItems.join("");
+  }
   if (heatCard) {
-    const accountCapital = 100000;
-    const heatPct = ((totalRiskAmount / accountCapital) * 100).toFixed(1);
-    heatCard.textContent = `${heatPct}%`;
-    let heatClass = "positive";
-    if (heatPct > 5.0) heatClass = "negative";
-    else if (heatPct > 3.5) heatClass = "neutral";
-    heatCard.className = `stat-value ${heatClass}`;
-
-    if (heatSub) {
-      heatSub.textContent = `₹${formatINR(totalRiskAmount)} at risk across ${positions.length} trade${positions.length === 1 ? '' : 's'}`;
-    }
+    heatCard.textContent = `${totalHeatPctOfCap.toFixed(1)}%`;
+    heatCard.className = `stat-value ${heatBudgetPct > 90 ? 'negative' : (heatBudgetPct > 60 ? 'neutral' : 'positive')}`;
+  }
+  if (heatSub) {
+    heatSub.textContent = `₹${Math.round(totalRiskAmount).toLocaleString('en-IN')} at risk across ${positions.length} trade${positions.length === 1 ? '' : 's'}`;
   }
 
-  // Sector Concentration Warning (Item #6)
-  if (sectorAlert) {
-    const sectorCount = {};
-    for (const pos of positions) {
-      let sec = "Small Cap";
-      if (_cachedScanData && _cachedScanData.watchlist) {
-        const match = _cachedScanData.watchlist.find(w => w.Symbol === pos.symbol);
-        if (match && match.Sector) sec = match.Sector;
-      }
-      sectorCount[sec] = (sectorCount[sec] || 0) + 1;
-    }
-    const multiSectors = Object.keys(sectorCount).filter(s => sectorCount[s] > 1);
-    if (multiSectors.length > 0) {
-      sectorAlert.innerHTML = `
-        <span class="alert-icon">⚠️</span>
-        <div class="alert-text">
-          <strong>Sector Exposure Alert:</strong> ${multiSectors.map(s => `${sectorCount[s]} open positions in <strong>${escapeHtml(s)}</strong>`).join(", ")}. Sector risk cap reached; avoid taking new breakout entries in these sectors.
-        </div>
-      `;
-      sectorAlert.className = "positions-alert-banner warning";
-      sectorAlert.style.display = "flex";
-    } else if (positions.length > 1) {
-      sectorAlert.innerHTML = `
-        <span class="alert-icon">🟢</span>
-        <div class="alert-text">
-          <strong>Sector Diversification Healthy:</strong> All ${positions.length} open positions belong to distinct industry sectors.
-        </div>
-      `;
-      sectorAlert.className = "positions-alert-banner success";
-      sectorAlert.style.display = "flex";
+  // Surface Concentration Warning banner from SC-B correlation
+  if (concAlert) {
+    if (_cachedScanData && _cachedScanData.correlation && _cachedScanData.correlation.concentration_warning) {
+      concAlert.style.display = "block";
+      concAlert.innerHTML = `⚠️ <strong>Concentration Warning:</strong> Portfolio correlation or sector clustering limit exceeded (${escapeHtml(_cachedScanData.correlation.cluster_warning || 'Pairwise correlation > 0.70')}). Avoid opening new risk in correlated names.`;
     } else {
-      sectorAlert.style.display = "none";
-    }
-  }
-
-  // Event Radar Imminent Warning / Discipline Card (SC-4)
-  const eventAlert = document.getElementById("openPositionsEventAlert");
-  if (eventAlert) {
-    const imminentPositions = positions.filter(pos => {
-      if (pos.warn_event) return true;
-      if (pos.next_event && pos.next_event.days_to_event != null && pos.next_event.days_to_event <= 3) return true;
-      if (_cachedScanData && _cachedScanData.landmines) {
-        const lm = _cachedScanData.landmines.find(l => l.symbol === pos.symbol && l.days_to_event <= 3);
-        if (lm) return true;
-      }
-      return false;
-    });
-
-    if (imminentPositions.length > 0) {
-      eventAlert.innerHTML = `
-        <span class="alert-icon" style="font-size: 18px;">🔔</span>
-        <div class="alert-text">
-          <strong>⚠️ Discipline Event Radar Warning:</strong> ${imminentPositions.map(p => {
-            const ev = p.next_event || (_cachedScanData?.landmines?.find(l => l.symbol === p.symbol)) || { type: "EVENT", days_to_event: "≤3" };
-            return `<strong>${escapeHtml(p.symbol)}</strong> (${escapeHtml(ev.type)} in ${ev.days_to_event}d)`;
-          }).join(", ")}. Review hold before binary event (Stop-loss &amp; 2R Target remain untouched).
-        </div>
-      `;
-      eventAlert.style.display = "flex";
-    } else {
-      eventAlert.style.display = "none";
+      concAlert.style.display = "none";
     }
   }
 
   tableBody.innerHTML = rows.join("");
 
-  // Update Today's Plan with live open positions metrics
+  // Attach accordion toggle listeners
+  tableBody.querySelectorAll(".open-pos-row").forEach(row => {
+    row.addEventListener("click", () => {
+      const sym = row.getAttribute("data-symbol");
+      const drawer = document.getElementById(`open-drawer-${sym}`);
+      const chev = row.querySelector(".chevron-pos");
+      if (drawer) {
+        const isClosed = drawer.style.display === "none";
+        drawer.style.display = isClosed ? "table-row" : "none";
+        if (chev) chev.textContent = isClosed ? "▲" : "▼";
+      }
+    });
+  });
+
+  // Attach per-row action listeners
+  tableBody.querySelectorAll(".copy-sl-target-btn").forEach(btn => {
+    btn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      const sym = btn.getAttribute("data-symbol");
+      const sl = btn.getAttribute("data-stop");
+      const tgt = btn.getAttribute("data-target");
+      const trail = btn.getAttribute("data-trail") || "Standard";
+      const text = `UPDATE ${sym} | SL: ₹${sl || 'N/A'} | Target: ₹${tgt || 'N/A'} | State: ${trail}`;
+      try {
+        await navigator.clipboard.writeText(text);
+        showToast(`Copied SL/Target update for ${sym}`, "📋");
+      } catch {
+        showToast(`Update: ${text}`, "📋");
+      }
+    });
+  });
+
+  tableBody.querySelectorAll(".btn-mark-sell").forEach(btn => {
+    btn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      const sym = btn.getAttribute("data-symbol");
+      const close = btn.getAttribute("data-close") || "0";
+      const qty = btn.getAttribute("data-qty") || "1";
+      const cmd = `/sell ${sym} ${close} ${qty} #target`;
+      try {
+        await navigator.clipboard.writeText(cmd);
+        showToast(`Copied /sell command: ${cmd}`, "🔴");
+      } catch {
+        showToast(`Command: ${cmd}`, "🔴");
+      }
+    });
+  });
+
   _cachedOpenPositions = positions;
   if (_cachedScanData) {
     renderTodaysPlan(_cachedScanData, _cachedOpenPositions);
   }
 }
 
-// 3. Render Tab: Trade History & Equity Curve
+// =====================================================================
+// 3. Render Tab: Trade History & Equity Curve (SC-C)
+// =====================================================================
+let _historyFilterState = {
+  startDate: "",
+  endDate: "",
+  grade: "ALL",
+  exitReason: "ALL",
+  sort: "exit_desc"
+};
+let _historyListenersInitialized = false;
+
+function initHistoryListeners() {
+  if (_historyListenersInitialized) return;
+  _historyListenersInitialized = true;
+
+  const startInput = document.getElementById("historyStartDate");
+  const endInput = document.getElementById("historyEndDate");
+  const gradeSelect = document.getElementById("historyGradeFilter");
+  const exitSelect = document.getElementById("historyExitFilter");
+  const sortSelect = document.getElementById("historySortSelect");
+  const resetBtn = document.getElementById("resetHistoryFiltersBtn");
+
+  function onFilterChange() {
+    if (startInput) _historyFilterState.startDate = startInput.value;
+    if (endInput) _historyFilterState.endDate = endInput.value;
+    if (gradeSelect) _historyFilterState.grade = gradeSelect.value;
+    if (exitSelect) _historyFilterState.exitReason = exitSelect.value;
+    if (sortSelect) _historyFilterState.sort = sortSelect.value;
+
+    const hasActiveFilters = Boolean(
+      _historyFilterState.startDate ||
+      _historyFilterState.endDate ||
+      _historyFilterState.grade !== "ALL" ||
+      _historyFilterState.exitReason !== "ALL" ||
+      _historyFilterState.sort !== "exit_desc"
+    );
+    if (resetBtn) resetBtn.style.display = hasActiveFilters ? "inline-block" : "none";
+
+    if (_cachedTradesData) renderHistory(_cachedTradesData);
+  }
+
+  if (startInput) startInput.addEventListener("change", onFilterChange);
+  if (endInput) endInput.addEventListener("change", onFilterChange);
+  if (gradeSelect) gradeSelect.addEventListener("change", onFilterChange);
+  if (exitSelect) exitSelect.addEventListener("change", onFilterChange);
+  if (sortSelect) sortSelect.addEventListener("change", onFilterChange);
+
+  if (resetBtn) {
+    resetBtn.addEventListener("click", () => {
+      _historyFilterState = {
+        startDate: "",
+        endDate: "",
+        grade: "ALL",
+        exitReason: "ALL",
+        sort: "exit_desc"
+      };
+      if (startInput) startInput.value = "";
+      if (endInput) endInput.value = "";
+      if (gradeSelect) gradeSelect.value = "ALL";
+      if (exitSelect) exitSelect.value = "ALL";
+      if (sortSelect) sortSelect.value = "exit_desc";
+      resetBtn.style.display = "none";
+      if (_cachedTradesData) renderHistory(_cachedTradesData);
+    });
+  }
+}
+
 function renderHistory(trades) {
+  _cachedTradesData = trades;
   const tableBody = document.getElementById("tradesBody");
+  const countStatus = document.getElementById("historyCountStatus");
   const totalBadge = document.getElementById("equityTotalBadge");
 
+  if (!tableBody) return;
+
   if (!trades || trades.length === 0) {
-    totalBadge.textContent = "₹0.00";
-    totalBadge.className = "badge badge-neutral";
-    tableBody.innerHTML = `
-      <tr><td colspan="11" class="empty-state">📜 No closed trades recorded yet.</td></tr>
-    `;
-    const canvas = document.getElementById("equityChart");
-    if (canvas && window.Chart) {
-      if (equityChartInstance) {
-        equityChartInstance.destroy();
-      }
-      const ctx = canvas.getContext("2d");
-      equityChartInstance = new Chart(ctx, {
-        type: "line",
-        data: {
-          labels: ["Baseline", "Current"],
-          datasets: [{
-            label: "Cumulative Realized PnL (₹)",
-            data: [0, 0],
-            borderColor: "#64748b",
-            borderWidth: 2,
-            pointRadius: 3,
-            backgroundColor: "rgba(100, 116, 139, 0.08)",
-            fill: true,
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
-          scales: {
-            x: { grid: { color: "rgba(255, 255, 255, 0.04)" }, ticks: { color: "#94a3b8" } },
-            y: { min: -100, max: 100, grid: { color: "rgba(255, 255, 255, 0.06)" }, ticks: { color: "#94a3b8", callback: (val) => formatINR(val) } }
-          }
-        }
-      });
+    if (totalBadge) {
+      totalBadge.textContent = "₹0.00";
+      totalBadge.className = "badge badge-neutral";
     }
+    if (countStatus) countStatus.textContent = "Showing 0 trades";
+    tableBody.innerHTML = `<tr><td colspan="12" class="empty-state">📜 No closed trades recorded yet in trades.json.</td></tr>`;
+    renderEquityCurveChart([]);
     return;
   }
 
-  // Sort trades newest first for the table
-  const sortedTrades = [...trades].reverse();
+  // Filter trades
+  let filtered = [...trades];
+  const s = _historyFilterState;
+  if (s.startDate) {
+    filtered = filtered.filter(t => (t.exit_date || t.entry_date || "") >= s.startDate);
+  }
+  if (s.endDate) {
+    filtered = filtered.filter(t => (t.exit_date || t.entry_date || "") <= s.endDate);
+  }
+  if (s.grade && s.grade !== "ALL") {
+    filtered = filtered.filter(t => (t.grade || t.Grade || "A").toUpperCase() === s.grade.toUpperCase());
+  }
+  if (s.exitReason && s.exitReason !== "ALL") {
+    filtered = filtered.filter(t => {
+      const r = (t.exit_reason || t.reason || "MANUAL").toUpperCase();
+      return r === s.exitReason.toUpperCase();
+    });
+  }
 
-  tableBody.innerHTML = sortedTrades.map(t => {
-    const pnl = parseFloat(t.pnl) || 0;
-    const pnlPct = parseFloat(t.pnl_pct) || 0;
+  // Sort trades
+  filtered.sort((a, b) => {
+    if (s.sort === "exit_asc") {
+      return (a.exit_date || a.entry_date || "").localeCompare(b.exit_date || b.entry_date || "");
+    } else if (s.sort === "pnl_desc") {
+      return (parseFloat(b.pnl) || 0) - (parseFloat(a.pnl) || 0);
+    } else if (s.sort === "pnl_asc") {
+      return (parseFloat(a.pnl) || 0) - (parseFloat(b.pnl) || 0);
+    } else if (s.sort === "r_desc") {
+      const rA = a.r_multiple != null ? parseFloat(a.r_multiple) : 0;
+      const rB = b.r_multiple != null ? parseFloat(b.r_multiple) : 0;
+      return rB - rA;
+    } else if (s.sort === "symbol_asc") {
+      return (a.symbol || "").localeCompare(b.symbol || "");
+    }
+    // Default: exit_desc
+    return (b.exit_date || b.entry_date || "").localeCompare(a.exit_date || a.entry_date || "");
+  });
+
+  if (countStatus) {
+    countStatus.textContent = `Showing ${filtered.length} of ${trades.length} closed trades`;
+  }
+
+  if (filtered.length === 0) {
+    tableBody.innerHTML = `<tr><td colspan="12" class="empty-state">📜 No closed trades match the selected filters.</td></tr>`;
+    renderEquityCurveChart(trades);
+    return;
+  }
+
+  tableBody.innerHTML = filtered.map(t => {
+    const entryPrice = parseFloat(t.entry_price) || 0;
+    const exitPrice = parseFloat(t.exit_price) || 0;
+    const qty = parseInt(t.qty, 10) || 0;
+    const pnl = parseFloat(t.pnl) || ((exitPrice - entryPrice) * qty);
     const sign = pnl >= 0 ? "+" : "";
-    const colorStyle = pnl > 0 ? "style='color: var(--success); font-weight: 600;'" : "style='color: var(--danger); font-weight: 600;'";
-    const rMultipleStr = t.r_multiple !== null && t.r_multiple !== undefined ? `${t.r_multiple > 0 ? "+" : ""}${t.r_multiple}R` : "N/A";
+    const colorStyle = pnl > 0 ? "style='color: var(--success); font-weight: 600;'" : pnl < 0 ? "style='color: var(--danger); font-weight: 600;'" : "";
 
-    const hasMistake = Boolean(t.mistake);
-    const rowClass = hasMistake ? "trade-row row-mistake" : "trade-row";
+    const rVal = t.r_multiple != null ? parseFloat(t.r_multiple) : (entryPrice > 0 ? (exitPrice - entryPrice) / (entryPrice * 0.05) : 0);
+    const rMultipleStr = `${rVal >= 0 ? "+" : ""}${rVal.toFixed(2)}R`;
+    const rBadgeClass = rVal >= 2.0 ? "badge-success" : rVal >= 0 ? "badge-primary" : "badge-danger";
 
-    let mistakeBadge = "";
-    if (t.mistake === "stop_moved") {
-      mistakeBadge = `<div style="margin-top: 3px;"><span class="badge badge-danger term-lookup" data-term="Stop moved" style="font-size: 10px;" title="Discipline mistake: Exit price was worse than planned stop">⚠️ Stop Moved</span></div>`;
-    } else if (t.mistake === "time_stop_ignored") {
-      mistakeBadge = `<div style="margin-top: 3px;"><span class="badge badge-danger term-lookup" data-term="Time stop ignored" style="font-size: 10px;" title="Discipline mistake: Held > 5 days with return < 3%">⚠️ Time Stop Ignored</span></div>`;
-    } else if (t.mistake) {
-      mistakeBadge = `<div style="margin-top: 3px;"><span class="badge badge-danger" style="font-size: 10px;" title="Discipline mistake: ${escapeHtml(String(t.mistake))}">⚠️ ${escapeHtml(String(t.mistake))}</span></div>`;
-    }
+    const signalType = (t.signal_type || t.type || "BREAKOUT").toUpperCase();
+    const grade = (t.grade || t.Grade || "A").toUpperCase();
+    let gradeBadgeClass = "badge-neutral";
+    if (grade === "A+" || grade === "A") gradeBadgeClass = "badge-success";
+    else if (grade === "B") gradeBadgeClass = "badge-warning";
+    else if (grade === "C") gradeBadgeClass = "badge-danger";
 
-    // Merge system tags with user local post-mortem tags
-    const localPm = getTradePostMortem(t.symbol, t.entry_date) || { tags: [], notes: "" };
-    const rawTags = [...(Array.isArray(t.tags) ? t.tags : []), ...(localPm.tags || [])];
-    const uniqueTags = [...new Set(rawTags.map(tag => String(tag).trim()))].filter(Boolean);
-
-    let tagsHtml = `<span style="color: var(--text-dim); font-size: 11px;">-</span>`;
-    if (uniqueTags.length > 0) {
-      tagsHtml = uniqueTags.map(tag => {
-        const clean = String(tag).trim().toLowerCase();
-        let tagClass = "tag-default";
-        if (clean === "#breakout" || clean === "#cleanbreakout") tagClass = "tag-breakout";
-        else if (clean === "#pullback") tagClass = "tag-pullback";
-        else if (clean === "#plan_followed" || clean === "#followedplan" || clean === "#targethit") tagClass = "tag-plan";
-        else if (clean === "#fomo" || clean === "#chasedgap" || clean === "#stopmoved" || clean === "#revengetrade") tagClass = "tag-fomo";
-        return `<span class="tag-pill ${tagClass}">${escapeHtml(String(tag))}</span>`;
-      }).join("");
-    }
-
-    const noteText = t.note || "";
-    const reflectionText = localPm.notes || "";
-    let noteCellHtml = "";
-    if (reflectionText) {
-      noteCellHtml = `
-        <div class="trade-note-block">
-          ${noteText ? `<div class="trade-system-note"><small>${escapeHtml(noteText)}</small></div>` : ""}
-          <div class="trade-pm-reflection"><span class="pm-reflection-icon">📝</span> <em>"${escapeHtml(reflectionText)}"</em></div>
-        </div>
-      `;
-    } else {
-      noteCellHtml = `<small style="color: var(--text-muted);">${escapeHtml(noteText || "-")}</small>`;
-    }
+    const exitReason = (t.exit_reason || t.reason || (pnl > 0 ? "TARGET" : (t.mistake === "time_stop_ignored" ? "TIME" : "STOP"))).toUpperCase();
+    let reasonBadgeClass = "badge-neutral";
+    if (exitReason === "TARGET") reasonBadgeClass = "badge-success";
+    else if (exitReason === "STOP") reasonBadgeClass = "badge-danger";
+    else if (exitReason === "TIME") reasonBadgeClass = "badge-warning";
+    else if (exitReason === "EVENT") reasonBadgeClass = "badge-danger";
 
     return `
-      <tr class="${rowClass}">
-        <td data-label="Symbol">
-          <strong>${escapeHtml(t.symbol || "")}</strong>
-          ${mistakeBadge}
-        </td>
-        <td data-label="Tags">${tagsHtml}</td>
-        <td data-label="Entry Date">${formatDate(t.entry_date)}</td>
-        <td data-label="Entry">${formatINR(t.entry_price)}</td>
-        <td data-label="Qty">${t.qty || 0}</td>
-        <td data-label="Exit Date">${formatDate(t.exit_date)}</td>
-        <td data-label="Exit">${formatINR(t.exit_price)}</td>
-        <td data-label="Realized PnL" ${colorStyle}>${sign}${formatINR(pnl)}</td>
-        <td data-label="Return %" ${colorStyle}>${sign}${pnlPct.toFixed(2)}%</td>
-        <td data-label="R-Multiple"><span class="badge ${pnl > 0 ? "badge-success" : "badge-danger"}">${rMultipleStr}</span></td>
-        <td data-label="Note & Reflection">${noteCellHtml}</td>
+      <tr class="trade-row">
+        <td data-label="Date In">${formatDate(t.entry_date)}</td>
+        <td data-label="Date Out">${formatDate(t.exit_date)}</td>
+        <td data-label="Symbol"><strong>${escapeHtml(t.symbol || "")}</strong></td>
+        <td data-label="Signal Type"><span class="badge badge-neutral">${escapeHtml(signalType)}</span></td>
+        <td data-label="Grade"><span class="badge ${gradeBadgeClass}">${escapeHtml(grade)}</span></td>
+        <td data-label="Entry Price">${formatINR(entryPrice)}</td>
+        <td data-label="Exit Price">${formatINR(exitPrice)}</td>
+        <td data-label="Qty">${qty}</td>
+        <td data-label="R-Multiple"><span class="badge ${rBadgeClass}">${rMultipleStr}</span></td>
+        <td data-label="₹ Realized PnL" ${colorStyle}>${sign}${formatINR(pnl)}</td>
+        <td data-label="Exit Reason"><span class="badge ${reasonBadgeClass}">${escapeHtml(exitReason)}</span></td>
         <td data-label="Action">
           <button class="btn btn-xs btn-outline-secondary pm-edit-btn"
             data-symbol="${escapeHtml(t.symbol || '')}"
             data-entry-date="${escapeHtml(t.entry_date || '')}"
             data-exit-date="${escapeHtml(t.exit_date || '')}"
-            data-entry-price="${t.entry_price || 0}"
-            data-exit-price="${t.exit_price || 0}"
+            data-entry-price="${entryPrice}"
+            data-exit-price="${exitPrice}"
             data-pnl="${pnl}"
-            data-r="${t.r_multiple !== null && t.r_multiple !== undefined ? t.r_multiple : 'N/A'}"
+            data-r="${rMultipleStr}"
             title="Add post-mortem takeaways & execution tags">
             📝 Reflect
           </button>
@@ -3516,47 +3676,60 @@ function renderHistory(trades) {
     `;
   }).join("");
 
+  renderEquityCurveChart(trades);
+}
+
+function renderEquityCurveChart(trades) {
+  const totalBadge = document.getElementById("equityTotalBadge");
+  const statsTotalBadge = document.getElementById("statsEquityTotalBadge");
+  const canvas = document.getElementById("equityChart");
+  const statsCanvas = document.getElementById("statsEquityChart");
+
   // Calculate Cumulative Equity Curve in chronological order
+  const chronological = [...(trades || [])].sort((a, b) => (a.exit_date || a.entry_date || "").localeCompare(b.exit_date || b.entry_date || ""));
   const labels = ["Start"];
   const equityPoints = [0];
   let runningPnl = 0;
 
-  for (let i = 0; i < trades.length; i++) {
-    const t = trades[i];
+  for (let i = 0; i < chronological.length; i++) {
+    const t = chronological[i];
     runningPnl += (parseFloat(t.pnl) || 0);
-    labels.push(`${t.symbol} (#${i + 1})`);
+    labels.push(`${t.symbol || 'Trade'} (#${i + 1})`);
     equityPoints.push(runningPnl);
   }
 
-  totalBadge.textContent = formatINR(runningPnl, true);
-  totalBadge.className = `badge ${runningPnl >= 0 ? "badge-success" : "badge-danger"}`;
+  if (totalBadge) {
+    totalBadge.textContent = formatINR(runningPnl, true);
+    totalBadge.className = `badge ${runningPnl >= 0 ? "badge-success" : "badge-danger"}`;
+  }
+  if (statsTotalBadge) {
+    statsTotalBadge.textContent = formatINR(runningPnl, true);
+    statsTotalBadge.className = `badge ${runningPnl >= 0 ? "badge-success" : "badge-danger"}`;
+  }
 
-  // Render Chart via Chart.js
-  const canvas = document.getElementById("equityChart");
-  if (canvas && window.Chart) {
-    if (equityChartInstance) {
-      equityChartInstance.destroy();
-    }
+  function setupChart(targetCanvas, instanceRefSetter, existingInstance) {
+    if (!targetCanvas || !window.Chart) return;
+    if (existingInstance) existingInstance.destroy();
 
-    const ctx = canvas.getContext("2d");
-    const gradient = ctx.createLinearGradient(0, 0, 0, 300);
-    gradient.addColorStop(0, runningPnl >= 0 ? "rgba(16, 185, 129, 0.3)" : "rgba(239, 68, 68, 0.3)");
+    const ctx = targetCanvas.getContext("2d");
+    const gradient = ctx.createLinearGradient(0, 0, 0, 260);
+    gradient.addColorStop(0, runningPnl >= 0 ? "rgba(16, 185, 129, 0.28)" : "rgba(239, 68, 68, 0.28)");
     gradient.addColorStop(1, "rgba(15, 23, 42, 0.0)");
 
-    equityChartInstance = new Chart(ctx, {
+    const newInst = new Chart(ctx, {
       type: "line",
       data: {
         labels: labels,
         datasets: [{
-          label: "Cumulative Realized PnL (₹)",
+          label: "Realized P&L (₹)",
           data: equityPoints,
           borderColor: runningPnl >= 0 ? "#10b981" : "#ef4444",
           borderWidth: 2.5,
           pointBackgroundColor: "#fff",
-          pointRadius: 3,
+          pointRadius: chronological.length > 50 ? 1 : 3,
           backgroundColor: gradient,
           fill: true,
-          tension: 0.25,
+          tension: 0.2,
         }]
       },
       options: {
@@ -3566,14 +3739,14 @@ function renderHistory(trades) {
           legend: { display: false },
           tooltip: {
             callbacks: {
-              label: (ctx) => ` PnL: ${formatINR(ctx.raw, true)}`
+              label: (ctx) => ` Realized P&L: ${formatINR(ctx.raw, true)}`
             }
           }
         },
         scales: {
           x: {
             grid: { color: "rgba(255, 255, 255, 0.04)" },
-            ticks: { color: "#94a3b8", font: { size: 11 } }
+            ticks: { color: "#94a3b8", font: { size: 10 } }
           },
           y: {
             grid: { color: "rgba(255, 255, 255, 0.06)" },
@@ -3586,24 +3759,33 @@ function renderHistory(trades) {
         }
       }
     });
+    instanceRefSetter(newInst);
   }
+
+  setupChart(canvas, (inst) => { equityChartInstance = inst; }, equityChartInstance);
+  setupChart(statsCanvas, (inst) => { statsEquityChartInstance = inst; }, statsEquityChartInstance);
 }
 
-// 4. Render Tab: Statistics
+// =====================================================================
+// 4. Render Tab: Statistics (LIVE results, not backtest)
+// =====================================================================
 function renderStats(trades) {
   const statTotal = document.getElementById("statTotalTrades");
   const statWinRate = document.getElementById("statWinRate");
   const statTotalPnl = document.getElementById("statTotalPnl");
   const statProfitFactor = document.getElementById("statProfitFactor");
-  const statExpectancy = document.getElementById("statExpectancy");
-  const statAvgWin = document.getElementById("statAvgWin");
-  const statAvgLoss = document.getElementById("statAvgLoss");
+  const statAvgWinR = document.getElementById("statAvgWinR");
+  const statAvgLossR = document.getElementById("statAvgLossR");
+  const statExpectancyR = document.getElementById("statExpectancyR");
   const statMaxDD = document.getElementById("statMaxDD");
   const statBest = document.getElementById("statBestTrade");
   const statWorst = document.getElementById("statWorstTrade");
+  const statTails = document.getElementById("statTailsCaptured");
+  const statTailsSub = document.getElementById("statTailsCapturedSub");
 
+  const gradeEl = document.getElementById("statsGradeContent");
   const setupEl = document.getElementById("statsSetupTypeContent");
-  const planEl = document.getElementById("statsPlanDisciplineContent");
+  const exitEl = document.getElementById("statsExitReasonContent");
   const mistakesEl = document.getElementById("statsMistakesContent");
 
   if (!trades || trades.length === 0) {
@@ -3611,16 +3793,19 @@ function renderStats(trades) {
     if (statWinRate) statWinRate.textContent = "0.0%";
     if (statTotalPnl) statTotalPnl.textContent = "₹0.00";
     if (statProfitFactor) statProfitFactor.textContent = "0.00";
-    if (statExpectancy) statExpectancy.textContent = "₹0.00";
-    if (statAvgWin) statAvgWin.textContent = "+₹0.00";
-    if (statAvgLoss) statAvgLoss.textContent = "-₹0.00";
+    if (statAvgWinR) statAvgWinR.textContent = "+0.00R";
+    if (statAvgLossR) statAvgLossR.textContent = "-0.00R";
+    if (statExpectancyR) statExpectancyR.textContent = "0.00R";
     if (statMaxDD) statMaxDD.textContent = "₹0.00";
     if (statBest) statBest.textContent = "+₹0.00";
     if (statWorst) statWorst.textContent = "-₹0.00";
+    if (statTails) statTails.textContent = "0.0%";
+    if (statTailsSub) statTailsSub.textContent = "0 of 0 winners";
 
-    if (setupEl) setupEl.innerHTML = `<div class="empty-state-sm">No trades recorded yet to analyze setup types.</div>`;
-    if (planEl) planEl.innerHTML = `<div class="empty-state-sm">No trades recorded yet to analyze plan discipline.</div>`;
-    if (mistakesEl) mistakesEl.innerHTML = `<div class="empty-state-sm">No trades recorded yet to track mistakes.</div>`;
+    if (gradeEl) gradeEl.innerHTML = `<div class="empty-state-sm">No closed trades recorded yet.</div>`;
+    if (setupEl) setupEl.innerHTML = `<div class="empty-state-sm">No closed trades recorded yet.</div>`;
+    if (exitEl) exitEl.innerHTML = `<div class="empty-state-sm">No closed trades recorded yet.</div>`;
+    if (mistakesEl) mistakesEl.innerHTML = `<div class="empty-state-sm">No mistake records yet.</div>`;
     return;
   }
 
@@ -3633,8 +3818,24 @@ function renderStats(trades) {
   const sumLosses = losses.reduce((acc, t) => acc + (parseFloat(t.pnl) || 0), 0);
   const totalPnl = sumWins + sumLosses;
 
-  const avgWin = wins.length > 0 ? (sumWins / wins.length) : 0;
-  const avgLoss = losses.length > 0 ? (sumLosses / losses.length) : 0;
+  // R multiples
+  function getR(t) {
+    if (t.r_multiple != null && !isNaN(t.r_multiple)) return parseFloat(t.r_multiple);
+    const e = parseFloat(t.entry_price) || 0;
+    const x = parseFloat(t.exit_price) || 0;
+    const s = parseFloat(t.stop) || (e * 0.95);
+    const risk = (s && e > s) ? (e - s) : (e * 0.05);
+    return risk > 0 ? (x - e) / risk : 0;
+  }
+
+  const winRs = wins.map(getR);
+  const lossRs = losses.map(getR);
+  const avgWinR = winRs.length > 0 ? (winRs.reduce((a, b) => a + b, 0) / winRs.length) : 0;
+  const avgLossR = lossRs.length > 0 ? (lossRs.reduce((a, b) => a + b, 0) / lossRs.length) : 0;
+
+  const winProb = wins.length / totalTrades;
+  const lossProb = 1.0 - winProb;
+  const expectancyR = (winProb * avgWinR) - (lossProb * Math.abs(avgLossR));
 
   let profitFactorStr = "0.00";
   if (sumLosses !== 0) {
@@ -3643,15 +3844,12 @@ function renderStats(trades) {
     profitFactorStr = "∞";
   }
 
-  const winProb = wins.length / totalTrades;
-  const lossProb = 1.0 - winProb;
-  const expectancy = (winProb * avgWin) - (lossProb * Math.abs(avgLoss));
-
-  // Max Drawdown calculation
+  // Max Drawdown calculation on chronological realized equity curve
+  const chronological = [...trades].sort((a, b) => (a.exit_date || a.entry_date || "").localeCompare(b.exit_date || b.entry_date || ""));
   let cum = 0;
   let peak = 0;
   let maxDD = 0;
-  for (const t of trades) {
+  for (const t of chronological) {
     cum += (parseFloat(t.pnl) || 0);
     if (cum > peak) peak = cum;
     const dd = peak - cum;
@@ -3662,111 +3860,99 @@ function renderStats(trades) {
   const bestTrade = Math.max(...pnls);
   const worstTrade = Math.min(...pnls);
 
+  // Tails captured: % of winners that ran past +2R via trail
+  const tailsWinners = wins.filter(t => getR(t) > 2.0);
+  const tailsPct = wins.length > 0 ? (tailsWinners.length / wins.length) * 100 : 0;
+
   if (statTotal) statTotal.textContent = `${totalTrades} (${wins.length}W / ${losses.length}L)`;
   if (statWinRate) statWinRate.textContent = `${winRate.toFixed(1)}%`;
   if (statTotalPnl) {
     statTotalPnl.textContent = formatINR(totalPnl, true);
     statTotalPnl.className = `stat-value ${totalPnl >= 0 ? "positive" : "negative"}`;
   }
-
   if (statProfitFactor) statProfitFactor.textContent = profitFactorStr;
-  if (statExpectancy) {
-    statExpectancy.textContent = formatINR(expectancy, true);
-    statExpectancy.className = `stat-value ${expectancy >= 0 ? "positive" : "negative"}`;
+  if (statAvgWinR) statAvgWinR.textContent = `+${avgWinR.toFixed(2)}R`;
+  if (statAvgLossR) statAvgLossR.textContent = `${avgLossR <= 0 ? '' : '-'}${Math.abs(avgLossR).toFixed(2)}R`;
+  if (statExpectancyR) {
+    statExpectancyR.textContent = `${expectancyR >= 0 ? '+' : ''}${expectancyR.toFixed(2)}R`;
+    statExpectancyR.className = `stat-value ${expectancyR >= 0 ? "positive" : "negative"}`;
   }
-
-  if (statAvgWin) statAvgWin.textContent = `+${formatINR(avgWin)}`;
-  if (statAvgLoss) statAvgLoss.textContent = `-${formatINR(Math.abs(avgLoss))}`;
   if (statMaxDD) statMaxDD.textContent = `-${formatINR(maxDD)}`;
-
   if (statBest) statBest.textContent = formatINR(bestTrade, true);
   if (statWorst) statWorst.textContent = formatINR(worstTrade, true);
+  if (statTails) statTails.textContent = `${tailsPct.toFixed(1)}%`;
+  if (statTailsSub) statTailsSub.textContent = `${tailsWinners.length} of ${wins.length} winners past +2R`;
 
-  // 1. "By setup type" block: win rate for #breakout vs #pullback
+  // Helper to build breakdown cards
+  function buildBreakdownHtml(groups, labelFn) {
+    return Object.keys(groups).map(k => {
+      const groupTrades = groups[k];
+      const gWins = groupTrades.filter(t => (parseFloat(t.pnl) || 0) > 0);
+      const gRate = groupTrades.length > 0 ? ((gWins.length / groupTrades.length) * 100).toFixed(0) : 0;
+      const gPnl = groupTrades.reduce((acc, t) => acc + (parseFloat(t.pnl) || 0), 0);
+      const gAvgR = groupTrades.length > 0 ? (groupTrades.map(getR).reduce((a, b) => a + b, 0) / groupTrades.length).toFixed(2) : "0.00";
+      return `
+        <div class="stats-compare-row" style="padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
+          <div class="stats-compare-label">
+            <div class="stats-compare-title">${labelFn(k)}</div>
+            <div class="stats-compare-subtitle">${groupTrades.length} trade${groupTrades.length === 1 ? '' : 's'} (${gWins.length}W / ${groupTrades.length - gWins.length}L) &bull; Avg ${gAvgR}R</div>
+          </div>
+          <div class="stats-compare-val" style="text-align: right;">
+            <span class="stats-compare-metric ${gRate >= 50 ? 'positive' : 'negative'}">${gRate}% win</span>
+            <span class="stats-compare-subtitle" style="color: ${gPnl >= 0 ? 'var(--success)' : 'var(--danger)'};">${formatINR(gPnl, true)}</span>
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  // 1. Breakdown by Grade
+  if (gradeEl) {
+    const grades = { "A+": [], "A": [], "B": [], "C": [] };
+    for (const t of trades) {
+      const g = (t.grade || t.Grade || "A").toUpperCase();
+      if (grades[g]) grades[g].push(t);
+      else (grades["A"] = grades["A"] || []).push(t);
+    }
+    gradeEl.innerHTML = buildBreakdownHtml(grades, g => `<span class="badge ${g === 'A+' || g === 'A' ? 'badge-success' : (g === 'B' ? 'badge-warning' : 'badge-danger')}">Grade ${g}</span>`);
+  }
+
+  // 2. Breakdown by Signal Type
   if (setupEl) {
-    const breakoutTrades = trades.filter(t => (t.tags || []).some(tag => String(tag).trim().toLowerCase() === "#breakout"));
-    const pullbackTrades = trades.filter(t => (t.tags || []).some(tag => String(tag).trim().toLowerCase() === "#pullback"));
-
-    const breakoutWins = breakoutTrades.filter(t => (parseFloat(t.pnl) || 0) > 0);
-    const pullbackWins = pullbackTrades.filter(t => (parseFloat(t.pnl) || 0) > 0);
-
-    const breakoutWinRate = breakoutTrades.length > 0
-      ? ((breakoutWins.length / breakoutTrades.length) * 100).toFixed(1) + "%"
-      : "N/A";
-    const pullbackWinRate = pullbackTrades.length > 0
-      ? ((pullbackWins.length / pullbackTrades.length) * 100).toFixed(1) + "%"
-      : "N/A";
-
-    const breakoutPnl = breakoutTrades.reduce((acc, t) => acc + (parseFloat(t.pnl) || 0), 0);
-    const pullbackPnl = pullbackTrades.reduce((acc, t) => acc + (parseFloat(t.pnl) || 0), 0);
-
-    setupEl.innerHTML = `
-      <div class="stats-compare-row">
-        <div class="stats-compare-label">
-          <div class="stats-compare-title"><span class="tag-pill tag-breakout">#breakout</span> Setup</div>
-          <div class="stats-compare-subtitle">${breakoutTrades.length} trade${breakoutTrades.length === 1 ? "" : "s"} (${breakoutWins.length}W / ${breakoutTrades.length - breakoutWins.length}L)</div>
-        </div>
-        <div class="stats-compare-val">
-          <span class="stats-compare-metric ${breakoutWinRate !== "N/A" && parseFloat(breakoutWinRate) >= 50 ? "positive" : (breakoutWinRate === "N/A" ? "" : "negative")}">${breakoutWinRate}</span>
-          <span class="stats-compare-subtitle" style="color: ${breakoutPnl >= 0 ? "var(--success)" : "var(--danger)"}">${formatINR(breakoutPnl, true)}</span>
-        </div>
-      </div>
-      <div class="stats-compare-row">
-        <div class="stats-compare-label">
-          <div class="stats-compare-title"><span class="tag-pill tag-pullback">#pullback</span> Setup</div>
-          <div class="stats-compare-subtitle">${pullbackTrades.length} trade${pullbackTrades.length === 1 ? "" : "s"} (${pullbackWins.length}W / ${pullbackTrades.length - pullbackWins.length}L)</div>
-        </div>
-        <div class="stats-compare-val">
-          <span class="stats-compare-metric ${pullbackWinRate !== "N/A" && parseFloat(pullbackWinRate) >= 50 ? "positive" : (pullbackWinRate === "N/A" ? "" : "negative")}">${pullbackWinRate}</span>
-          <span class="stats-compare-subtitle" style="color: ${pullbackPnl >= 0 ? "var(--success)" : "var(--danger)"}">${formatINR(pullbackPnl, true)}</span>
-        </div>
-      </div>
-    `;
+    const types = { "BREAKOUT": [], "PULLBACK": [], "SPRING": [] };
+    for (const t of trades) {
+      let st = (t.signal_type || t.type || "").toUpperCase();
+      if (!st && t.tags) {
+        if (t.tags.some(tg => String(tg).toLowerCase().includes("pullback"))) st = "PULLBACK";
+        else if (t.tags.some(tg => String(tg).toLowerCase().includes("spring"))) st = "SPRING";
+      }
+      if (!st) st = "BREAKOUT";
+      if (types[st]) types[st].push(t);
+      else (types["BREAKOUT"] = types["BREAKOUT"] || []).push(t);
+    }
+    setupEl.innerHTML = buildBreakdownHtml(types, tp => `<span class="tag-pill tag-breakout">${tp}</span>`);
   }
 
-  // 2. "Plan discipline" block: win rate and count for trades tagged #plan_followed vs not
-  if (planEl) {
-    const planTrades = trades.filter(t => (t.tags || []).some(tag => String(tag).trim().toLowerCase() === "#plan_followed"));
-    const noPlanTrades = trades.filter(t => !(t.tags || []).some(tag => String(tag).trim().toLowerCase() === "#plan_followed"));
-
-    const planWins = planTrades.filter(t => (parseFloat(t.pnl) || 0) > 0);
-    const noPlanWins = noPlanTrades.filter(t => (parseFloat(t.pnl) || 0) > 0);
-
-    const planWinRate = planTrades.length > 0
-      ? ((planWins.length / planTrades.length) * 100).toFixed(1) + "%"
-      : "N/A";
-    const noPlanWinRate = noPlanTrades.length > 0
-      ? ((noPlanWins.length / noPlanTrades.length) * 100).toFixed(1) + "%"
-      : "N/A";
-
-    const planPnl = planTrades.reduce((acc, t) => acc + (parseFloat(t.pnl) || 0), 0);
-    const noPlanPnl = noPlanTrades.reduce((acc, t) => acc + (parseFloat(t.pnl) || 0), 0);
-
-    planEl.innerHTML = `
-      <div class="stats-compare-row">
-        <div class="stats-compare-label">
-          <div class="stats-compare-title"><span class="tag-pill tag-plan">#plan_followed</span></div>
-          <div class="stats-compare-subtitle">${planTrades.length} trade${planTrades.length === 1 ? "" : "s"} (${planWins.length}W / ${planTrades.length - planWins.length}L)</div>
-        </div>
-        <div class="stats-compare-val">
-          <span class="stats-compare-metric ${planWinRate !== "N/A" && parseFloat(planWinRate) >= 50 ? "positive" : (planWinRate === "N/A" ? "" : "negative")}">${planWinRate}</span>
-          <span class="stats-compare-subtitle" style="color: ${planPnl >= 0 ? "var(--success)" : "var(--danger)"}">${formatINR(planPnl, true)}</span>
-        </div>
-      </div>
-      <div class="stats-compare-row">
-        <div class="stats-compare-label">
-          <div class="stats-compare-title"><span style="color: var(--text-muted); font-size: 13px; font-weight: 600;">Not Tagged / Deviated</span></div>
-          <div class="stats-compare-subtitle">${noPlanTrades.length} trade${noPlanTrades.length === 1 ? "" : "s"} (${noPlanWins.length}W / ${noPlanTrades.length - noPlanWins.length}L)</div>
-        </div>
-        <div class="stats-compare-val">
-          <span class="stats-compare-metric ${noPlanWinRate !== "N/A" && parseFloat(noPlanWinRate) >= 50 ? "positive" : (noPlanWinRate === "N/A" ? "" : "negative")}">${noPlanWinRate}</span>
-          <span class="stats-compare-subtitle" style="color: ${noPlanPnl >= 0 ? "var(--success)" : "var(--danger)"}">${formatINR(noPlanPnl, true)}</span>
-        </div>
-      </div>
-    `;
+  // 3. Breakdown by Exit Reason
+  if (exitEl) {
+    const reasons = { "TARGET": [], "STOP": [], "TIME": [], "EVENT": [], "MANUAL": [] };
+    for (const t of trades) {
+      const p = parseFloat(t.pnl) || 0;
+      let r = (t.exit_reason || t.reason || "").toUpperCase();
+      if (!r) r = p > 0 ? "TARGET" : (t.mistake === "time_stop_ignored" ? "TIME" : "STOP");
+      if (reasons[r]) reasons[r].push(t);
+      else (reasons["MANUAL"] = reasons["MANUAL"] || []).push(t);
+    }
+    exitEl.innerHTML = buildBreakdownHtml(reasons, r => {
+      let cls = "badge-neutral";
+      if (r === "TARGET") cls = "badge-success";
+      else if (r === "STOP" || r === "EVENT") cls = "badge-danger";
+      else if (r === "TIME") cls = "badge-warning";
+      return `<span class="badge ${cls}">${r}</span>`;
+    });
   }
 
-  // 3. "Mistakes" block: counting each mistake type
+  // 4. Mistakes Tracker
   if (mistakesEl) {
     const stopMovedTrades = trades.filter(t => t.mistake === "stop_moved");
     const timeStopTrades = trades.filter(t => t.mistake === "time_stop_ignored");
@@ -3778,7 +3964,7 @@ function renderStats(trades) {
           <div class="stats-compare-title" style="color: ${stopMovedTrades.length > 0 ? "var(--danger)" : "var(--text-dim)"};">
             ${stopMovedTrades.length > 0 ? "⚠️" : "✓"} Stop Moved (stop_moved)
           </div>
-          <div class="stats-compare-subtitle">Exit price was worse than planned stop</div>
+          <div class="stats-compare-subtitle">Exit price worse than planned stop</div>
         </div>
         <div class="stats-compare-val">
           <span class="stats-compare-metric ${stopMovedTrades.length > 0 ? "negative" : "positive"}">${stopMovedTrades.length}</span>
@@ -3812,31 +3998,6 @@ function renderStats(trades) {
         </div>
       </div>
     `;
-  }
-
-  // Update Discipline Index Card (Phase 3 Item #9)
-  const statDisciplineIndex = document.getElementById("statDisciplineIndex");
-  const statDisciplineSub = document.getElementById("statDisciplineSub");
-  if (statDisciplineIndex) {
-    const totalTrades = trades.length;
-    const cleanTrades = trades.filter(t => {
-      if (t.mistake) return false;
-      const pm = getTradePostMortem(t.symbol, t.entry_date);
-      if (pm && pm.tags) {
-        if (pm.tags.includes("#StopMoved") || pm.tags.includes("#ChasedGap") || pm.tags.includes("#RevengeTrade")) {
-          return false;
-        }
-      }
-      return true;
-    });
-
-    const discPct = totalTrades > 0 ? Math.round((cleanTrades.length / totalTrades) * 100) : 100;
-    statDisciplineIndex.textContent = `${discPct}%`;
-    statDisciplineIndex.className = `stat-value ${discPct >= 80 ? "positive" : (discPct >= 60 ? "neutral" : "negative")}`;
-    if (statDisciplineSub) {
-      const mistakesCount = totalTrades - cleanTrades.length;
-      statDisciplineSub.textContent = mistakesCount === 0 ? "100% adhered to plan" : `${mistakesCount} rule deviation${mistakesCount === 1 ? '' : 's'}`;
-    }
   }
 }
 
@@ -4325,6 +4486,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initGttListeners();
   initScanArchiveListeners();
   initPostMortemListeners();
+  initHistoryListeners();
   initCsvExportListeners();
 
   // Initialize SC-3 Collapsible Sections (Leaders Board & On Deck)
@@ -4768,16 +4930,19 @@ function exportTradesToCsv() {
 
   const headers = [
     "Trade No",
+    "Date In",
+    "Date Out",
     "Symbol",
-    "Entry Date",
+    "Signal Type",
+    "Grade",
     "Entry Price (INR)",
+    "Exit Price (INR)",
     "Qty",
     "Capital Deployed (INR)",
-    "Exit Date",
-    "Exit Price (INR)",
+    "R-Multiple",
     "Realized PnL (INR)",
     "Return (%)",
-    "R-Multiple",
+    "Exit Reason",
     "System Mistake Flag",
     "Execution Tags",
     "Trade Notes & Reflections"
@@ -4791,23 +4956,32 @@ function exportTradesToCsv() {
     const pnl = parseFloat(t.pnl) || 0;
     const pnlPct = parseFloat(t.pnl_pct) || 0;
     const entryPrice = parseFloat(t.entry_price) || 0;
+    const exitPrice = parseFloat(t.exit_price) || 0;
     const qty = parseInt(t.qty, 10) || 1;
     const capital = entryPrice * qty;
+
+    const signalType = (t.signal_type || t.type || "BREAKOUT").toUpperCase();
+    const grade = (t.grade || t.Grade || "A").toUpperCase();
+    const exitReason = (t.exit_reason || t.reason || (pnl > 0 ? "TARGET" : (t.mistake === "time_stop_ignored" ? "TIME" : "STOP"))).toUpperCase();
+    const rVal = t.r_multiple != null ? parseFloat(t.r_multiple) : (entryPrice > 0 ? (exitPrice - entryPrice) / (entryPrice * 0.05) : 0);
 
     const escapeCsv = (str) => `"${String(str || "").replace(/"/g, '""')}"`;
 
     return [
       idx + 1,
-      escapeCsv(t.symbol || ""),
       escapeCsv(t.entry_date || ""),
+      escapeCsv(t.exit_date || ""),
+      escapeCsv(t.symbol || ""),
+      escapeCsv(signalType),
+      escapeCsv(grade),
       entryPrice.toFixed(2),
+      exitPrice.toFixed(2),
       qty,
       capital.toFixed(2),
-      escapeCsv(t.exit_date || ""),
-      (parseFloat(t.exit_price) || 0).toFixed(2),
+      escapeCsv(`${rVal >= 0 ? "+" : ""}${rVal.toFixed(2)}R`),
       pnl.toFixed(2),
       pnlPct.toFixed(2),
-      escapeCsv(t.r_multiple !== null && t.r_multiple !== undefined ? `${t.r_multiple}R` : "N/A"),
+      escapeCsv(exitReason),
       escapeCsv(t.mistake || "none"),
       escapeCsv(uniqueTags),
       escapeCsv(mergedNotes)

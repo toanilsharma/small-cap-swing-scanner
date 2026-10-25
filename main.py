@@ -2762,6 +2762,220 @@ def save_open_positions(data: List[Dict[str, Any]]) -> None:
     save_json_file(OPEN_POSITIONS_FILE, data)
 
 
+def compute_portfolio_heat(
+    open_positions: List[Dict[str, Any]],
+    capital: float = CAPITAL,
+    max_heat_pct: float = MAX_TOTAL_HEAT_PCT
+) -> Dict[str, Any]:
+    """
+    Computes portfolio heat gauge metrics across all open positions.
+    Total open risk = sum((entry - stop) * qty).
+    Heat percentage = total_risk / capital.
+    Heat gauge percentage = total_risk / (max_heat_pct * capital) * 100%.
+    Status:
+      - green: < 60%
+      - amber: 60% - 90%
+      - red: > 90%
+    """
+    total_risk = 0.0
+    position_heats = []
+
+    for pos in open_positions:
+        sym = pos.get("symbol", "")
+        entry = float(pos.get("entry_price") or pos.get("entry") or 0.0)
+        qty = float(pos.get("qty") or 0.0)
+        stop = pos.get("stop")
+        if stop is not None and float(stop) > 0 and entry > float(stop):
+            risk_unit = entry - float(stop)
+        else:
+            risk_unit = entry * 0.05
+        pos_risk = risk_unit * qty
+        total_risk += pos_risk
+
+        pct_capital = (pos_risk / capital * 100.0) if capital > 0 else 0.0
+        position_heats.append({
+            "symbol": sym,
+            "entry": round(entry, 2),
+            "qty": int(qty),
+            "stop": round(float(stop), 2) if stop is not None else None,
+            "risk_inr": round(pos_risk, 2),
+            "risk_pct_capital": round(pct_capital, 2),
+        })
+
+    max_heat_budget = max_heat_pct * capital
+    heat_pct = (total_risk / capital * 100.0) if capital > 0 else 0.0
+    gauge_pct = (total_risk / max_heat_budget * 100.0) if max_heat_budget > 0 else 0.0
+
+    if gauge_pct < 60.0:
+        heat_status = "green"
+    elif gauge_pct <= 90.0:
+        heat_status = "amber"
+    else:
+        heat_status = "red"
+
+    return {
+        "total_risk": round(total_risk, 2),
+        "capital": capital,
+        "max_heat_budget": round(max_heat_budget, 2),
+        "heat_pct": round(heat_pct, 2),
+        "gauge_pct": round(gauge_pct, 1),
+        "heat_status": heat_status,
+        "positions": position_heats,
+    }
+
+
+def compute_live_journal_stats(trades: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """
+    Calculates live trading journal performance statistics from closed trades.
+    Includes win rate, avg win/loss R, expectancy R, profit factor, max drawdown,
+    best/worst trades, breakdowns by grade, signal_type, and exit_reason,
+    and tails captured percentage (winners extending past +2R).
+    """
+    if not trades:
+        return {
+            "total_trades": 0,
+            "wins": 0,
+            "losses": 0,
+            "win_rate": 0.0,
+            "total_pnl": 0.0,
+            "profit_factor": 0.0,
+            "avg_win_r": 0.0,
+            "avg_loss_r": 0.0,
+            "expectancy_r": 0.0,
+            "max_drawdown": 0.0,
+            "best_trade": 0.0,
+            "worst_trade": 0.0,
+            "tails_captured_pct": 0.0,
+            "by_grade": {},
+            "by_signal_type": {},
+            "by_exit_reason": {},
+        }
+
+    total_trades = len(trades)
+    wins = [t for t in trades if float(t.get("pnl") or 0.0) > 0]
+    losses = [t for t in trades if float(t.get("pnl") or 0.0) <= 0]
+
+    win_rate = (len(wins) / total_trades * 100.0) if total_trades > 0 else 0.0
+    sum_wins_pnl = sum(float(t.get("pnl") or 0.0) for t in wins)
+    sum_losses_pnl = sum(float(t.get("pnl") or 0.0) for t in losses)
+    total_pnl = sum_wins_pnl + sum_losses_pnl
+
+    if sum_losses_pnl != 0:
+        profit_factor = round(sum_wins_pnl / abs(sum_losses_pnl), 2)
+    elif sum_wins_pnl > 0:
+        profit_factor = 999.0
+    else:
+        profit_factor = 0.0
+
+    # R-Multiple calculations
+    win_rs = []
+    for t in wins:
+        if t.get("r_multiple") is not None:
+            win_rs.append(float(t["r_multiple"]))
+        elif t.get("exit_price") and t.get("entry_price") and t.get("stop"):
+            risk = float(t["entry_price"]) - float(t["stop"])
+            if risk > 0:
+                win_rs.append((float(t["exit_price"]) - float(t["entry_price"])) / risk)
+
+    loss_rs = []
+    for t in losses:
+        if t.get("r_multiple") is not None:
+            loss_rs.append(float(t["r_multiple"]))
+        elif t.get("exit_price") and t.get("entry_price") and t.get("stop"):
+            risk = float(t["entry_price"]) - float(t["stop"])
+            if risk > 0:
+                loss_rs.append((float(t["exit_price"]) - float(t["entry_price"])) / risk)
+
+    avg_win_r = round(sum(win_rs) / len(win_rs), 2) if win_rs else 0.0
+    avg_loss_r = round(sum(loss_rs) / len(loss_rs), 2) if loss_rs else 0.0
+
+    win_prob = len(wins) / total_trades if total_trades > 0 else 0.0
+    loss_prob = 1.0 - win_prob
+    expectancy_r = round((win_prob * avg_win_r) - (loss_prob * abs(avg_loss_r)), 2)
+
+    # Chronological Max Drawdown
+    sorted_trades = sorted(trades, key=lambda x: str(x.get("exit_date") or x.get("entry_date") or ""))
+    cum = 0.0
+    peak = 0.0
+    max_dd = 0.0
+    for t in sorted_trades:
+        cum += float(t.get("pnl") or 0.0)
+        if cum > peak:
+            peak = cum
+        dd = peak - cum
+        if dd > max_dd:
+            max_dd = dd
+
+    pnls = [float(t.get("pnl") or 0.0) for t in trades]
+    best_trade = round(max(pnls), 2) if pnls else 0.0
+    worst_trade = round(min(pnls), 2) if pnls else 0.0
+
+    # Tails Captured (% winners running past +2R via trailing stop)
+    tails_count = 0
+    for t in wins:
+        r_val = float(t.get("r_multiple") or 0.0)
+        reason = str(t.get("exit_reason") or t.get("reason") or "").lower()
+        if r_val >= 2.0 or "trail" in reason:
+            tails_count += 1
+    tails_captured_pct = round((tails_count / len(wins) * 100.0) if wins else 0.0, 1)
+
+    # Breakdowns by grade, signal_type, exit_reason
+    by_grade: Dict[str, Dict[str, Any]] = {}
+    by_signal: Dict[str, Dict[str, Any]] = {}
+    by_exit: Dict[str, Dict[str, Any]] = {}
+
+    for t in trades:
+        g = str(t.get("grade") or t.get("Grade") or "Unknown").upper()
+        if g not in by_grade:
+            by_grade[g] = {"count": 0, "wins": 0, "pnl": 0.0}
+        by_grade[g]["count"] += 1
+        p = float(t.get("pnl") or 0.0)
+        by_grade[g]["pnl"] += p
+        if p > 0:
+            by_grade[g]["wins"] += 1
+
+        st = str(t.get("signal_type") or t.get("type") or "BREAKOUT").upper()
+        if st not in by_signal:
+            by_signal[st] = {"count": 0, "wins": 0, "pnl": 0.0}
+        by_signal[st]["count"] += 1
+        by_signal[st]["pnl"] += p
+        if p > 0:
+            by_signal[st]["wins"] += 1
+
+        er = str(t.get("exit_reason") or t.get("reason") or "MANUAL").upper()
+        if er not in by_exit:
+            by_exit[er] = {"count": 0, "wins": 0, "pnl": 0.0}
+        by_exit[er]["count"] += 1
+        by_exit[er]["pnl"] += p
+        if p > 0:
+            by_exit[er]["wins"] += 1
+
+    for d in (by_grade, by_signal, by_exit):
+        for k, v in d.items():
+            cnt = v["count"]
+            v["win_rate"] = round((v["wins"] / cnt * 100.0) if cnt > 0 else 0.0, 1)
+            v["pnl"] = round(v["pnl"], 2)
+
+    return {
+        "total_trades": total_trades,
+        "wins": len(wins),
+        "losses": len(losses),
+        "win_rate": round(win_rate, 1),
+        "total_pnl": round(total_pnl, 2),
+        "profit_factor": profit_factor,
+        "avg_win_r": avg_win_r,
+        "avg_loss_r": avg_loss_r,
+        "expectancy_r": expectancy_r,
+        "max_drawdown": round(max_dd, 2),
+        "best_trade": best_trade,
+        "worst_trade": worst_trade,
+        "tails_captured_pct": tails_captured_pct,
+        "by_grade": by_grade,
+        "by_signal_type": by_signal,
+        "by_exit_reason": by_exit,
+    }
+
+
 def get_updates(offset: Optional[int] = None) -> List[Dict[str, Any]]:
     """
     Call Telegram getUpdates API with the bot token and an optional offset.

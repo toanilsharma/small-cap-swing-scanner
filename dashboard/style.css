@@ -4654,3 +4654,220 @@ th .term-lookup {
   margin: 12px 0;
   line-height: 1.6;
 }
+
+/* =====================================================================
+   SC-C: LIVE-MONEY VIEWS & JOURNAL STYLES
+   ===================================================================== */
+.heat-gauge-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+}
+
+.heat-gauge-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.heat-gauge-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.heat-gauge-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.heat-gauge-sub {
+  font-size: 11.5px;
+  color: var(--text-dim);
+}
+
+.heat-gauge-meter-wrapper {
+  margin: 10px 0 14px 0;
+}
+
+.heat-gauge-track {
+  position: relative;
+  width: 100%;
+  height: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 7px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.heat-gauge-bar {
+  height: 100%;
+  border-radius: 7px;
+  transition: width 0.4s ease, background-color 0.3s ease;
+}
+
+.heat-gauge-bar.green {
+  background: linear-gradient(90deg, #10b981, #22c55e);
+}
+
+.heat-gauge-bar.amber {
+  background: linear-gradient(90deg, #f59e0b, #eab308);
+}
+
+.heat-gauge-bar.red {
+  background: linear-gradient(90deg, #ef4444, #dc2626);
+}
+
+.heat-gauge-scale {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10.5px;
+  color: var(--text-dim);
+  margin-top: 4px;
+}
+
+.per-name-heat-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.per-name-heat-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.per-name-heat-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.per-name-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  color: var(--text-main);
+}
+
+.per-name-chip strong {
+  color: #fff;
+}
+
+.active-exit-rule-box {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin: 10px 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-main);
+}
+
+.active-exit-rule-box .rule-title {
+  font-weight: 700;
+  color: #38bdf8;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.history-controls-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 16px;
+}
+
+.history-filters-group {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.h-input-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.history-date-input,
+.history-select {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: #fff;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+.history-actions-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.live-stats-disclaimer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(56, 189, 248, 0.08);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 12.5px;
+  color: #bae6fd;
+  margin-bottom: 18px;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.btn-mark-sell {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #f87171;
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.btn-mark-sell:hover {
+  background: rgba(239, 68, 68, 0.25);
+  color: #fff;
+  border-color: #ef4444;
+}

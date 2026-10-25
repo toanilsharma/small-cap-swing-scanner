@@ -375,3 +375,75 @@ def test_correlation_and_mtf_diagnostics():
     assert "Risk 1% (gap-capped @20%)" in lines[3]
 
 
+def test_journal_views_no_crash():
+    """
+    Hermetic test feeding a 1-trade + 1-open fixture.
+    Asserts the render / computation functions return without throwing
+    and that heat math = risk / CAPITAL correctly.
+    """
+    import main
+
+    # 1-open fixture
+    open_fixture = [
+        {
+            "symbol": "TEST1.NS",
+            "entry_price": 100.0,
+            "stop": 93.0,
+            "qty": 100,
+            "entry_date": "2026-10-20"
+        }
+    ]
+
+    # 1-trade fixture
+    trade_fixture = [
+        {
+            "symbol": "TEST1.NS",
+            "entry_date": "2026-10-10",
+            "exit_date": "2026-10-18",
+            "entry_price": 100.0,
+            "exit_price": 114.0,
+            "stop": 93.0,
+            "qty": 100,
+            "pnl": 1400.0,
+            "r_multiple": 2.0,
+            "signal_type": "BREAKOUT",
+            "grade": "A",
+            "exit_reason": "TARGET",
+        }
+    ]
+
+    # Portfolio Heat Calculation
+    heat = main.compute_portfolio_heat(open_fixture, capital=200000.0, max_heat_pct=0.05)
+    expected_risk = (100.0 - 93.0) * 100.0  # 700.0
+    expected_pct_capital = round((expected_risk / 200000.0) * 100.0, 2)  # 0.35%
+
+    assert heat["total_risk"] == expected_risk
+    assert heat["heat_pct"] == expected_pct_capital
+    assert heat["max_heat_budget"] == 10000.0
+    assert heat["gauge_pct"] == 7.0
+    assert heat["heat_status"] == "green"
+    assert len(heat["positions"]) == 1
+
+    # Live Journal Stats Calculation
+    stats = main.compute_live_journal_stats(trade_fixture)
+    assert stats["total_trades"] == 1
+    assert stats["wins"] == 1
+    assert stats["losses"] == 0
+    assert stats["win_rate"] == 100.0
+    assert stats["total_pnl"] == 1400.0
+    assert stats["expectancy_r"] == 2.0
+    assert stats["tails_captured_pct"] == 100.0
+    assert "A" in stats["by_grade"]
+    assert "BREAKOUT" in stats["by_signal_type"]
+    assert "TARGET" in stats["by_exit_reason"]
+
+    # Assert empty fixtures also execute cleanly without crashing
+    empty_heat = main.compute_portfolio_heat([])
+    assert empty_heat["total_risk"] == 0.0
+    assert empty_heat["heat_pct"] == 0.0
+
+    empty_stats = main.compute_live_journal_stats([])
+    assert empty_stats["total_trades"] == 0
+
+
+

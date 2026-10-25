@@ -480,9 +480,10 @@
         </div>
       </div>
 
+      <!-- LIVE OPEN POSITIONS SUMMARY STRIP -->
       <div class="summary-strip">
         <div class="stat-card">
-          <div class="stat-label"><span class="term-lookup" data-term="Unrealized PnL">Total Unrealized PnL</span></div>
+          <div class="stat-label"><span class="term-lookup" data-term="Unrealized P&L">Total Unrealized PnL</span></div>
           <div id="openTotalPnl" class="stat-value neutral">₹0.00</div>
         </div>
         <div class="stat-card">
@@ -494,13 +495,42 @@
           <div id="openCapitalDeployed" class="stat-value">₹0.00</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label"><span class="term-lookup" data-term="Portfolio heat">Portfolio Heat (Risk)</span></div>
-          <div id="openPortfolioHeat" class="stat-value neutral">0.0%</div>
+          <div class="stat-label"><span class="term-lookup" data-term="Portfolio Heat">Portfolio Heat (Risk)</span></div>
+          <div id="openPortfolioHeat" class="stat-value positive">0.0%</div>
           <div id="openPortfolioHeatSub" class="stat-sub-text">₹0 at risk across 0 trades</div>
         </div>
       </div>
 
-      <!-- SECTOR CONCENTRATION ALERT BANNER (Item #6) -->
+      <!-- PORTFOLIO HEAT GAUGE (SC-C) -->
+      <div id="portfolioHeatGaugeCard" class="heat-gauge-card">
+        <div class="heat-gauge-header">
+          <div class="heat-gauge-title-group">
+            <span style="font-size: 16px;">🔥</span>
+            <span class="heat-gauge-title">Portfolio Heat &amp; Risk Budget</span>
+            <span id="heatGaugeBadge" class="badge badge-success">0.0% Used</span>
+          </div>
+          <span class="heat-gauge-sub" id="heatGaugeBudgetInfo">Max Heat Budget: ₹10,000 (5.0% of ₹2,00,000)</span>
+        </div>
+        <div class="heat-gauge-meter-wrapper">
+          <div class="heat-gauge-track">
+            <div id="heatGaugeBar" class="heat-gauge-bar green" style="width: 0%;"></div>
+          </div>
+          <div class="heat-gauge-scale">
+            <span>0% (₹0)</span>
+            <span>60% (₹6,000 Caution)</span>
+            <span>90% (₹9,000 Critical)</span>
+            <span>100% (₹10,000 Cap)</span>
+          </div>
+        </div>
+        <div class="per-name-heat-section">
+          <div class="per-name-heat-title">Open Risk by Position:</div>
+          <div id="perNameHeatList" class="per-name-heat-list">
+            <span style="font-size: 11.5px; color: var(--text-dim);">No active open positions.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- CONCENTRATION WARNING ALERT BANNER -->
       <div id="openPositionsSectorAlert" class="positions-alert-banner" style="display: none;"></div>
 
       <!-- EVENT RADAR DISCIPLINE CARD / ALERT BANNER -->
@@ -517,7 +547,7 @@
           <span class="correlation-hint">Pairwise 60d Pearson corr &bull; universe beta</span>
         </div>
         <div id="openConcentrationAlert" class="concentration-alert-banner" style="display: none;">
-          ⚠️ <strong>Concentration Warning:</strong> Elevated portfolio risk (pairwise correlation &gt; 0.70 or &gt;2 positions in the same sector).
+          ⚠️ <strong>Concentration Warning:</strong> Elevated portfolio risk (pairwise correlation &gt; 0.70 or &gt;2 positions in the same sector). Diversify small-cap exposure.
         </div>
         <div id="openCorrelationGrid" class="correlation-grid-wrapper"></div>
       </div>
@@ -527,22 +557,19 @@
           <thead>
             <tr>
               <th>Symbol</th>
-              <th>Entry Date</th>
+              <th>Qty</th>
               <th>Entry Price</th>
-              <th><span class="term-lookup" data-term="Position size">Qty</span></th>
-              <th><span class="term-lookup" data-term="Stop loss">Stop</span></th>
-              <th><span class="term-lookup" data-term="Target">Target</span></th>
-              <th>Last Price</th>
-              <th><span class="term-lookup" data-term="Unrealized PnL">Unrealized PnL</span></th>
-              <th><span class="term-lookup" data-term="% to Stop">% to Stop</span></th>
-              <th><span class="term-lookup" data-term="% to Target">% to Target</span></th>
-              <th><span class="term-lookup" data-term="R-multiple">R-Trajectory &amp; Progress</span></th>
-              <th>Action</th>
+              <th>Last Close</th>
+              <th><span class="term-lookup" data-term="Unrealized P&L">Unrealized P&amp;L</span></th>
+              <th><span class="term-lookup" data-term="R-multiple">R-Multiple</span></th>
+              <th>Days Held</th>
+              <th>Actions</th>
+              <th style="width: 44px; text-align: right;"></th>
             </tr>
           </thead>
           <tbody id="openPositionsBody">
             <tr>
-              <td colspan="12" class="empty-state">Loading active positions...</td>
+              <td colspan="9" class="empty-state">Loading active positions...</td>
             </tr>
           </tbody>
         </table>
@@ -623,21 +650,70 @@
         </div>
       </div>
 
-      <div class="table-scroll" tabindex="0" style="margin-top: 24px;">
+      <!-- Trade History Filters & Controls (SC-C) -->
+      <div class="history-controls-bar" style="margin-top: 20px;">
+        <div class="history-filters-group">
+          <div class="h-input-group">
+            <label for="historyStartDate">From:</label>
+            <input type="date" id="historyStartDate" class="history-date-input" />
+          </div>
+          <div class="h-input-group">
+            <label for="historyEndDate">To:</label>
+            <input type="date" id="historyEndDate" class="history-date-input" />
+          </div>
+          <div class="h-input-group">
+            <label for="historyGradeFilter">Grade:</label>
+            <select id="historyGradeFilter" class="history-select">
+              <option value="all">All Grades</option>
+              <option value="A_plus_A">Grade A+ / A</option>
+              <option value="B">Grade B</option>
+              <option value="C">Grade C</option>
+            </select>
+          </div>
+          <div class="h-input-group">
+            <label for="historyExitFilter">Exit Reason:</label>
+            <select id="historyExitFilter" class="history-select">
+              <option value="all">All Reasons</option>
+              <option value="TARGET">TARGET (2R)</option>
+              <option value="STOP">STOP LOSS</option>
+              <option value="TIME">TIME STOP (Day 5)</option>
+              <option value="EVENT">EVENT Blackout</option>
+              <option value="MANUAL">MANUAL</option>
+            </select>
+          </div>
+          <div class="h-input-group">
+            <label for="historySortSelect">Sort:</label>
+            <select id="historySortSelect" class="history-select">
+              <option value="exit_desc">Date Out (Newest)</option>
+              <option value="exit_asc">Date Out (Oldest)</option>
+              <option value="pnl_desc">P&amp;L (Highest)</option>
+              <option value="pnl_asc">P&amp;L (Lowest)</option>
+              <option value="r_desc">R-Multiple (Highest)</option>
+              <option value="symbol_asc">Symbol (A-Z)</option>
+            </select>
+          </div>
+        </div>
+        <div class="history-actions-group">
+          <span id="historyCountStatus" style="font-size: 12px; color: var(--text-dim);">Showing 0 trades</span>
+          <button id="resetHistoryFiltersBtn" class="btn btn-xs btn-secondary" style="display: none;">Reset</button>
+        </div>
+      </div>
+
+      <div class="table-scroll" tabindex="0">
         <table id="tradesTable">
           <thead>
             <tr>
+              <th>Date In</th>
+              <th>Date Out</th>
               <th>Symbol</th>
-              <th>Tags</th>
-              <th>Entry Date</th>
-              <th>Entry</th>
-              <th><span class="term-lookup" data-term="Position size">Qty</span></th>
-              <th>Exit Date</th>
-              <th>Exit</th>
-              <th><span class="term-lookup" data-term="Realized PnL">Realized PnL</span></th>
-              <th>Return %</th>
+              <th>Signal Type</th>
+              <th>Grade</th>
+              <th>Entry Price</th>
+              <th>Exit Price</th>
+              <th>Qty</th>
               <th><span class="term-lookup" data-term="R-multiple">R-Multiple</span></th>
-              <th>Note &amp; Reflection</th>
+              <th><span class="term-lookup" data-term="Realized PnL">₹ Realized PnL</span></th>
+              <th>Exit Reason</th>
               <th>Action</th>
             </tr>
           </thead>
@@ -652,22 +728,22 @@
 
     <!-- TAB 4: PERFORMANCE STATS -->
     <section id="tabStats" class="tab-content">
-      <!-- Tab Guide Banner -->
-      <div class="tab-guide-banner" id="bannerStats" data-tab-banner="stats">
-        <div class="tab-guide-content">
-          <span class="tab-guide-icon">💡</span>
-          <span class="tab-guide-text">Your report card. Judge the system over 20+ trades, not 2.</span>
+      <!-- Live vs Backtest Note Banner (SC-C) -->
+      <div class="live-stats-disclaimer">
+        <span style="font-size: 16px;">ℹ️</span>
+        <div>
+          <strong>Live Performance Journal:</strong> Live = your actual logged trades; see <a href="javascript:void(0)" onclick="document.querySelector('[data-tab=tabBacktest]').click()" style="color: #38bdf8; text-decoration: underline; font-weight: 600;">Backtest tab</a> for rules-replay over history.
         </div>
-        <button class="tab-guide-dismiss" title="Dismiss banner" aria-label="Dismiss">×</button>
       </div>
 
-      <div style="display: flex; justify-content: flex-end; margin-bottom: 12px;">
+      <div style="display: flex; justify-content: flex-end; margin-bottom: 14px;">
         <button id="exportStatsCsvBtn" class="btn btn-xs btn-outline-primary" title="Export closed trade journal to CSV for Excel / Tax calculations">
           📥 Export Journal (CSV)
         </button>
       </div>
 
-      <div class="summary-strip">
+      <!-- Realized Metrics Stat Grid -->
+      <div class="stat-grid">
         <div class="stat-card">
           <div class="stat-label">Total Closed Trades</div>
           <div id="statTotalTrades" class="stat-value">0</div>
@@ -685,16 +761,16 @@
           <div id="statProfitFactor" class="stat-value">0.00</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label"><span class="term-lookup" data-term="Expectancy">Expectancy / Trade</span></div>
-          <div id="statExpectancy" class="stat-value">₹0.00</div>
+          <div class="stat-label"><span class="term-lookup" data-term="R-multiple">Avg Win R</span></div>
+          <div id="statAvgWinR" class="stat-value positive">+0.00R</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">Average Win</div>
-          <div id="statAvgWin" class="stat-value positive">+₹0.00</div>
+          <div class="stat-label"><span class="term-lookup" data-term="R-multiple">Avg Loss R</span></div>
+          <div id="statAvgLossR" class="stat-value negative">-0.00R</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">Average Loss</div>
-          <div id="statAvgLoss" class="stat-value negative">-₹0.00</div>
+          <div class="stat-label"><span class="term-lookup" data-term="Expectancy">Expectancy R</span></div>
+          <div id="statExpectancyR" class="stat-value">0.00R</div>
         </div>
         <div class="stat-card">
           <div class="stat-label"><span class="term-lookup" data-term="Max drawdown">Max Drawdown</span></div>
@@ -709,52 +785,77 @@
           <div id="statWorstTrade" class="stat-value negative">-₹0.00</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label"><span class="term-lookup" data-term="Discipline index">Discipline Index</span></div>
-          <div id="statDisciplineIndex" class="stat-value positive">100%</div>
-          <div id="statDisciplineSub" class="stat-sub-text">0 mistakes flagged</div>
+          <div class="stat-label"><span class="term-lookup" data-term="Tail capture">Tails Captured (&gt;2R)</span></div>
+          <div id="statTailsCaptured" class="stat-value highlight">0.0%</div>
+          <div id="statTailsCapturedSub" class="stat-sub-text">0 of 0 winners</div>
         </div>
       </div>
 
-      <!-- Advanced Discipline & Setup Analytics -->
-      <div class="stats-insights-section">
-        <h2 class="stats-section-title"><span>🧠</span> Discipline & Setup Breakdown</h2>
+      <!-- Realized Equity Curve Chart -->
+      <div class="chart-card" style="margin-bottom: 24px;">
+        <div class="chart-header">
+          <h2 class="chart-title"><span>📈</span> Realized Equity Curve (Closed P&amp;L)</h2>
+          <span id="statsEquityTotalBadge" class="badge badge-success">₹0.00</span>
+        </div>
+        <div class="canvas-wrapper" style="height: 260px;">
+          <canvas id="statsEquityChart"></canvas>
+        </div>
+      </div>
 
-        <div class="stats-insights-grid">
-          <!-- 1. By setup type -->
+      <!-- Performance Breakdowns & Analytics -->
+      <div class="stats-insights-section">
+        <h2 class="stats-section-title"><span>🧠</span> Performance &amp; Discipline Breakdowns</h2>
+
+        <div class="stats-insights-grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
+          <!-- 1. By Grade -->
+          <div class="stats-insight-card">
+            <div class="stats-insight-header">
+              <span class="stats-insight-icon">🏷️</span>
+              <div>
+                <h3 class="stats-insight-title">By Setup Grade</h3>
+                <span class="stats-insight-sub">Win rate and P&amp;L by Grade A+/A vs B/C</span>
+              </div>
+            </div>
+            <div id="statsGradeContent" class="stats-insight-body">
+              <div class="empty-state-sm">No closed trades recorded yet</div>
+            </div>
+          </div>
+
+          <!-- 2. By Signal Type -->
           <div class="stats-insight-card">
             <div class="stats-insight-header">
               <span class="stats-insight-icon">🎯</span>
               <div>
-                <h3 class="stats-insight-title">By Setup Type</h3>
-                <span class="stats-insight-sub">Win rate for #breakout vs #pullback</span>
+                <h3 class="stats-insight-title">By Signal Type</h3>
+                <span class="stats-insight-sub">Breakout vs Pullback vs Spring</span>
               </div>
             </div>
             <div id="statsSetupTypeContent" class="stats-insight-body">
-              <div class="empty-state-sm">No setup tag data yet</div>
+              <div class="empty-state-sm">No closed trades recorded yet</div>
             </div>
           </div>
 
-          <!-- 2. Plan discipline -->
+          <!-- 3. By Exit Reason -->
           <div class="stats-insight-card">
             <div class="stats-insight-header">
-              <span class="stats-insight-icon">📋</span>
+              <span class="stats-insight-icon">🚪</span>
               <div>
-                <h3 class="stats-insight-title">Plan Discipline</h3>
-                <span class="stats-insight-sub">#plan_followed vs untagged / deviated</span>
+                <h3 class="stats-insight-title">By Exit Reason</h3>
+                <span class="stats-insight-sub">Target (2R) vs Stop vs Time vs Event</span>
               </div>
             </div>
-            <div id="statsPlanDisciplineContent" class="stats-insight-body">
-              <div class="empty-state-sm">No discipline tag data yet</div>
+            <div id="statsExitReasonContent" class="stats-insight-body">
+              <div class="empty-state-sm">No closed trades recorded yet</div>
             </div>
           </div>
 
-          <!-- 3. Mistakes -->
+          <!-- 4. Mistakes Tracker -->
           <div class="stats-insight-card">
             <div class="stats-insight-header">
               <span class="stats-insight-icon">⚠️</span>
               <div>
                 <h3 class="stats-insight-title">Mistakes Tracker</h3>
-                <span class="stats-insight-sub">Count of each mistake type</span>
+                <span class="stats-insight-sub">Discipline slips: stop moved &amp; time stop ignored</span>
               </div>
             </div>
             <div id="statsMistakesContent" class="stats-insight-body">
@@ -1654,6 +1755,48 @@
                 <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Eliminates manual calculation errors during market opens and prevents market order slippage.</span></div>
                 <div class="glossary-section-row"><span class="glossary-label">Format:</span><span class="glossary-threshold">BUY &lt;SYM&gt; | Trigger &lt;breakout&gt; | Limit &lt;+0.5%&gt; | Qty=(CAPITAL*0.01)/(Entry-SL) | GTC</span></div>
                 <div class="glossary-section-row"><span class="glossary-label">Where used:</span><span class="glossary-example">Near Buy Table (.badge-gtt Action button).</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-unrealized-pnl">
+                <div class="glossary-card-header"><span class="glossary-term">Unrealized P&amp;L</span><span class="glossary-category">Live Performance</span></div>
+                <p class="glossary-meaning">Open position mark-to-market profit or loss computed by joining each position's entry price against latest small-cap scan close price.</p>
+                <div class="glossary-section-row"><span class="glossary-label">Formula:</span><span class="glossary-threshold">(Latest Close - Entry Price) × Qty</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Where used:</span><span class="glossary-example">Open Positions Tab, Summary Strip.</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-r-multiple">
+                <div class="glossary-card-header"><span class="glossary-term">R-Multiple</span><span class="glossary-category">Risk Unit Math</span></div>
+                <p class="glossary-meaning">Trade gain or loss normalized by initial risk (1R = Entry - Planned Stop). Allows fair statistical evaluation across varied stock prices.</p>
+                <div class="glossary-section-row"><span class="glossary-label">Formula:</span><span class="glossary-threshold">R = (Close - Entry) / (Entry - Initial Stop)</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Where used:</span><span class="glossary-example">Open Positions, Trade History Table, Stats Tab.</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-portfolio-heat">
+                <div class="glossary-card-header"><span class="glossary-term">Portfolio Heat</span><span class="glossary-category">Risk Budgeting</span></div>
+                <p class="glossary-meaning">Total cumulative capital at risk across all currently open swing trades measured against the maximum heat allowance (MAX_TOTAL_HEAT_PCT × CAPITAL).</p>
+                <div class="glossary-section-row"><span class="glossary-label">main.py Rule:</span><span class="glossary-threshold">Heat = Σ((Entry - Stop) × Qty); max cap = 5% of ₹2,00,000 (₹10,000). Meter: &lt;60% green, 60-90% amber, &gt;90% red.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Where used:</span><span class="glossary-example">Open Positions Tab (Portfolio HEAT Gauge).</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-expectancy">
+                <div class="glossary-card-header"><span class="glossary-term">Expectancy</span><span class="glossary-category">Edge Quantification</span></div>
+                <p class="glossary-meaning">Average statistical edge per trade in R-units or rupees. Positive expectancy mathematically guarantees long-term equity growth.</p>
+                <div class="glossary-section-row"><span class="glossary-label">Formula:</span><span class="glossary-threshold">Expectancy R = (Win Rate × Avg Win R) - (Loss Rate × |Avg Loss R|)</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Where used:</span><span class="glossary-example">Performance Stats Tab (.stat-grid).</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-profit-factor">
+                <div class="glossary-card-header"><span class="glossary-term">Profit Factor</span><span class="glossary-category">Edge Quantification</span></div>
+                <p class="glossary-meaning">Ratio of total gross profits to total gross losses. Values above 2.0 indicate strong institutional swing edge.</p>
+                <div class="glossary-section-row"><span class="glossary-label">Formula:</span><span class="glossary-threshold">Gross Realized Profit (₹) / |Gross Realized Losses (₹)|</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Where used:</span><span class="glossary-example">Performance Stats Tab (.stat-grid).</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-realized-vs-backtest">
+                <div class="glossary-card-header"><span class="glossary-term">Realized vs Backtest</span><span class="glossary-category">Verification</span></div>
+                <p class="glossary-meaning">Distinction between Live results (actual filled trades in trades.json) versus Backtest (zero-slippage rules-replay across OHLCV history).</p>
+                <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Validates whether real execution discipline and broker slippage align with theoretical edge.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Where used:</span><span class="glossary-example">Performance Stats Tab &amp; Backtest Tab headers.</span></div>
               </div>
             </div>
           </article>

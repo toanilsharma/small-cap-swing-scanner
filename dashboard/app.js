@@ -1,21 +1,16 @@
-const REPO_OWNER = "toanilsharma";
-const REPO_SLUG  = "smallcap-swing-scanner";
+const OWNER = "toanilsharma";
+const REPO  = "small-cap-swing-scanner";
+const REPO_OWNER = OWNER;
+const REPO_SLUG  = REPO;
 
 // =====================================================================
-// AUTHENTICATION CONFIGURATION
-// Replace PASSWORD_HASH with the SHA-256 of your own password before deploying.
-// Placeholder SHA-256 hash below must be replaced with your chosen password hash before deploying.
+// DATA ENDPOINTS (Direct public GitHub raw URLs, anonymous, zero secrets)
 // =====================================================================
-const PASSWORD_HASH = "ad15418e84fe6e94ec8dd2c22e7f952fc90457256ffbc0f59dcffdef0509366d";
-
-// =====================================================================
-// DATA PROXY ENDPOINTS (Zero client secrets)
-// =====================================================================
-const DATA_PROXY_BASE = "/.netlify/functions/data";
-const SCAN_RESULTS_URL = `${DATA_PROXY_BASE}?file=scan_results.json`;
-const OPEN_POSITIONS_URL = `${DATA_PROXY_BASE}?file=open_positions.json`;
-const TRADES_URL = `${DATA_PROXY_BASE}?file=trades.json`;
-const BACKTEST_RESULTS_URL = `${DATA_PROXY_BASE}?file=backtest_results.json`;
+const RAW_BASE_URL = `https://raw.githubusercontent.com/${OWNER}/${REPO}/main`;
+const SCAN_RESULTS_URL = `${RAW_BASE_URL}/scan_results.json`;
+const OPEN_POSITIONS_URL = `${RAW_BASE_URL}/open_positions.json`;
+const TRADES_URL = `${RAW_BASE_URL}/trades.json`;
+const BACKTEST_RESULTS_URL = `${RAW_BASE_URL}/backtest_results.json`;
 
 let equityChartInstance = null;
 let backtestChartInstance = null;
@@ -606,7 +601,10 @@ function showDataLinkError(statusCode) {
   const codeStr = statusCode || "Network Error";
   const banner = document.getElementById("dataLinkErrorBanner");
   if (banner) {
-    banner.innerHTML = `<span>⚠️</span><span>Data link error (HTTP ${codeStr}) — check connection / API key</span>`;
+    const msg = codeStr === "404"
+      ? "Data file not found (404) — awaiting first automated scan in repo"
+      : `Data link error (HTTP ${codeStr}) — unable to connect to GitHub`;
+    banner.innerHTML = `<span>⚠️</span><span>${msg}</span>`;
     banner.style.display = "flex";
   }
   stopLoadingStates(codeStr);
@@ -642,32 +640,16 @@ function showCachedCopyChip(timestamp) {
   }
 }
 
-// Single data layer fetching /.netlify/functions/data?file=<encodeURIComponent(name)>
+// Single data layer fetching public raw GitHub URL directly (anonymous, no headers)
 async function loadFile(name) {
   const cleanName = String(name || "").replace(/^\/+/, "").trim();
-  const url = `/.netlify/functions/data?file=${encodeURIComponent(cleanName)}`;
-  const dashKey = localStorage.getItem("dash_key_hash") || (typeof PASSWORD_HASH !== "undefined" ? PASSWORD_HASH : "");
-
-  const headers = {
-    "x-dash-key": dashKey
-  };
-
-  let response;
-  try {
-    const delim = url.includes("?") ? "&" : "?";
-    response = await fetch(`${url}${delim}t=${Date.now()}`, { headers });
-  } catch (netErr) {
-    console.error(`Network error loading ${cleanName}:`, netErr);
-    return handleLoadFallback(cleanName, "Network Error");
-  }
-
-  if (!response.ok) {
-    console.error(`HTTP ${response.status} loading ${cleanName}`);
-    return handleLoadFallback(cleanName, response.status);
-  }
+  const url = `https://raw.githubusercontent.com/${OWNER}/${REPO}/main/${encodeURIComponent(cleanName)}`;
 
   try {
-    const payload = await response.json();
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const payload = await res.json();
+
     // Cache every successful payload to localStorage keyed by name+updated_at
     const updatedAt = (payload && payload.updated_at) ? payload.updated_at : new Date().toISOString();
     const cacheKey = `cached_${cleanName}_${updatedAt}`;
@@ -680,9 +662,11 @@ async function loadFile(name) {
       console.warn("localStorage quota exceeded writing cache:", e);
     }
     return payload;
-  } catch (parseErr) {
-    console.error(`JSON parse error for ${cleanName}:`, parseErr);
-    return handleLoadFallback(cleanName, "Parse Error");
+  } catch (err) {
+    const statusMatch = err && err.message && err.message.match(/HTTP (\d+)/);
+    const status = statusMatch ? statusMatch[1] : "Network Error";
+    console.warn(`Direct fetch failed for ${cleanName} (${status}):`, err.message);
+    return handleLoadFallback(cleanName, status);
   }
 }
 

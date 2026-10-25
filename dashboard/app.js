@@ -270,10 +270,34 @@ const TERMS = {
     anchor: "glossary-maxdrawdown"
   },
   "Time stop": {
-    short: "Discipline rule to cut a stagnant breakout after 5 trading days without follow-through.",
-    long: "Genuine momentum breakouts follow through swiftly. If a stock trades sideways near entry for 5 trading sessions, we close the trade to liberate capital for better setups.",
-    where_used: "Trade Management, Risk Commandments, Help Guide",
+    short: "Mechanical discipline rule to close a stagnant breakout after 8 trading days without profit.",
+    long: "Genuine small-cap momentum breakouts follow through swiftly. If an open position fails to achieve positive momentum and is not in profit after 8 trading sessions (TIME_STOP_DAYS=8), the trade is mechanically liquidated at market close to free up cash for active leaders.",
+    where_used: "Trader's Playbook, Risk Commandments, Help Guide",
     anchor: "glossary-timestop"
+  },
+  "Time Stop": {
+    short: "Mechanical discipline rule to close a stagnant breakout after 8 trading days without profit.",
+    long: "Genuine small-cap momentum breakouts follow through swiftly. If an open position fails to achieve positive momentum and is not in profit after 8 trading sessions (TIME_STOP_DAYS=8), the trade is mechanically liquidated at market close to free up cash for active leaders.",
+    where_used: "Trader's Playbook, Risk Commandments, Help Guide",
+    anchor: "glossary-timestop"
+  },
+  "GTT": {
+    short: "Good-Till-Triggered conditional order resting at broker until breakout price triggers execution.",
+    long: "A conditional pending order (supported by Zerodha Kite, Groww, etc.) that stays active until triggered or cancelled. For small-cap swing trading breakouts, place a Buy GTT with Trigger = Breakout Price and Limit = Trigger + 0.5% with validity GTC/7d. Avoids emotional execution and never uses market orders.",
+    where_used: "Trader's Playbook, Watchlist GTT Generator, Help Guide",
+    anchor: "glossary-gtt"
+  },
+  "Bracket Order": {
+    short: "Multi-leg conditional order linking limit entry with automated stop-loss and profit target.",
+    long: "A risk-mitigation order type where placing an entry automatically arms both a predefined stop-loss order and a target exit order. If either exit leg fills, the other leg is automatically cancelled (OCO - One Cancels Other).",
+    where_used: "Trader's Playbook, Position Sizer, Help Guide",
+    anchor: "glossary-bracketorder"
+  },
+  "Breakeven SL": {
+    short: "Adjusting stop loss to exact entry price once trade reaches +2R or partial targets.",
+    long: "A crucial capital-protection rule. Once the stock hits its initial +2R profit target and 50% of the position is locked in, the stop loss on the remaining 50% trailing runner is immediately moved up to breakeven (entry price + brokerage buffer). Eliminates downside risk completely.",
+    where_used: "Trader's Playbook, Open Positions, Help Guide",
+    anchor: "glossary-breakeven"
   },
   "Breakeven ratchet": {
     short: "Moving stop loss up to entry price once trade reaches +8% unrealized profit.",
@@ -1512,25 +1536,53 @@ function applyWatchlistFiltering(watchlist, scanData) {
       eventChip = `<span class="badge ${isBlocked ? 'badge-danger' : 'badge-warning'} warn-event-chip" style="font-size: 10px;" title="${isBlocked ? 'ENTRY GATE: Event within 5d blackout window' : 'Upcoming Event'}: ${t} in ${d}d">🔔 ${t} ${d}d</span>`;
     }
 
+    // SC-6: Color Pills with WCAG-AA Contrast
+    let gradePillClass = "pill-grade-c";
+    if (grade === "A+") gradePillClass = "pill-grade-aplus";
+    else if (grade === "A") gradePillClass = "pill-grade-a";
+    else if (grade === "B") gradePillClass = "pill-grade-b";
+    const gradePill = `<span class="pill ${gradePillClass} term-lookup" data-term="Grade">${grade}</span>`;
+
+    let distPillClass = "pill-neutral";
+    if (dist <= 1.0) distPillClass = "pill-success";
+    else if (dist <= 2.0) distPillClass = "pill-primary";
+    else if (dist <= 5.0) distPillClass = "pill-warning";
+    const distPill = `<span class="pill ${distPillClass} term-lookup" data-term="Dist to Breakout">${dist.toFixed(2)}%</span>`;
+
+    // Status Pill
+    let statusPill = "";
+    if (item.next_event && item.next_event.days_to_event != null && item.next_event.days_to_event <= 5) {
+      statusPill = `<span class="pill pill-danger">🔴 Blackout (${item.next_event.days_to_event}d)</span>`;
+    } else if (dist <= 1.0) {
+      statusPill = `<span class="pill pill-success">🟢 Ready (${dist >= 0 ? '+' : ''}${dist.toFixed(1)}%)</span>`;
+    } else if (dist <= 2.0) {
+      statusPill = `<span class="pill pill-primary">🔵 Near Breakout</span>`;
+    } else if (item.Coiling === "YES") {
+      statusPill = `<span class="pill pill-warning">🟡 Coiling</span>`;
+    } else {
+      statusPill = `<span class="pill pill-neutral">⚪ Watchlist (${dist.toFixed(1)}%)</span>`;
+    }
+
     return `
-      <tr class="watchlist-row ${rowClass}" data-symbol="${item.Symbol}" title="Click to view 6-month chart & checklist">
+      <tr class="watchlist-row ${rowClass}" data-symbol="${item.Symbol}" title="Click to expand diagnosis, 6-month chart & GTT plan">
         <td data-label="Symbol">
-          <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%;">
-            <strong>${item.Symbol}</strong>
-            <span class="chevron" style="font-size: 10px; color: var(--text-dim); padding: 4px 8px;">▼</span>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <strong style="font-size: 13.5px; color: #fff;">${item.Symbol}</strong>
           </div>
         </td>
-        <td data-label="Score">${scoreBadge}</td>
-        <td data-label="Grade"><div style="display: flex; align-items: center; gap: 4px; flex-wrap: wrap;">${gradeBadge} ${rsBadge} ${instBadge} ${eventChip}</div></td>
-        <td data-label="Close">${formatINR(item.Close)}</td>
-        <td data-label="Dist to Breakout"><strong>${dist.toFixed(2)}%</strong> away</td>
-        <td data-label="Coiling">${coilingBadge}</td>
-        <td data-label="Sector"><span class="badge badge-neutral">${item.Sector || "^NSEI"}</span></td>
-        <td data-label="Sector Bullish">${bullishBadge}</td>
+        <td data-label="Grade"><div style="display: flex; align-items: center; gap: 4px; flex-wrap: wrap;">${gradePill} ${rsBadge} ${instBadge} ${eventChip}</div></td>
+        <td data-label="Close"><strong>${formatINR(item.Close)}</strong></td>
+        <td data-label="Dist %">${distPill}</td>
+        <td data-label="Status">${statusPill}</td>
+        <td data-label="Score" class="hide-mobile">${scoreBadge}</td>
+        <td data-label="Sector" class="hide-mobile"><span class="pill pill-neutral">${item.Sector || "^NSEI"}</span></td>
         <td data-label="Action">
           <button class="btn btn-xs btn-outline-primary size-trade-btn" data-symbol="${item.Symbol}" title="Size this trade with Position Sizer">
-            Size this trade
+            Size
           </button>
+        </td>
+        <td style="text-align: right; width: 44px;">
+          <span class="chevron" style="font-size: 11px; color: var(--text-dim); padding: 8px;">▼</span>
         </td>
       </tr>
     `;
@@ -2014,9 +2066,17 @@ async function toggleWatchlistDetail(row, item, scanData) {
   const symbol = item.Symbol;
   const existingDetail = document.getElementById(`detail-${symbol}`);
 
-  // If already open, collapse it
+  // If already open, collapse it with 0.3s smooth transition
   if (existingDetail) {
-    existingDetail.remove();
+    const drawer = existingDetail.querySelector(".accordion-drawer");
+    if (drawer) {
+      drawer.classList.remove("open");
+      setTimeout(() => {
+        if (existingDetail.parentNode) existingDetail.remove();
+      }, 300);
+    } else {
+      existingDetail.remove();
+    }
     row.classList.remove("expanded");
     const chevron = row.querySelector(".chevron");
     if (chevron) chevron.textContent = "▼";
@@ -2024,7 +2084,13 @@ async function toggleWatchlistDetail(row, item, scanData) {
   }
 
   // Close other open detail rows to keep view tidy
-  document.querySelectorAll(".detail-row").forEach(el => el.remove());
+  document.querySelectorAll(".detail-row").forEach(el => {
+    const d = el.querySelector(".accordion-drawer");
+    if (d) d.classList.remove("open");
+    setTimeout(() => {
+      if (el.parentNode) el.remove();
+    }, 300);
+  });
   document.querySelectorAll(".watchlist-row.expanded").forEach(el => {
     el.classList.remove("expanded");
     const ch = el.querySelector(".chevron");
@@ -2056,16 +2122,42 @@ async function toggleWatchlistDetail(row, item, scanData) {
   const bePrice = Number((breakoutLevel * 1.08).toFixed(2));
   const atrPct = ((atr / (close || 1)) * 100).toFixed(1);
 
+  // SC-6: Relative Strength, Institutional Footprint, Base Maturity & Stage
+  const rawRs = item.rs_rating != null ? Number(item.rs_rating) : (item.RS_RATING != null ? Number(item.RS_RATING) : null);
+  let rsBadge = "";
+  if (rawRs !== null && !isNaN(rawRs)) {
+    const rsVal = Math.round(rawRs);
+    let rsClass = "rs-pill-gray";
+    if (rsVal >= 90) rsClass = "rs-pill-green";
+    else if (rsVal >= 80) rsClass = "rs-pill-blue";
+    rsBadge = `<span class="rs-pill ${rsClass}">RS ${rsVal}</span>`;
+  } else {
+    rsBadge = `<span class="rs-pill rs-pill-gray">RS n/a</span>`;
+  }
+
+  const instFp = item.inst_footprint || "unknown";
+  let instBadge = "";
+  if (instFp === "accumulation") {
+    instBadge = `<span class="inst-pill inst-pill-acc">🏦 ACCUM</span>`;
+  } else if (instFp === "churn") {
+    instBadge = `<span class="inst-pill inst-pill-churn">⚠️ CHURN</span>`;
+  } else {
+    instBadge = `<span class="inst-pill inst-pill-unk">⚪ UNK</span>`;
+  }
+
+  const isCoiling = item.Coiling === "YES";
+  const basePill = `<span class="pill ${isCoiling ? 'pill-success' : 'pill-warning'}">Stage 2 ${isCoiling ? 'Tight Coil (Mature)' : 'Consolidating'}</span>`;
+
   const detailHtml = `
-    <tr class="detail-row" id="detail-${symbol}">
+    <tr class="accordion-drawer-row detail-row" id="detail-${symbol}">
       <td colspan="9">
-        <div class="stock-detail-panel">
+        <div class="accordion-drawer stock-detail-panel" id="drawer-${symbol}">
           <div class="detail-header">
             <div class="detail-title-group">
               <span class="detail-symbol">${symbol}</span>
               <span class="badge badge-neutral">${item.Sector || "^NSEI"}</span>
               <span class="badge badge-success">₹${item.Close || 0}</span>
-              <span class="badge badge-warning">${parseFloat(item["DistToBreakout%"] || 0).toFixed(2)}% to Breakout</span>
+              <span class="badge badge-warning">${dist.toFixed(2)}% to Breakout</span>
               <button class="btn btn-sm btn-primary size-trade-btn" data-symbol="${symbol}">
                 🎯 Size this trade
               </button>
@@ -2084,6 +2176,42 @@ async function toggleWatchlistDetail(row, item, scanData) {
               <span class="detail-hint">(Click row to collapse)</span>
             </div>
             <div id="earnings-warn-${symbol}"></div>
+          </div>
+
+          <!-- SC-6 Accordion Intelligence Strip: RS | Inst | Base Maturity -->
+          <div class="accordion-grid">
+            <div class="accordion-card">
+              <div class="accordion-card-title">Relative Strength (RS)</div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                ${rsBadge}
+                <span style="font-size: 12px; color: var(--text-dim);">${rawRs !== null ? `${Math.round(rawRs)}th percentile vs Nifty 500` : 'RS Index benchmark'}</span>
+              </div>
+            </div>
+            <div class="accordion-card">
+              <div class="accordion-card-title">Institutional Footprint</div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                ${instBadge}
+                <span style="font-size: 12px; color: var(--text-dim);">${instFp === 'accumulation' ? 'Smart-money accumulation detected' : (instFp === 'churn' ? 'High volume / low delivery warning' : 'Normal retail / bulk volume')}</span>
+              </div>
+            </div>
+            <div class="accordion-card">
+              <div class="accordion-card-title">Base Maturity &amp; Stage</div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                ${basePill}
+                <span style="font-size: 12px; color: var(--text-dim);">20D Range: ${isCoiling ? 'Tight Compression' : 'Developing'}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- SC-6 Trade Thesis Card -->
+          <div class="card" style="margin-bottom: 16px; padding: 12px 16px; background: rgba(255, 255, 255, 0.02); border-left: 3px solid var(--primary); border-radius: 8px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+              <span style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-main);">💡 Trade Thesis &amp; Catalyst</span>
+              <span class="pill ${dist <= 1.0 ? 'pill-success' : 'pill-primary'}">${dist <= 1.0 ? 'Ready for Trigger' : 'Resting GTT Setup'}</span>
+            </div>
+            <p style="font-size: 12.5px; color: var(--text-muted); margin: 0; line-height: 1.55;">
+              ${escapeHtml(item.thesis || `${symbol} is in a confirmed Stage 2 uptrend with RS ${rawRs !== null ? Math.round(rawRs) : 'solid'} relative momentum in the ${item.Sector || 'Small-Cap'} sector. Price is coiling ${dist.toFixed(1)}% below the 20-day high trigger at ₹${breakoutLevel.toFixed(2)}. ${item.VolDryup === 'YES' ? 'Volume has dried up significantly below the 50-day average, signaling supply exhaustion.' : 'Monitoring for institutional breakout volume print.'}`)}
+            </p>
           </div>
 
           <!-- Event Radar Timeline Strip (SC-4) -->
@@ -2240,6 +2368,12 @@ async function toggleWatchlistDetail(row, item, scanData) {
   `;
 
   row.insertAdjacentHTML("afterend", detailHtml);
+
+  // Trigger smooth 0.3s accordion open transition
+  requestAnimationFrame(() => {
+    const drawer = document.getElementById(`drawer-${symbol}`);
+    if (drawer) drawer.classList.add("open");
+  });
 
   // Attach listener to all "Size this trade" buttons inside the detail panel
   const detailEl = document.getElementById(`detail-${symbol}`);
@@ -3812,6 +3946,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // Initialize SC-5 Backtest Tab Listeners
   initBacktestListeners();
 
+  // Initialize SC-6 Trader's Playbook Listeners (Buy & Sell Cards)
+  initPlaybookListeners();
+
   // Keep IST Live chip ticking every 30 seconds
   setInterval(updateIstLiveChip, 30000);
 
@@ -4566,6 +4703,96 @@ function initBacktestListeners() {
     });
   }
 }
+
+// =====================================================================
+// SC-6: TRADER'S PLAYBOOK LISTENERS (Buy & Sell Cards)
+// =====================================================================
+function initPlaybookListeners() {
+  const isMobile = window.innerWidth < 768;
+
+  // 1. Buy Playbook Card (#playbookBuyCard)
+  const buyCard = document.getElementById("playbookBuyCard");
+  const buyBtn = document.getElementById("playbookBuyToggleBtn");
+  const buyChevron = document.getElementById("playbookBuyChevron");
+  if (buyCard && buyBtn) {
+    const savedBuy = localStorage.getItem("playbook_buy_expanded");
+    const buyExpanded = savedBuy !== null ? savedBuy === "true" : !isMobile;
+    if (!buyExpanded) {
+      buyCard.classList.add("collapsed");
+      buyBtn.setAttribute("aria-expanded", "false");
+      if (buyChevron) buyChevron.textContent = "▶";
+    } else {
+      buyCard.classList.remove("collapsed");
+      buyBtn.setAttribute("aria-expanded", "true");
+      if (buyChevron) buyChevron.textContent = "▼";
+    }
+
+    buyBtn.addEventListener("click", () => {
+      const isCollapsed = buyCard.classList.toggle("collapsed");
+      const expanded = !isCollapsed;
+      buyBtn.setAttribute("aria-expanded", expanded ? "true" : "false");
+      if (buyChevron) buyChevron.textContent = expanded ? "▼" : "▶";
+      localStorage.setItem("playbook_buy_expanded", expanded ? "true" : "false");
+    });
+  }
+
+  // 2. Sell Playbook Card (#playbookSellCard)
+  const sellCard = document.getElementById("playbookSellCard");
+  const sellBtn = document.getElementById("playbookSellToggleBtn");
+  const sellChevron = document.getElementById("playbookSellChevron");
+  if (sellCard && sellBtn) {
+    const savedSell = localStorage.getItem("playbook_sell_expanded");
+    const sellExpanded = savedSell !== null ? savedSell === "true" : !isMobile;
+    if (!sellExpanded) {
+      sellCard.classList.add("collapsed");
+      sellBtn.setAttribute("aria-expanded", "false");
+      if (sellChevron) sellChevron.textContent = "▶";
+    } else {
+      sellCard.classList.remove("collapsed");
+      sellBtn.setAttribute("aria-expanded", "true");
+      if (sellChevron) sellChevron.textContent = "▼";
+    }
+
+    sellBtn.addEventListener("click", () => {
+      const isCollapsed = sellCard.classList.toggle("collapsed");
+      const expanded = !isCollapsed;
+      sellBtn.setAttribute("aria-expanded", expanded ? "true" : "false");
+      if (sellChevron) sellChevron.textContent = expanded ? "▼" : "▶";
+      localStorage.setItem("playbook_sell_expanded", expanded ? "true" : "false");
+    });
+  }
+
+  // 3. Copy Formula Button (#copyFormulaBtn)
+  const copyFormulaBtn = document.getElementById("copyFormulaBtn");
+  if (copyFormulaBtn) {
+    copyFormulaBtn.addEventListener("click", async () => {
+      const formula = "size = (CAPITAL * RISK_PCT) / (Entry - SL)";
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(formula);
+        } else {
+          const ta = document.createElement("textarea");
+          ta.value = formula;
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand("copy");
+          document.body.removeChild(ta);
+        }
+        const originalHtml = copyFormulaBtn.innerHTML;
+        copyFormulaBtn.innerHTML = "✓ Copied!";
+        copyFormulaBtn.classList.add("btn-success");
+        setTimeout(() => {
+          copyFormulaBtn.innerHTML = originalHtml;
+          copyFormulaBtn.classList.remove("btn-success");
+        }, 2000);
+        showToast("Copied formula to clipboard", "📋");
+      } catch (err) {
+        console.warn("Failed to copy formula:", err);
+      }
+    });
+  }
+}
+
 
 
 

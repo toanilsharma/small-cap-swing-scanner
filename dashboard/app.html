@@ -73,200 +73,310 @@
 
     <!-- TAB 1: NEAR BUY / WATCHLIST -->
     <section id="tabNearBuy" class="tab-content active">
-      <!-- Tab Guide Banner -->
-      <div class="tab-guide-banner" id="bannerNearBuy" data-tab-banner="near_buy">
-        <div class="tab-guide-content">
-          <span class="tab-guide-icon">💡</span>
-          <span class="tab-guide-text">Stocks in uptrend closest to their breakout. Act only on Grade A/A+ when the market badge is green.</span>
+
+      <!-- ZONE 1: MARKET OVERVIEW (Pulse + Breadth + Sector Chips) -->
+      <div class="zone-card market-overview-zone" id="zoneMarketOverview">
+        <div class="zone-header">
+          <span class="zone-title">🌐 Zone 1: Market Overview &amp; Regime Pulse</span>
         </div>
-        <button class="tab-guide-dismiss" title="Dismiss banner" aria-label="Dismiss">×</button>
+
+        <!-- Tab Guide Banner -->
+        <div class="tab-guide-banner" id="bannerNearBuy" data-tab-banner="near_buy">
+          <div class="tab-guide-content">
+            <span class="tab-guide-icon">💡</span>
+            <span class="tab-guide-text">Stocks in uptrend closest to their breakout. Act only on Grade A/A+ when the market badge is green.</span>
+          </div>
+          <button class="tab-guide-dismiss" title="Dismiss banner" aria-label="Dismiss">×</button>
+        </div>
+
+        <!-- TODAY'S PLAN CARD -->
+        <div id="todaysPlanCard" class="todays-plan-card">
+          <div class="todays-plan-header">
+            <div class="todays-plan-title-group">
+              <span class="todays-plan-icon">📋</span>
+              <div>
+                <h3 class="todays-plan-title">Today's Action Plan</h3>
+                <span id="planMetaTime" class="todays-plan-meta">Updated: Today</span>
+              </div>
+            </div>
+            <span id="planStatusPill" class="badge badge-success">Active Strategy</span>
+          </div>
+          <ul id="todaysPlanBullets" class="todays-plan-list">
+            <li class="todays-plan-item">
+              <span class="todays-plan-bullet-icon">•</span>
+              <span class="todays-plan-bullet-text">Analyzing market regime and watchlist setups...</span>
+            </li>
+          </ul>
+        </div>
+
+        <div id="regimeBanner" class="regime-banner" style="display: none;">
+          <span id="regimeText">Market Regime: Checking...</span>
+          <span id="scannedMeta">100 constituents scanned</span>
+        </div>
+
+        <!-- SECTOR LEADERSHIP STRIP (Item #2) -->
+        <div id="sectorLeadershipStrip" class="sector-strip-card" style="display: none;">
+          <div class="sector-strip-header">
+            <div class="sector-strip-title-group">
+              <span style="font-size: 16px;">🧭</span>
+              <span class="sector-strip-title">Sector Leadership &amp; Rotation</span>
+              <span id="sectorActiveFilterBadge" class="badge badge-primary sector-filter-badge" style="display: none; cursor: pointer;" title="Click to clear sector filter">
+                Filtered: <strong id="sectorFilterName"></strong> &times;
+              </span>
+            </div>
+            <span class="sector-strip-hint">Click a sector chip to filter setups</span>
+          </div>
+          <div id="sectorChipsContainer" class="sector-chips-row"></div>
+        </div>
       </div>
 
-      <!-- TODAY'S PLAN CARD -->
-      <div id="todaysPlanCard" class="todays-plan-card">
-        <div class="todays-plan-header">
-          <div class="todays-plan-title-group">
-            <span class="todays-plan-icon">📋</span>
-            <div>
-              <h3 class="todays-plan-title">Today's Action Plan</h3>
-              <span id="planMetaTime" class="todays-plan-meta">Updated: Today</span>
+      <!-- ZONE 2: ACTION INTELLIGENCE (Playbook + Landmines + Leaders + On Deck) -->
+      <div class="zone-card action-intelligence-zone" id="zoneActionIntelligence">
+        <div class="zone-header">
+          <span class="zone-title">⚡ Zone 2: Action Intelligence &amp; Playbook</span>
+        </div>
+
+        <!-- 🛒 HOW TO BUY (GTT Strategy) PLAYBOOK CARD -->
+        <div id="playbookBuyCard" class="playbook-card playbook-buy-card">
+          <button id="playbookBuyToggleBtn" class="playbook-toggle-btn" aria-expanded="true">
+            <div class="playbook-title-group">
+              <span class="playbook-icon">🛒</span>
+              <span class="playbook-title-text">HOW TO BUY (GTT Strategy)</span>
+              <span class="badge badge-success playbook-badge">Buy Playbook</span>
+            </div>
+            <span id="playbookBuyChevron" class="chevron">▼</span>
+          </button>
+          <div id="playbookBuyContent" class="playbook-content">
+            <div class="playbook-steps-grid">
+              <!-- Step 1 -->
+              <div class="playbook-step">
+                <div class="playbook-step-badge">Step 1</div>
+                <div class="playbook-step-title">Verify Signal</div>
+                <div class="playbook-step-desc">
+                  Grade A/A+, dist &lt; 1%, no event within 3d, regime not Defensive unless exceptional.
+                </div>
+              </div>
+              <!-- Step 2 -->
+              <div class="playbook-step">
+                <div class="playbook-step-badge">Step 2</div>
+                <div class="playbook-step-title">Size Position</div>
+                <div class="playbook-formula-box">
+                  <code>size = (CAPITAL * RISK_PCT) / (Entry - SL)</code>
+                  <button id="copyFormulaBtn" class="btn btn-xs btn-outline-success copy-formula-btn" title="Copy sizing formula to clipboard">
+                    📋 Copy Formula
+                  </button>
+                </div>
+                <div class="playbook-worked-example">
+                  <strong>Worked Example (Repo Numbers):</strong><br>
+                  Capital = ₹2,00,000 | 1% Risk = ₹2,000<br>
+                  Entry = ₹100.00 | ATR(14) = ₹5.00 | Stop = ₹91.00 (9% floor cap)<br>
+                  Risk/Unit = ₹9.00 &rarr; <code>Qty = floor(2,000 / 9) = 222 units</code><br>
+                  Target (2R) = ₹118.00 (₹4,000 profit potential)
+                </div>
+              </div>
+              <!-- Step 3 -->
+              <div class="playbook-step">
+                <div class="playbook-step-badge">Step 3</div>
+                <div class="playbook-step-title">Place GTT Order</div>
+                <div class="playbook-step-desc">
+                  Place a GTT/Smart/Conditional BUY at the dashboard breakout level with <code>Limit = Trigger + 0.5%</code>, validity <code>GTC / 7d</code>, <strong>NEVER a market order</strong>.
+                </div>
+              </div>
+              <!-- Step 4 -->
+              <div class="playbook-step">
+                <div class="playbook-step-badge">Step 4</div>
+                <div class="playbook-step-title">Morning Check</div>
+                <div class="playbook-step-desc">
+                  If gap-up &gt; 2% above trigger <strong>CANCEL</strong>, if opens near trigger let GTT fill, else order rests.
+                </div>
+              </div>
             </div>
           </div>
-          <span id="planStatusPill" class="badge badge-success">Active Strategy</span>
         </div>
-        <ul id="todaysPlanBullets" class="todays-plan-list">
-          <li class="todays-plan-item">
-            <span class="todays-plan-bullet-icon">•</span>
-            <span class="todays-plan-bullet-text">Analyzing market regime and watchlist setups...</span>
-          </li>
-        </ul>
-      </div>
 
-      <div id="regimeBanner" class="regime-banner" style="display: none;">
-        <span id="regimeText">Market Regime: Checking...</span>
-        <span id="scannedMeta">100 constituents scanned</span>
-      </div>
-
-      <!-- SECTOR LEADERSHIP STRIP (Item #2) -->
-      <div id="sectorLeadershipStrip" class="sector-strip-card" style="display: none;">
-        <div class="sector-strip-header">
-          <div class="sector-strip-title-group">
-            <span style="font-size: 16px;">🧭</span>
-            <span class="sector-strip-title">Sector Leadership & Rotation</span>
-            <span id="sectorActiveFilterBadge" class="badge badge-primary sector-filter-badge" style="display: none; cursor: pointer;" title="Click to clear sector filter">
-              Filtered: <strong id="sectorFilterName"></strong> &times;
-            </span>
+        <!-- 🏆 LEADERS BOARD STRIP (Collapsible) -->
+        <div id="leadersBoardSection" class="leaders-strip-card">
+          <button id="leadersToggleBtn" class="leaders-toggle-btn" aria-expanded="true" title="Click to collapse/expand Leaders Board">
+            <div class="leaders-toggle-title">
+              <span style="font-size: 16px;">🏆</span>
+              <span class="leaders-title-text">Leaders Board (Top RS in Stage 2)</span>
+              <span id="leadersCountBadge" class="badge badge-success">0 Leaders</span>
+            </div>
+            <span id="leadersChevron" class="chevron">▼</span>
+          </button>
+          <div id="leadersContent" class="leaders-content-collapse" style="display: block;">
+            <div id="leadersChipsRow" class="leaders-chips-row">
+              <span class="text-dim" style="font-size: 12px;">Loading leaders...</span>
+            </div>
           </div>
-          <span class="sector-strip-hint">Click a sector chip to filter setups</span>
         </div>
-        <div id="sectorChipsContainer" class="sector-chips-row"></div>
+
+        <!-- 🎯 ON DECK (NEAR MISSES) (Collapsible) -->
+        <div id="onDeckSection" class="on-deck-section">
+          <button id="onDeckToggleBtn" class="on-deck-toggle-btn" aria-expanded="true" title="Click to collapse/expand On Deck Setups">
+            <div class="on-deck-toggle-title">
+              <span style="font-size: 18px;">🎯</span>
+              <span class="on-deck-title-text">On Deck (Near Misses)</span>
+              <span id="onDeckCountBadge" class="badge badge-warning">0 Setups</span>
+            </div>
+            <span id="onDeckChevron" class="chevron">▼</span>
+          </button>
+          <div id="onDeckContent" class="on-deck-content-collapse" style="display: block;">
+            <p class="on-deck-subtitle" style="font-size: 12px; color: var(--text-dim); margin-bottom: 14px;">
+              Stage-2 setups passing Trend &amp; Squeeze filters under resistance, awaiting final breakout trigger or institutional volume spike.
+            </p>
+            <div id="onDeckCardsGrid" class="on-deck-grid">
+              <div class="empty-state">Loading on-deck candidates...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ⚠️ THIS WEEK'S LANDMINES (Collapsible) -->
+        <div id="landminesSection" class="landmines-card" style="display: none;">
+          <button id="landminesToggleBtn" class="landmines-header-btn" aria-expanded="true" title="Click to collapse/expand Corporate Landmines">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 16px;">⚠️</span>
+              <span style="font-weight: 700;">This Week's Landmines (Next 7 Days)</span>
+              <span id="landminesCountBadge" class="badge badge-danger">0 Events</span>
+            </div>
+            <span id="landminesChevron" class="chevron">▼</span>
+          </button>
+          <div id="landminesContent" class="landmines-content" style="display: block;">
+            <p style="font-size: 12px; color: var(--text-dim); margin-bottom: 12px;">
+              Upcoming corporate actions (AGM, Lock-in expiries, Record dates, Earnings) across watchlist, on-deck, and open positions. High overnight gap-risk.
+            </p>
+            <div id="landminesGrid" class="landmines-grid">
+              <div class="empty-state">No corporate landmines scheduled in the next 7 days.</div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div id="signalsContainer" style="margin-bottom: 24px; display: none;">
-        <h2 style="font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 12px;">🟢 Active Today's Signals</h2>
+      <!-- ZONE 3: WATCHLIST (Generous Padding + Modern Accordion Table) -->
+      <div class="zone-card watchlist-zone" id="zoneWatchlist">
+        <div class="zone-header">
+          <span class="zone-title">🎯 Zone 3: High-Probability Watchlist</span>
+        </div>
+
+        <div id="signalsContainer" style="margin-bottom: 24px; display: none;">
+          <h2 style="font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 12px;">🟢 Active Today's Signals</h2>
+          <div class="table-scroll" tabindex="0">
+            <table id="signalsTable">
+              <thead>
+                <tr>
+                  <th>Type</th>
+                  <th>Symbol</th>
+                  <th>Entry</th>
+                  <th><span class="term-lookup" data-term="Stop loss">Stop</span></th>
+                  <th><span class="term-lookup" data-term="Target">Target</span></th>
+                  <th><span class="term-lookup" data-term="Position size">Qty</span></th>
+                  <th>Risk Amount</th>
+                  <th><span class="term-lookup" data-term="Sector filter">Sector</span></th>
+                </tr>
+              </thead>
+              <tbody id="signalsBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- SCAN ARCHIVE RETROSPECTIVE BANNER (Item #8) -->
+        <div id="archiveScanNoticeBanner" class="archive-notice-banner" style="display: none;">
+          <div class="archive-notice-content">
+            <span class="archive-notice-icon">🕒</span>
+            <span id="archiveNoticeText" class="archive-notice-text">Viewing Historical Scan Archive</span>
+          </div>
+          <button id="returnToLatestScanBtn" class="btn btn-xs btn-primary">Return to Latest (Live)</button>
+        </div>
+
+        <!-- WATCHLIST FILTER & SORT TOOLBAR (Item #1) -->
+        <div class="watchlist-controls-card">
+          <div class="watchlist-controls-top">
+            <div class="watchlist-search-box">
+              <span class="search-box-icon">🔍</span>
+              <input type="text" id="watchlistSearchInput" placeholder="Filter by symbol or sector (e.g. TRENT, Auto)..." autocomplete="off" />
+              <button id="clearWatchlistSearchBtn" class="search-clear-btn" style="display: none;" title="Clear search">&times;</button>
+            </div>
+            <div class="watchlist-sort-group">
+              <label for="watchlistSortSelect">Sort:</label>
+              <select id="watchlistSortSelect" class="form-select-sm">
+                <option value="score_desc">Setup Score (High &rarr; Low)</option>
+                <option value="dist_asc">Dist to Breakout (Closest)</option>
+                <option value="price_desc">Price (High &rarr; Low)</option>
+                <option value="price_asc">Price (Low &rarr; High)</option>
+                <option value="symbol_asc">Symbol (A &rarr; Z)</option>
+              </select>
+            </div>
+            <div class="watchlist-archive-group">
+              <label for="watchlistDateSelect">📅 Scan:</label>
+              <select id="watchlistDateSelect" class="form-select-sm" title="Select today's live scan or view past cached daily scans">
+                <option value="latest">Latest (Live)</option>
+              </select>
+            </div>
+          </div>
+          <div class="watchlist-filter-chips">
+            <button class="wl-filter-chip active" data-filter="all">All Setups (<span id="countAll">0</span>)</button>
+            <button class="wl-filter-chip" data-filter="grade_a">Grade A+ / A (<span id="countGradeA">0</span>)</button>
+            <button class="wl-filter-chip" data-filter="near_breakout">&le; 2% to Breakout (<span id="countNearBreakout">0</span>)</button>
+            <button class="wl-filter-chip" data-filter="coiling">Coiling Vol (<span id="countCoiling">0</span>)</button>
+            <button class="wl-filter-chip" data-filter="sector_bullish">Sector Bullish (<span id="countSectorBullish">0</span>)</button>
+          </div>
+          <div class="watchlist-status-bar">
+            <span id="watchlistCountStatus">Showing all setups</span>
+            <button id="resetWatchlistFiltersBtn" class="btn-link-sm" style="display: none;">Reset all filters</button>
+          </div>
+        </div>
+
         <div class="table-scroll" tabindex="0">
-          <table id="signalsTable">
+          <table id="watchlistTable">
             <thead>
               <tr>
-                <th>Type</th>
                 <th>Symbol</th>
-                <th>Entry</th>
-                <th><span class="term-lookup" data-term="Stop loss">Stop</span></th>
-                <th><span class="term-lookup" data-term="Target">Target</span></th>
-                <th><span class="term-lookup" data-term="Position size">Qty</span></th>
-                <th>Risk Amount</th>
-                <th><span class="term-lookup" data-term="Sector filter">Sector</span></th>
+                <th><span class="term-lookup" data-term="Grade">Grade</span></th>
+                <th>Close</th>
+                <th><span class="term-lookup" data-term="Dist to Breakout">Dist %</span></th>
+                <th>Status</th>
+                <th class="hide-mobile"><span class="term-lookup" data-term="Setup score">Score</span></th>
+                <th class="hide-mobile">Sector</th>
+                <th>Action</th>
+                <th style="width: 44px;"></th>
               </tr>
             </thead>
-            <tbody id="signalsBody"></tbody>
+            <tbody id="watchlistBody">
+              <tr class="skeleton-row">
+                <td><div class="skeleton-pill skeleton-sm"></div></td>
+                <td><div class="skeleton-pill skeleton-badge"></div></td>
+                <td><div class="skeleton-pill skeleton-md"></div></td>
+                <td><div class="skeleton-pill skeleton-sm"></div></td>
+                <td><div class="skeleton-pill skeleton-md"></div></td>
+                <td class="hide-mobile"><div class="skeleton-pill skeleton-sm"></div></td>
+                <td class="hide-mobile"><div class="skeleton-pill skeleton-lg"></div></td>
+                <td><div class="skeleton-pill skeleton-btn"></div></td>
+                <td><div class="skeleton-pill" style="width: 20px; border-radius: 50%;"></div></td>
+              </tr>
+              <tr class="skeleton-row">
+                <td><div class="skeleton-pill skeleton-sm"></div></td>
+                <td><div class="skeleton-pill skeleton-badge"></div></td>
+                <td><div class="skeleton-pill skeleton-md"></div></td>
+                <td><div class="skeleton-pill skeleton-sm"></div></td>
+                <td><div class="skeleton-pill skeleton-md"></div></td>
+                <td class="hide-mobile"><div class="skeleton-pill skeleton-sm"></div></td>
+                <td class="hide-mobile"><div class="skeleton-pill skeleton-lg"></div></td>
+                <td><div class="skeleton-pill skeleton-btn"></div></td>
+                <td><div class="skeleton-pill" style="width: 20px; border-radius: 50%;"></div></td>
+              </tr>
+              <tr class="skeleton-row">
+                <td><div class="skeleton-pill skeleton-sm"></div></td>
+                <td><div class="skeleton-pill skeleton-badge"></div></td>
+                <td><div class="skeleton-pill skeleton-md"></div></td>
+                <td><div class="skeleton-pill skeleton-sm"></div></td>
+                <td><div class="skeleton-pill skeleton-md"></div></td>
+                <td class="hide-mobile"><div class="skeleton-pill skeleton-sm"></div></td>
+                <td class="hide-mobile"><div class="skeleton-pill skeleton-lg"></div></td>
+                <td><div class="skeleton-pill skeleton-btn"></div></td>
+                <td><div class="skeleton-pill" style="width: 20px; border-radius: 50%;"></div></td>
+              </tr>
+            </tbody>
           </table>
-        </div>
-      </div>
-
-      <!-- SCAN ARCHIVE RETROSPECTIVE BANNER (Item #8) -->
-      <div id="archiveScanNoticeBanner" class="archive-notice-banner" style="display: none;">
-        <div class="archive-notice-content">
-          <span class="archive-notice-icon">🕒</span>
-          <span id="archiveNoticeText" class="archive-notice-text">Viewing Historical Scan Archive</span>
-        </div>
-        <button id="returnToLatestScanBtn" class="btn btn-xs btn-primary">Return to Latest (Live)</button>
-      </div>
-
-      <!-- 🏆 LEADERS BOARD STRIP (Collapsible) -->
-      <div id="leadersBoardSection" class="leaders-strip-card">
-        <button id="leadersToggleBtn" class="leaders-toggle-btn" aria-expanded="true" title="Click to collapse/expand Leaders Board">
-          <div class="leaders-toggle-title">
-            <span style="font-size: 16px;">🏆</span>
-            <span class="leaders-title-text">Leaders Board (Top RS in Stage 2)</span>
-            <span id="leadersCountBadge" class="badge badge-success">0 Leaders</span>
-          </div>
-          <span id="leadersChevron" class="chevron">▼</span>
-        </button>
-        <div id="leadersContent" class="leaders-content-collapse" style="display: block;">
-          <div id="leadersChipsRow" class="leaders-chips-row">
-            <span class="text-dim" style="font-size: 12px;">Loading leaders...</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- WATCHLIST FILTER & SORT TOOLBAR (Item #1) -->
-      <div class="watchlist-controls-card">
-        <div class="watchlist-controls-top">
-          <div class="watchlist-search-box">
-            <span class="search-box-icon">🔍</span>
-            <input type="text" id="watchlistSearchInput" placeholder="Filter by symbol or sector (e.g. TRENT, Auto)..." autocomplete="off" />
-            <button id="clearWatchlistSearchBtn" class="search-clear-btn" style="display: none;" title="Clear search">&times;</button>
-          </div>
-          <div class="watchlist-sort-group">
-            <label for="watchlistSortSelect">Sort:</label>
-            <select id="watchlistSortSelect" class="form-select-sm">
-              <option value="score_desc">Setup Score (High &rarr; Low)</option>
-              <option value="dist_asc">Dist to Breakout (Closest)</option>
-              <option value="price_desc">Price (High &rarr; Low)</option>
-              <option value="price_asc">Price (Low &rarr; High)</option>
-              <option value="symbol_asc">Symbol (A &rarr; Z)</option>
-            </select>
-          </div>
-          <div class="watchlist-archive-group">
-            <label for="watchlistDateSelect">📅 Scan:</label>
-            <select id="watchlistDateSelect" class="form-select-sm" title="Select today's live scan or view past cached daily scans">
-              <option value="latest">Latest (Live)</option>
-            </select>
-          </div>
-        </div>
-        <div class="watchlist-filter-chips">
-          <button class="wl-filter-chip active" data-filter="all">All Setups (<span id="countAll">0</span>)</button>
-          <button class="wl-filter-chip" data-filter="grade_a">Grade A+ / A (<span id="countGradeA">0</span>)</button>
-          <button class="wl-filter-chip" data-filter="near_breakout">&le; 2% to Breakout (<span id="countNearBreakout">0</span>)</button>
-          <button class="wl-filter-chip" data-filter="coiling">Coiling Vol (<span id="countCoiling">0</span>)</button>
-          <button class="wl-filter-chip" data-filter="sector_bullish">Sector Bullish (<span id="countSectorBullish">0</span>)</button>
-        </div>
-        <div class="watchlist-status-bar">
-          <span id="watchlistCountStatus">Showing all setups</span>
-          <button id="resetWatchlistFiltersBtn" class="btn-link-sm" style="display: none;">Reset all filters</button>
-        </div>
-      </div>
-
-      <div class="table-scroll" tabindex="0">
-        <table id="watchlistTable">
-          <thead>
-            <tr>
-              <th>Symbol</th>
-              <th><span class="term-lookup" data-term="Setup score">Score</span></th>
-              <th><span class="term-lookup" data-term="Grade">Grade</span></th>
-              <th>Close</th>
-              <th><span class="term-lookup" data-term="Dist to Breakout">Dist to Breakout</span></th>
-              <th><span class="term-lookup" data-term="Coiling">Coiling</span></th>
-              <th>Sector</th>
-              <th><span class="term-lookup" data-term="Sector Bullish">Sector Bullish</span></th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody id="watchlistBody">
-            <tr>
-              <td colspan="9" class="empty-state">Loading scan results from GitHub...</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- 🎯 ON DECK (NEAR MISSES) (Collapsible) -->
-      <div id="onDeckSection" class="on-deck-section">
-        <button id="onDeckToggleBtn" class="on-deck-toggle-btn" aria-expanded="true" title="Click to collapse/expand On Deck Setups">
-          <div class="on-deck-toggle-title">
-            <span style="font-size: 18px;">🎯</span>
-            <span class="on-deck-title-text">On Deck (Near Misses)</span>
-            <span id="onDeckCountBadge" class="badge badge-warning">0 Setups</span>
-          </div>
-          <span id="onDeckChevron" class="chevron">▼</span>
-        </button>
-        <div id="onDeckContent" class="on-deck-content-collapse" style="display: block;">
-          <p class="on-deck-subtitle" style="font-size: 12px; color: var(--text-dim); margin-bottom: 14px;">
-            Stage-2 setups passing Trend &amp; Squeeze filters under resistance, awaiting final breakout trigger or institutional volume spike.
-          </p>
-          <div id="onDeckCardsGrid" class="on-deck-grid">
-            <div class="empty-state">Loading on-deck candidates...</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ⚠️ THIS WEEK'S LANDMINES (Collapsible) -->
-      <div id="landminesSection" class="landmines-card" style="display: none;">
-        <button id="landminesToggleBtn" class="landmines-header-btn" aria-expanded="true" title="Click to collapse/expand Corporate Landmines">
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <span style="font-size: 16px;">⚠️</span>
-            <span style="font-weight: 700;">This Week's Landmines (Next 7 Days)</span>
-            <span id="landminesCountBadge" class="badge badge-danger">0 Events</span>
-          </div>
-          <span id="landminesChevron" class="chevron">▼</span>
-        </button>
-        <div id="landminesContent" class="landmines-content" style="display: block;">
-          <p style="font-size: 12px; color: var(--text-dim); margin-bottom: 12px;">
-            Upcoming corporate actions (AGM, Lock-in expiries, Record dates, Earnings) across watchlist, on-deck, and open positions. High overnight gap-risk.
-          </p>
-          <div id="landminesGrid" class="landmines-grid">
-            <div class="empty-state">No corporate landmines scheduled in the next 7 days.</div>
-          </div>
         </div>
       </div>
     </section>
@@ -403,6 +513,54 @@
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <!-- 💰 HOW TO SELL / MANAGE RISK PLAYBOOK CARD -->
+      <div id="playbookSellCard" class="playbook-card playbook-sell-card">
+        <button id="playbookSellToggleBtn" class="playbook-toggle-btn" aria-expanded="true">
+          <div class="playbook-title-group">
+            <span class="playbook-icon">💰</span>
+            <span class="playbook-title-text">HOW TO SELL / MANAGE RISK</span>
+            <span class="badge badge-warning playbook-badge">Sell Playbook</span>
+          </div>
+          <span id="playbookSellChevron" class="chevron">▼</span>
+        </button>
+        <div id="playbookSellContent" class="playbook-content">
+          <div class="playbook-scenarios-grid">
+            <!-- Scenario A -->
+            <div class="playbook-scenario">
+              <div class="scenario-badge scenario-a">Scenario A</div>
+              <div class="scenario-title">Stop-Hit (Discipline)</div>
+              <div class="scenario-desc">
+                Broker auto-executes, log <code>/sell</code>, no revenge.
+              </div>
+            </div>
+            <!-- Scenario B -->
+            <div class="playbook-scenario">
+              <div class="scenario-badge scenario-b">Scenario B</div>
+              <div class="scenario-title">+2R Target</div>
+              <div class="scenario-desc">
+                Sell 50%, <code>SL &rarr; breakeven</code>, trail rest on 20-EMA.
+              </div>
+            </div>
+            <!-- Scenario C -->
+            <div class="playbook-scenario">
+              <div class="scenario-badge scenario-c">Scenario C</div>
+              <div class="scenario-title">Time-Stop &gt;8d</div>
+              <div class="scenario-desc">
+                Time-stop &gt;8d not in profit (exit at close).
+              </div>
+            </div>
+            <!-- Scenario D -->
+            <div class="playbook-scenario">
+              <div class="scenario-badge scenario-d">Scenario D</div>
+              <div class="scenario-title">Event Warning</div>
+              <div class="scenario-desc">
+                Close before event regardless of P&amp;L.
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 

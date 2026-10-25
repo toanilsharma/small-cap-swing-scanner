@@ -56,14 +56,14 @@ const TERMS = {
     anchor: "glossary-gtt-copy"
   },
   "Hurst Exponent (persistence)": {
-    short: "Measures whether price action is trending (persistent, H>=0.55) or choppy (mean-reverting, H<=0.45).",
-    long: "Calculated via the rescaled-range (R/S) method over a rolling 100-bar window on log-returns. Above 0.55 = the trend tends to continue; below 0.45 = it tends to snap back, so breakouts whipsaw. Gray (0.45-0.55) indicates a random walk.",
+    short: "Measures whether price action is trending (persistent, H>=0.55) or choppy (mean-reverting, H<=0.45). Hard entry gate (H>=0.50) for breakouts.",
+    long: "Calculated via the rescaled-range (R/S) method over a rolling 100-bar window on log-returns. Breakouts require H >= 0.50 (HURST_GATE) or absent history; mean-reversion setups (springs & pullbacks) ignore Hurst. Above 0.55 = persistent momentum; below 0.45 = choppy whipsaw risk; 0.45-0.55 = random walk.",
     where_used: "Near Buy (Expandable Row), On Deck Card, Help Guide",
     anchor: "glossary-hurst"
   },
   "Hurst Exponent": {
-    short: "Measures whether price action is trending (persistent, H>=0.55) or choppy (mean-reverting, H<=0.45).",
-    long: "Calculated via the rescaled-range (R/S) method over a rolling 100-bar window on log-returns. Above 0.55 = the trend tends to continue; below 0.45 = it tends to snap back, so breakouts whipsaw. Gray (0.45-0.55) indicates a random walk.",
+    short: "Measures whether price action is trending (persistent, H>=0.55) or choppy (mean-reverting, H<=0.45). Hard entry gate (H>=0.50) for breakouts.",
+    long: "Calculated via the rescaled-range (R/S) method over a rolling 100-bar window on log-returns. Breakouts require H >= 0.50 (HURST_GATE) or absent history; mean-reversion setups (springs & pullbacks) ignore Hurst. Above 0.55 = persistent momentum; below 0.45 = choppy whipsaw risk; 0.45-0.55 = random walk.",
     where_used: "Near Buy (Expandable Row), On Deck Card, Help Guide",
     anchor: "glossary-hurst"
   },

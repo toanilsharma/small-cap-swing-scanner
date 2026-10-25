@@ -298,3 +298,61 @@ def test_diagnostic_keys_attached(monkeypatch: pytest.MonkeyPatch):
     for s, r in ratings.items():
         assert r is not None
         assert 1 <= r <= 99
+
+
+def test_hurst_breakout_gate(monkeypatch: pytest.MonkeyPatch):
+    """
+    9) Hurst persistence gate:
+    - BREAKOUT signals require hurst >= HURST_GATE (0.50).
+    - If hurst < HURST_GATE (e.g. 0.42 choppy mean-reverting), BREAKOUT is rejected.
+    - If history < 100 bars (hurst is None), fail-open: BREAKOUT is NOT blocked.
+    """
+    tb = build_scenario_dataframe("textbook")
+    monkeypatch.setattr(main, "get_history", lambda sym: tb)
+    monkeypatch.setattr(main, "sector_ok", lambda sym: True)
+    monkeypatch.setattr(main, "index_return_50", lambda: 0.0)
+    monkeypatch.setattr(main, "get_next_earnings", lambda sym: "2026-12-01")
+    monkeypatch.setattr(main, "diagnose", lambda sym: {"grade": "A", "score": 85})
+
+    # High Hurst (trending, textbook = 0.798) passes
+    sig_pass = main.scan_symbol("TB_PASS.NS")
+    assert sig_pass is not None, "Textbook breakout with H >= 0.50 must emit signal"
+    assert sig_pass["Type"] == "BREAKOUT"
+
+    # Choppy Hurst (H < 0.50) is rejected
+    monkeypatch.setattr(main, "calculate_hurst_exponent", lambda df: 0.42)
+    sig_rej = main.scan_symbol("CHOPPY_REJ.NS")
+    assert sig_rej is None, "Breakout setup with H=0.42 must be suppressed by Hurst gate"
+
+    # Absent Hurst (<100 bars, None) fails open
+    monkeypatch.setattr(main, "calculate_hurst_exponent", lambda df: None)
+    sig_none = main.scan_symbol("SHORT_HIST.NS")
+    assert sig_none is not None, "Breakout with insufficient history (H=None) must fail-open"
+    assert sig_none["Type"] == "BREAKOUT"
+
+
+def test_mean_reversion_setups_ignore_hurst(monkeypatch: pytest.MonkeyPatch):
+    """
+    Mean-reversion setups (SPRING and PULLBACK) thrive in choppy/rangebound regimes
+    and must NEVER be gated or suppressed by low Hurst.
+    """
+    monkeypatch.setattr(main, "sector_ok", lambda sym: True)
+    monkeypatch.setattr(main, "index_return_50", lambda: 0.0)
+    monkeypatch.setattr(main, "get_next_earnings", lambda sym: "2026-12-01")
+    monkeypatch.setattr(main, "diagnose", lambda sym: {"grade": "A", "score": 85})
+    # Force low/choppy Hurst (e.g. 0.35)
+    monkeypatch.setattr(main, "calculate_hurst_exponent", lambda df: 0.35)
+
+    # 1. Spring setup with H=0.35 must still pass
+    sp_df = build_scenario_dataframe("spring")
+    monkeypatch.setattr(main, "get_history", lambda sym: sp_df)
+    sig_spring = main.scan_symbol("SPRING_CHOP.NS")
+    assert sig_spring is not None, "Spring setup must NOT be blocked by low Hurst"
+    assert sig_spring["Type"] == "SPRING"
+
+    # 2. Pullback setup with H=0.35 must still pass
+    pb_df = build_scenario_dataframe("pullback")
+    monkeypatch.setattr(main, "get_history", lambda sym: pb_df)
+    sig_pb = main.scan_symbol("PULLBACK_CHOP.NS")
+    assert sig_pb is not None, "Pullback setup must NOT be blocked by low Hurst"
+    assert sig_pb["Type"] == "PULLBACK"

@@ -90,6 +90,7 @@ TIME_STOP_DAYS = 8
 MOMENTUM_RANK_TOP = 20
 RS_SLOPE_WEEKS = 4
 BREADTH_THRUST_THRESHOLD = 2.0
+HURST_GATE = 0.50
 
 # File paths & sources
 SYMBOL_SOURCE_URL = "https://www.niftyindices.com/IndexConstituent/ind_niftysmallcap100list.csv"
@@ -2651,6 +2652,12 @@ def scan_symbol(symbol: str) -> Optional[Dict[str, Any]]:
         signal_type = "PULLBACK"
     else:
         return None
+
+    # 6a) Hurst persistence entry gate (BREAKOUT only; MEAN-REVERSION springs & pullbacks thrive in chop)
+    if signal_type == "BREAKOUT":
+        hurst_val = calculate_hurst_exponent(df)
+        if hurst_val is not None and hurst_val < HURST_GATE:
+            return None
 
     # 6b) Catalyst gate by grade: B-grade signals additionally require an identifiable catalyst OR an institutional print (else suppressed); A/A+ exempt.
     grade = "A"

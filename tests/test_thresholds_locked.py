@@ -34,6 +34,7 @@ def test_core_trading_constants():
     assert main.MONTHLY_STOP_PCT == 0.06, f"MONTHLY_STOP_PCT changed: {main.MONTHLY_STOP_PCT}"
     assert main.MOMENTUM_RANK_TOP == 20, f"MOMENTUM_RANK_TOP changed: {main.MOMENTUM_RANK_TOP}"
     assert main.RS_SLOPE_WEEKS == 4, f"RS_SLOPE_WEEKS changed: {main.RS_SLOPE_WEEKS}"
+    assert main.HURST_GATE == 0.50, f"HURST_GATE changed: {main.HURST_GATE}"
 
 
 def test_core_flags_and_index_symbol():

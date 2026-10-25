@@ -924,6 +924,92 @@ def calculate_tail_capture_exit(
     }
 
 
+def calculate_hurst_exponent(df: Optional[pd.DataFrame]) -> Optional[float]:
+    """
+    Compute Hurst exponent H via the rescaled-range (R/S) method on log-returns
+    over a rolling 100-bar window.
+    - If <100 daily bars or invalid data, returns None.
+    - Detrend each sub-window by subtracting its mean before computing R/S.
+    - H = log(R/S) / log(n/2) averaged over non-overlapping sub-windows of size n=50.
+    - Mapped to standard [0.0, 1.0] scale where 0.5 = random walk, >0.5 = trending, <0.5 = mean-reverting.
+    - Deterministic, fixed window=100, zero randomness, zero division/crash risk.
+    """
+    if df is None or len(df) < 100 or "Close" not in df.columns:
+        return None
+    try:
+        closes = pd.to_numeric(df["Close"], errors="coerce").dropna().values
+        if len(closes) < 100 or np.any(closes <= 0):
+            return None
+
+        # Take 100 log returns if >=101 closes, else 99 returns for exactly 100 closes
+        if len(closes) >= 101:
+            rets = np.diff(np.log(closes[-101:]))
+        else:
+            rets = np.diff(np.log(closes[-100:]))
+
+        n = 50
+        num_windows = len(rets) // n
+        if num_windows < 1:
+            n = len(rets) // 2
+            num_windows = 2
+
+        h_vals = []
+        for i in range(num_windows):
+            sub = rets[i * n : (i + 1) * n]
+            if len(sub) < 4:
+                continue
+            m = np.mean(sub)
+            y = sub - m
+            z = np.cumsum(y)
+            r = float(np.max(z) - np.min(z))
+            s = float(np.std(sub, ddof=1)) if len(sub) > 1 else 0.0
+
+            denom = np.log(n / 2.0)
+            if s > 1e-12 and r > 1e-12 and denom > 1e-12:
+                h = np.log(r / s) / denom
+                if not np.isnan(h) and not np.isinf(h):
+                    h_vals.append(h)
+
+        if not h_vals:
+            return None
+
+        raw_h = float(np.mean(h_vals))
+        mapped_h = max(0.0, min(1.0, raw_h))
+        return round(mapped_h, 3)
+    except Exception:
+        return None
+
+
+def compute_hurst_summary(items: List[Dict[str, Any]]) -> Dict[str, int]:
+    """
+    Compute top-level hurst_summary {trending:n, random:n, meanrev:n, unknown:n}.
+    Trending: H >= 0.55
+    Mean-reverting: H <= 0.45
+    Random: 0.45 < H < 0.55
+    Unknown: H is None
+    """
+    trending = 0
+    random_cnt = 0
+    meanrev = 0
+    unknown = 0
+    for x in items:
+        h = x.get("hurst")
+        if h is None:
+            unknown += 1
+        elif h >= 0.55:
+            trending += 1
+        elif h <= 0.45:
+            meanrev += 1
+        else:
+            random_cnt += 1
+    return {
+        "trending": trending,
+        "random": random_cnt,
+        "meanrev": meanrev,
+        "unknown": unknown,
+    }
+
+
 def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
     """
     Compute moving averages, volatility measures, trend filters,
@@ -2271,6 +2357,7 @@ def scan_symbol(symbol: str) -> Optional[Dict[str, Any]]:
         "next_event": get_next_event(symbol, curr_date),
         "warn_event": bool(get_next_event(symbol, curr_date) and 0 <= get_next_event(symbol, curr_date)["days_to_event"] <= 3),
         "mtf_confluence": calculate_mtf_confluence(df, daily_trend_ok=bool(last_row.get("TREND_OK", True))),
+        "hurst": calculate_hurst_exponent(df),
     }
     sig_dict["thesis_card"] = build_thesis_card(sig_dict)
     return sig_dict
@@ -2469,6 +2556,7 @@ def diagnose(symbol: str) -> Optional[Dict[str, Any]]:
             and 0 <= get_next_event(symbol, pd.to_datetime(last_row["Date"]).date() if "Date" in last_row else datetime.date.today())["days_to_event"] <= 3
         ),
         "mtf_confluence": calculate_mtf_confluence(df, daily_trend_ok=trend_ok),
+        "hurst": calculate_hurst_exponent(df),
     }
     diag_dict["thesis_card"] = build_thesis_card(diag_dict)
     return diag_dict
@@ -2657,6 +2745,7 @@ def get_on_deck_candidates(symbols: Optional[List[str]] = None, history_map: Opt
                         "next_event": n_ev,
                         "warn_event": bool(n_ev and 0 <= n_ev["days_to_event"] <= 3),
                         "mtf_confluence": calculate_mtf_confluence(df, daily_trend_ok=bool(last_row.get("TREND_OK", False))),
+                        "hurst": calculate_hurst_exponent(df),
                     }
                     od_item["thesis_card"] = build_thesis_card(od_item)
                     candidates.append(od_item)
@@ -3868,6 +3957,7 @@ if __name__ == "__main__":
 
         correlation = compute_open_positions_correlation(open_positions)
         sector_rotation = compute_sector_rotation(get_symbols(), on_deck=on_deck)
+        hurst_summary = compute_hurst_summary(watchlist_candidates if watchlist_candidates else (signals + on_deck))
 
         scan_results = {
             "updated_at": now_ist,
@@ -3883,6 +3973,7 @@ if __name__ == "__main__":
             "landmines": landmines,
             "correlation": correlation,
             "sector_rotation": sector_rotation,
+            "hurst_summary": hurst_summary,
         }
 
         with open(SCAN_RESULTS_FILE, "w", encoding="utf-8") as f:

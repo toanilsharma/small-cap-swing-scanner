@@ -79,6 +79,7 @@ def execute_full_scan_pipeline() -> Tuple[List[Dict[str, Any]], List[Dict[str, A
 
     correlation = main.compute_open_positions_correlation([])
     sector_rotation = main.compute_sector_rotation(main.get_symbols(), on_deck=on_deck)
+    hurst_summary = main.compute_hurst_summary(watchlist if watchlist else (signals + on_deck))
 
     scan_data = {
         "updated_at": now_str,
@@ -94,6 +95,7 @@ def execute_full_scan_pipeline() -> Tuple[List[Dict[str, Any]], List[Dict[str, A
         "landmines": landmines,
         "correlation": correlation,
         "sector_rotation": sector_rotation,
+        "hurst_summary": hurst_summary,
     }
     with open(main.SCAN_RESULTS_FILE, "w", encoding="utf-8") as f:
         json.dump(scan_data, f, indent=2, ensure_ascii=False)
@@ -138,6 +140,7 @@ def test_hermetic_scan_unmuted(tmp_cwd: Any, spy_posts: list, pin_ist_time: Any,
         "landmines",
         "correlation",
         "sector_rotation",
+        "hurst_summary",
     }
     assert data["market_ok"] is True
     assert data["scanned_count"] == 2

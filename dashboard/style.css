@@ -5353,4 +5353,44 @@ th .term-lookup {
   padding: 4px 0;
 }
 
+/* =====================================================================
+   HURST EXPONENT PERSISTENCE LENS PILL
+   ===================================================================== */
+.hurst-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-family: var(--font-mono, monospace);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.hurst-trending {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.hurst-random {
+  background: rgba(148, 163, 184, 0.12);
+  color: #94a3b8;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+.hurst-choppy {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.hurst-na {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-muted, #64748b);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
 

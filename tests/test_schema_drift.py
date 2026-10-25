@@ -25,6 +25,7 @@ EXPECTED_TOP_LEVEL_KEYS = {
     "landmines",
     "correlation",
     "sector_rotation",
+    "hurst_summary",
 }
 
 EXPECTED_BACKTEST_RESULTS_KEYS = {
@@ -84,6 +85,7 @@ EXPECTED_SIGNAL_KEYS = {
     "warn_event",
     "mtf_confluence",
     "thesis_card",
+    "hurst",
 }
 
 EXPECTED_WATCHLIST_KEYS = {
@@ -110,6 +112,7 @@ EXPECTED_WATCHLIST_KEYS = {
     "warn_event",
     "mtf_confluence",
     "thesis_card",
+    "hurst",
 }
 
 EXPECTED_ON_DECK_KEYS = {
@@ -125,6 +128,7 @@ EXPECTED_ON_DECK_KEYS = {
     "warn_event",
     "mtf_confluence",
     "thesis_card",
+    "hurst",
 }
 
 
@@ -158,6 +162,13 @@ def test_schema_keys_exact_match(tmp_cwd: Any, monkeypatch: pytest.MonkeyPatch):
     assert isinstance(data["sector_rotation"], dict)
     assert "top_sectors" in data["sector_rotation"]
     assert "sector_map" in data["sector_rotation"]
+
+    assert "hurst_summary" in data
+    assert isinstance(data["hurst_summary"], dict)
+    assert set(data["hurst_summary"].keys()) == {"trending", "random", "meanrev", "unknown"}
+    for k, v in data["hurst_summary"].items():
+        assert isinstance(v, int)
+        assert v >= 0
 
     # 2. Signals schema
     assert len(data["signals"]) > 0, "Expected at least one signal in hermetic scan"
@@ -248,6 +259,45 @@ def test_rs_graceful_small_universe():
     import main
     res = main.calculate_rs_rating(["AAA.NS", "BBB.NS"])
     assert res == {"AAA.NS": None, "BBB.NS": None}
+
+
+def test_hurst_graceful_short_history():
+    """
+    Hermetic test: A short history fixture (<100 daily bars) returns None,
+    never crashes, and does not divide by zero.
+    """
+    import main
+    import pandas as pd
+    import numpy as np
+
+    # 1. <100 bars DataFrame
+    short_df = pd.DataFrame({"Close": [100.0 + i for i in range(50)]})
+    res_short = main.calculate_hurst_exponent(short_df)
+    assert res_short is None
+
+    # 2. Empty / None DataFrame
+    assert main.calculate_hurst_exponent(None) is None
+    assert main.calculate_hurst_exponent(pd.DataFrame()) is None
+
+    # 3. Exactly 99 bars
+    df_99 = pd.DataFrame({"Close": [100.0 + i for i in range(99)]})
+    assert main.calculate_hurst_exponent(df_99) is None
+
+    # 4. Constant closes (zero variance / division by zero safety)
+    const_df = pd.DataFrame({"Close": [100.0] * 120})
+    assert main.calculate_hurst_exponent(const_df) is None
+
+    # 5. >=100 bars valid history with price variation produces a float in [0.0, 1.0]
+    prices = [100.0]
+    for i in range(120):
+        # Deterministic variation
+        step = 1.01 if (i % 3 != 0) else 0.99
+        prices.append(prices[-1] * step)
+    valid_df = pd.DataFrame({"Close": prices})
+    h = main.calculate_hurst_exponent(valid_df)
+    assert h is not None
+    assert isinstance(h, float)
+    assert 0.0 <= h <= 1.0
 
 
 def test_backtest_schema_drift_and_empty_tolerance(tmp_cwd: Any):

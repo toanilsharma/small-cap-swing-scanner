@@ -55,6 +55,18 @@ const TERMS = {
     where_used: "Near Buy (Action Column), Trade Blueprint, Help Guide",
     anchor: "glossary-gtt-copy"
   },
+  "Hurst Exponent (persistence)": {
+    short: "Measures whether price action is trending (persistent, H>=0.55) or choppy (mean-reverting, H<=0.45).",
+    long: "Calculated via the rescaled-range (R/S) method over a rolling 100-bar window on log-returns. Above 0.55 = the trend tends to continue; below 0.45 = it tends to snap back, so breakouts whipsaw. Gray (0.45-0.55) indicates a random walk.",
+    where_used: "Near Buy (Expandable Row), On Deck Card, Help Guide",
+    anchor: "glossary-hurst"
+  },
+  "Hurst Exponent": {
+    short: "Measures whether price action is trending (persistent, H>=0.55) or choppy (mean-reverting, H<=0.45).",
+    long: "Calculated via the rescaled-range (R/S) method over a rolling 100-bar window on log-returns. Above 0.55 = the trend tends to continue; below 0.45 = it tends to snap back, so breakouts whipsaw. Gray (0.45-0.55) indicates a random walk.",
+    where_used: "Near Buy (Expandable Row), On Deck Card, Help Guide",
+    anchor: "glossary-hurst"
+  },
 
   // Moving Averages & Trend
   "SMA50": {
@@ -1382,6 +1394,20 @@ function renderLeadersBoard(leaders) {
   });
 }
 
+function formatHurstPill(hVal) {
+  if (hVal === null || hVal === undefined || isNaN(hVal)) {
+    return `<span class="hurst-pill hurst-na" title="Hurst Exponent: insufficient history (<100 bars)">H n/a</span>`;
+  }
+  const h = Number(hVal);
+  if (h >= 0.55) {
+    return `<span class="hurst-pill hurst-trending" title="Hurst ${h.toFixed(3)}: Trending (persistent momentum)">H ${h.toFixed(3)}</span>`;
+  } else if (h <= 0.45) {
+    return `<span class="hurst-pill hurst-choppy" title="Hurst ${h.toFixed(3)}: Choppy (mean-reverting, whipsaw risk)">H ${h.toFixed(3)}</span>`;
+  } else {
+    return `<span class="hurst-pill hurst-random" title="Hurst ${h.toFixed(3)}: Random walk">H ${h.toFixed(3)}</span>`;
+  }
+}
+
 function renderOnDeck(onDeckList) {
   const countBadge = document.getElementById("onDeckCountBadge");
   const grid = document.getElementById("onDeckCardsGrid");
@@ -1431,6 +1457,7 @@ function renderOnDeck(onDeckList) {
           <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
             <strong class="on-deck-symbol">${sym}</strong>
             <span class="badge badge-warning" style="font-size: 11px; font-weight: 700;">${dist}% to pivot</span>
+            ${formatHurstPill(item.hurst)}
             ${instBadge}
             ${eventChip}
           </div>
@@ -2693,6 +2720,7 @@ async function toggleWatchlistDetail(row, item, scanData) {
               <span class="badge badge-neutral">${item.Sector || "^NSEI"}</span>
               <span class="badge badge-success">₹${item.Close || 0}</span>
               <span class="badge badge-warning">${dist.toFixed(2)}% to Breakout</span>
+              ${formatHurstPill(item.hurst)}
               <button class="btn btn-sm btn-primary size-trade-btn" data-symbol="${symbol}">
                 🎯 Size this trade
               </button>
@@ -2737,6 +2765,13 @@ async function toggleWatchlistDetail(row, item, scanData) {
               </div>
               <div style="margin-top: 8px; width: 100%; height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden;">
                 <div style="width: ${Math.max(15, Math.min(100, ((item.base_maturity != null ? item.base_maturity : (isCoiling ? 3 : 2)) / 4) * 100))}%; height: 100%; background: linear-gradient(90deg, #38bdf8, #10b981);"></div>
+              </div>
+            </div>
+            <div class="accordion-card">
+              <div class="accordion-card-title">Hurst Exponent (Persistence)</div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                ${formatHurstPill(item.hurst)}
+                <span style="font-size: 12px; color: var(--text-dim);">${item.hurst != null ? (item.hurst >= 0.55 ? 'Trending (persistent momentum)' : (item.hurst <= 0.45 ? 'Choppy (mean-reverting whipsaw)' : 'Random walk')) : 'Need ≥100 bars'}</span>
               </div>
             </div>
           </div>

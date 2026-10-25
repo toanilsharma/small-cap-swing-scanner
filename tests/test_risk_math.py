@@ -78,6 +78,8 @@ def test_risk_math_7pct_floor_cap_binds(monkeypatch: pytest.MonkeyPatch):
     assert sig["Target"] == 118.0
     assert sig["Qty"] == 222
     assert sig["Risk Amount"] == 1998.0
+    assert sig["sizing_source"] == "flat-fallback"
+    assert sig["chosen_kelly_f"] == 0.01
 
 
 def test_risk_math_atr_stop_above_floor(monkeypatch: pytest.MonkeyPatch):
@@ -198,4 +200,134 @@ def test_backtest_matches_live_risk(monkeypatch: pytest.MonkeyPatch, tmp_cwd: An
     assert trade["initial_stop"] == 91.0, f"Expected 91.0, got {trade['initial_stop']}"
     assert trade["target"] == 118.0, f"Expected 118.0, got {trade['target']}"
     assert trade["qty"] == 222, f"Expected 222, got {trade['qty']}"
+
+
+def test_kelly_fraction_formula_and_bounds():
+    """
+    Tests Half-Kelly fraction formula and hard clamping to [0.0025, 0.015].
+    """
+    # 1. Extreme high edge clamps to 1.5% (0.015)
+    f_high = main.kelly_fraction(win_rate=0.9, avg_win_R=5.0, avg_loss_R=1.0)
+    assert f_high == 0.015, f"Expected 0.015, got {f_high}"
+
+    # 2. Extreme low / negative edge clamps to 0.25% (0.0025)
+    f_low = main.kelly_fraction(win_rate=0.25, avg_win_R=1.0, avg_loss_R=1.0)
+    assert f_low == 0.0025, f"Expected 0.0025, got {f_low}"
+
+    # 3. Zero / invalid inputs gracefully clamp
+    assert main.kelly_fraction(0.0, 0.0, 0.0) == 0.0025
+    assert main.kelly_fraction(-0.5, 2.0, 1.0) == 0.0025
+
+    # 4. Moderate positive edge inside [0.0025, 0.015]
+    f_mid = main.kelly_fraction(win_rate=0.40, avg_win_R=1.55, avg_loss_R=1.0)
+    assert 0.0025 < f_mid < 0.015, f"Expected inside clamp, got {f_mid}"
+
+
+def test_kelly_high_and_low_edge_sizing():
+    """
+    Asserts high-edge bucket sizes larger than flat, low-edge bucket sizes smaller,
+    and both respect survival constraints.
+    """
+    entry = 200.0
+    stop = 182.0  # 9% stop, risk per unit = 18.0
+    capital = 200000
+
+    # Flat fallback sizing: 1% risk = 2000 Rs / 18 = 111 shares. Gap cap = (5000) / (200 * 0.20) = 125 shares.
+    flat_res = main.calculate_position_size(
+        entry=entry,
+        stop=stop,
+        capital=capital,
+        stats_override={"trades": 10, "win_rate": 0.5, "avg_win_R": 2.0},  # < 30 trades -> fallback
+    )
+    assert flat_res["sizing_source"] == "flat-fallback"
+    assert flat_res["chosen_kelly_f"] == 0.01
+    assert flat_res["qty"] == 111
+
+    # High edge sizing: 1.5% ceiling = 3000 Rs / 18 = 166 shares. Clamped by gap cap (125 shares).
+    high_res = main.calculate_position_size(
+        entry=entry,
+        stop=stop,
+        capital=capital,
+        stats_override={"trades": 50, "win_rate": 0.6, "avg_win_R": 2.5, "avg_loss_R": 1.0, "source": "Kelly-BREAKOUT"},
+    )
+    assert high_res["chosen_kelly_f"] == 0.015
+    assert high_res["sizing_source"] == "Kelly-BREAKOUT"
+    assert high_res["qty"] == 125  # Gap cap bound at 125, which is > 111!
+    assert high_res["qty"] > flat_res["qty"]
+
+    # Low edge sizing: 0.65% risk budget = 1300 Rs / 18 = 72 shares.
+    low_res = main.calculate_position_size(
+        entry=entry,
+        stop=stop,
+        capital=capital,
+        stats_override={"trades": 50, "win_rate": 0.40, "avg_win_R": 1.55, "avg_loss_R": 1.0, "source": "Kelly-PULLBACK"},
+    )
+    assert low_res["chosen_kelly_f"] < 0.01
+    assert low_res["sizing_source"] == "Kelly-PULLBACK"
+    assert low_res["qty"] == 72
+    assert low_res["qty"] < flat_res["qty"]
+
+
+def test_kelly_never_breaches_survival_caps():
+    """
+    Explicit test required by audit:
+    Feeds extreme win_rate=0.9, avg_win_R=5.0 and asserts final shares
+    still strictly respect:
+      1) Gap-cap (worst-case gap limit)
+      2) 1.5% single-name risk ceiling
+      3) 1.0% ADV turnover cap
+      4) 5.0% aggregate heat ceiling
+    """
+    entry = 100.0
+    atr = 5.0
+    stop = 91.0  # 9% floor, risk per unit = 9.0
+    capital = 200000
+
+    extreme_stats = {
+        "trades": 100,
+        "win_rate": 0.9,
+        "avg_win_R": 5.0,
+        "avg_loss_R": 1.0,
+        "source": "Kelly-BREAKOUT",
+    }
+
+    # 1. Check raw risk ceiling clamp: Kelly chooses 1.5% max risk ceiling
+    res = main.calculate_position_size(
+        entry=entry,
+        stop=stop,
+        capital=capital,
+        stats_override=extreme_stats,
+    )
+    assert res["chosen_kelly_f"] == 0.015, "Extreme edge must clamp to 1.5% ceiling"
+    # Raw risk qty: floor(3000 / 9) = 333
+    # Gap cap: floor(5000 / 20) = 250
+    # Final shares must be <= gap cap (250)
+    assert res["qty"] == 250, "Shares must be clamped by gap survival cap"
+    assert res["risk_amount"] <= capital * 0.015, "Risk amount must not exceed 1.5% ceiling"
+
+    # 2. Check ADV ownership cap: 1.0% of ADV20
+    # When ADV20 is limited (e.g. 1,500,000 Rs), 1% is 15,000 Rs -> max 150 shares
+    tight_adv_res = main.calculate_position_size(
+        entry=entry,
+        stop=stop,
+        capital=capital,
+        adv20_rupees=1_500_000.0,
+        stats_override=extreme_stats,
+    )
+    assert tight_adv_res["qty"] == 150, "ADV cap strictly binds when tighter than gap/risk"
+    assert tight_adv_res["qty"] * entry <= 0.01 * 1_500_000.0
+
+    # 3. Check concurrent heat ceiling (5% max portfolio heat)
+    # If 9,500 Rs of heat is already used out of 10,000 Rs (5% of 200,000), remaining heat = 500 Rs.
+    # Max shares = floor(500 / 9) = 55 shares.
+    heat_res = main.calculate_position_size(
+        entry=entry,
+        stop=stop,
+        capital=capital,
+        current_heat=9500.0,
+        stats_override=extreme_stats,
+    )
+    assert heat_res["qty"] == 55, "Heat cap strictly clamps remaining shares"
+    assert heat_res["qty"] * (entry - stop) <= (capital * 0.05 - 9500.0)
+
 

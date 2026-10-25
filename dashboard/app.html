@@ -407,7 +407,10 @@
       <div id="positionSizerCard" class="sizer-card">
         <div class="sizer-header">
           <div>
-            <h2 class="sizer-title"><span>📐</span> Position Sizer & Risk Calculator</h2>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <h2 class="sizer-title"><span>📐</span> Position Sizer & Risk Calculator</h2>
+              <span id="sizerSizingSourceBadge" class="pill pill-primary" style="display: none; font-size: 11px;">Kelly 0.9%</span>
+            </div>
             <p class="sizer-subtitle">Auto-compute position quantity, risk budget, and 2R profit targets</p>
           </div>
           <button id="sizerResetBtn" class="btn btn-secondary btn-sm" title="Reset to defaults">Reset</button>
@@ -2227,6 +2230,15 @@
                 <div class="glossary-section-row"><span class="glossary-label">Why it matters:</span><span class="glossary-example">Above 0.55 = the trend tends to continue; below 0.45 = it tends to snap back, so breakouts whipsaw.</span></div>
                 <div class="glossary-section-row"><span class="glossary-label">main.py Threshold:</span><span class="glossary-threshold">Trending: H &ge; 0.55 (green); Random: 0.45 &lt; H &lt; 0.55 (gray); Choppy: H &le; 0.45 (amber). Fixed 100-bar window.</span></div>
                 <div class="glossary-section-row"><span class="glossary-label">Example:</span><span class="glossary-example">Stock coiling near pivot with H=0.62 signals persistent momentum favoring clean breakout continuation.</span></div>
+              </div>
+
+              <div class="glossary-card" id="glossary-half-kelly">
+                <div class="glossary-card-header"><span class="glossary-term">Half-Kelly Sizing</span><span class="glossary-category">Position Sizing</span></div>
+                <p class="glossary-meaning">Adaptive bet sizing derived from realized backtest edge (win rate &amp; payoff ratio), hard-clamped inside the capital preservation survival envelope.</p>
+                <div class="glossary-section-row"><span class="glossary-label">Formula:</span><span class="glossary-threshold">f* = win_rate - (1 - win_rate) / (avg_win_R / |avg_loss_R|); Half-Kelly = f* / 2</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Clamp Bounds:</span><span class="glossary-threshold">Strictly clamped to [0.25%, 1.5%] risk of Capital (never below ₹500, never above ₹3,000 on ₹200,000).</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Worked Example:</span><span class="glossary-example">Capital = ₹2,00,000. If Half-Kelly = 0.90%, Risk Budget = ₹2,00,000 × 0.009 = ₹1,800. Shares = min(₹1,800 / (Entry - SL), Gap Cap ₹5,000 / (Entry × 0.20)). If backtest has &lt;30 closed trades in bucket, falls back to flat 1.0% (₹2,000) with "flat-fallback".</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Where used:</span><span class="glossary-example">Open Positions, Near Buy Expandable Details, Position Sizer.</span></div>
               </div>
             </div>
           </article>

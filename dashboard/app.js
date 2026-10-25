@@ -297,6 +297,12 @@ const TERMS = {
     where_used: "Performance Stats Tab, Help Guide",
     anchor: "glossary-expectancy-r"
   },
+  "Half-Kelly Sizing": {
+    short: "Adaptive risk fraction based on backtest edge, clamped to [0.25%, 1.5%].",
+    long: "Computes Half-Kelly = f*/2 where f* = win_rate - (1 - win_rate) / (avg_win_R / |avg_loss_R|). Hard-clamped to [0.25%, 1.5%] risk of capital. If <30 closed trades exist in the signal bucket, falls back to flat 1.0% (flat-fallback).",
+    where_used: "Near Buy, Open Positions, Position Sizer, Help Guide",
+    anchor: "glossary-half-kelly"
+  },
   "Win rate": {
     short: "The percentage of closed trades that resulted in a positive realized profit.",
     long: "Calculated as Winning Trades / Total Trades. Because our 2R target delivers twice what our stop loses, a 45-50% win rate generates steady capital growth.",
@@ -2716,6 +2722,12 @@ async function toggleWatchlistDetail(row, item, scanData) {
   const isCoiling = item.Coiling === "YES";
   const basePill = `<span class="pill ${isCoiling ? 'pill-success' : 'pill-warning'}">Stage 2 ${isCoiling ? 'Tight Coil (Mature)' : 'Consolidating'}</span>`;
 
+  // Sizing model parameters (Half-Kelly)
+  const sizingSource = item.sizing_source || "flat-fallback";
+  const chosenKellyF = item.chosen_kelly_f != null ? item.chosen_kelly_f : 0.01;
+  const riskPctStr = (chosenKellyF * 100).toFixed(1) + "%";
+  const sizingLabel = `${sizingSource === "flat-fallback" ? "flat-fallback" : sizingSource} ${riskPctStr}`;
+
   const detailHtml = `
     <tr class="accordion-drawer-row detail-row" id="detail-${symbol}">
       <td colspan="9">
@@ -2727,8 +2739,8 @@ async function toggleWatchlistDetail(row, item, scanData) {
               <span class="badge badge-success">₹${item.Close || 0}</span>
               <span class="badge badge-warning">${dist.toFixed(2)}% to Breakout</span>
               ${formatHurstPill(item.hurst)}
-              <button class="btn btn-sm btn-primary size-trade-btn" data-symbol="${symbol}">
-                🎯 Size this trade
+              <button class="btn btn-sm btn-primary size-trade-btn" data-symbol="${symbol}" title="Size this trade with Position Sizer (${sizingLabel})">
+                🎯 Size (${sizingLabel})
               </button>
               <button class="btn btn-sm btn-secondary tv-chart-trigger-btn" data-symbol="${symbol}" title="Open interactive TradingView chart">
                 📊 Interactive Chart
@@ -2780,6 +2792,13 @@ async function toggleWatchlistDetail(row, item, scanData) {
                 <span style="font-size: 12px; color: var(--text-dim);">${item.hurst != null ? (item.hurst >= 0.55 ? 'Trending (persistent momentum)' : (item.hurst <= 0.45 ? 'Choppy (mean-reverting whipsaw)' : 'Random walk')) : 'Need ≥100 bars'}</span>
               </div>
             </div>
+            <div class="accordion-card">
+              <div class="accordion-card-title">Risk Sizing Model</div>
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                <span class="pill pill-primary">${sizingLabel}</span>
+                <span style="font-size: 11px; color: var(--text-dim);">${sizingSource === "flat-fallback" ? "Fallback 1% risk" : "Half-Kelly"}</span>
+              </div>
+            </div>
           </div>
 
           <!-- SC-B Trade Thesis Card (Monospace Block) -->
@@ -2819,8 +2838,8 @@ async function toggleWatchlistDetail(row, item, scanData) {
                 <span class="blueprint-rr-pill">Planned R:R = 1 : 2.0</span>
               </div>
               <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
-                <button class="btn btn-xs btn-outline-primary size-trade-btn" data-symbol="${symbol}" title="Size this trade with Position Sizer">
-                  🎯 Size at 1% Risk
+                <button class="btn btn-xs btn-outline-primary size-trade-btn" data-symbol="${symbol}" title="Size this trade with Position Sizer (${sizingLabel})">
+                  🎯 Size at ${riskPctStr} (${sizingSource})
                 </button>
                 <button class="btn btn-xs btn-outline-secondary gtt-copy-btn"
                   data-symbol="${symbol}"
@@ -3107,10 +3126,20 @@ function openPositionSizerFor(item) {
   const symInput = document.getElementById("sizerSymbol");
   const entryInput = document.getElementById("sizerEntry");
   const stopInput = document.getElementById("sizerStop");
+  const riskPctInput = document.getElementById("sizerRiskPct");
+  const sizerSourceBadge = document.getElementById("sizerSizingSourceBadge");
+
+  const chosenKellyF = item.chosen_kelly_f != null ? item.chosen_kelly_f : 0.01;
+  const sizingSource = item.sizing_source || "flat-fallback";
 
   if (symInput) symInput.value = symbol;
   if (entryInput) entryInput.value = entryPrice > 0 ? entryPrice : "";
   if (stopInput) stopInput.value = stopPrice > 0 ? stopPrice : "";
+  if (riskPctInput) riskPctInput.value = Number((chosenKellyF * 100).toFixed(2));
+  if (sizerSourceBadge) {
+    sizerSourceBadge.textContent = `${sizingSource} (${(chosenKellyF * 100).toFixed(1)}%)`;
+    sizerSourceBadge.style.display = "inline-block";
+  }
 
   // Auto-calculate outputs
   updatePositionSizer();
@@ -3279,6 +3308,8 @@ function initPositionSizer() {
       if (entryInput) entryInput.value = "";
       if (stopInput) stopInput.value = "";
       if (symbolInput) symbolInput.value = "";
+      const sizerSourceBadge = document.getElementById("sizerSizingSourceBadge");
+      if (sizerSourceBadge) sizerSourceBadge.style.display = "none";
       updatePositionSizer();
     });
   }
@@ -3640,6 +3671,20 @@ async function renderOpenPositions(positions) {
       </tr>
       <tr class="accordion-drawer-row detail-row" id="open-drawer-${escapeHtml(pos.symbol)}" style="display: none;">
         <td colspan="9" style="padding: 16px; background: rgba(15, 23, 42, 0.45);">
+          <!-- Sizing & Risk Allocation (Half-Kelly) -->
+          <div class="card" style="margin-bottom: 12px; padding: 10px 14px; background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 6px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+            <div style="display: flex; align-items: center; gap: 8px; font-size: 12px;">
+              <span>🛡️ <strong>Risk Allocation:</strong></span>
+              <span class="pill pill-primary" style="font-size: 11px;">
+                ${pos.sizing_source ? `${pos.sizing_source} ${(pos.chosen_kelly_f ? (pos.chosen_kelly_f * 100).toFixed(1) : (pos.risk_pct || 1.0))}%` : (match?.sizing_source ? `${match.sizing_source} ${(match.chosen_kelly_f * 100).toFixed(1)}%` : `flat-fallback ${pRiskPct}%`)}
+              </span>
+              <span style="color: var(--text-dim); font-size: 11.5px;">₹${Math.round(posRiskAmount).toLocaleString('en-IN')} max risk (${pRiskPct}% of capital)</span>
+            </div>
+            <a href="javascript:void(0)" onclick="document.querySelector('[data-tab=tabHelp]').click(); setTimeout(() => { const el = document.getElementById('glossary-half-kelly'); if(el) el.scrollIntoView({behavior: 'smooth'}); }, 100);" style="font-size: 11px; color: #38bdf8; text-decoration: underline;">
+              Half-Kelly details ➔
+            </a>
+          </div>
+
           <!-- Thesis Card (SC-B) -->
           <div class="card" style="margin-bottom: 12px; padding: 12px 16px; background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(56, 189, 248, 0.25); border-left: 3px solid var(--primary); border-radius: 8px;">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">

@@ -86,6 +86,8 @@ EXPECTED_SIGNAL_KEYS = {
     "mtf_confluence",
     "thesis_card",
     "hurst",
+    "sizing_source",
+    "chosen_kelly_f",
 }
 
 EXPECTED_WATCHLIST_KEYS = {

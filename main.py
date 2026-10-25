@@ -2167,12 +2167,178 @@ def compute_sector_rotation(
     }
 
 
+def kelly_fraction(
+    win_rate: float,
+    avg_win_R: float,
+    avg_loss_R: float = 1.0,
+) -> float:
+    """
+    Computes Half-Kelly position risk fraction from realized trade statistics.
+    f* = win_rate - (1.0 - win_rate) / (avg_win_R / abs(avg_loss_R))
+    Half-Kelly = f* / 2.0
+    Clamped strictly to [0.0025, 0.015] (0.25% to 1.5% risk budget).
+    Deterministic: fixed formula, no randomness, no seed.
+    """
+    try:
+        wr = float(win_rate)
+        win_r = float(avg_win_R)
+        loss_r_abs = abs(float(avg_loss_R)) if float(avg_loss_R) != 0 else 1.0
+
+        if win_r <= 0 or wr <= 0:
+            return 0.0025
+
+        payoff_b = win_r / loss_r_abs
+        if payoff_b <= 0:
+            return 0.0025
+
+        f_star = wr - ((1.0 - wr) / payoff_b)
+        half_kelly = f_star / 2.0
+
+        # Hard clamp inside survival envelope: [0.25%, 1.5%]
+        clamped = max(0.0025, min(0.015, half_kelly))
+        return round(clamped, 4)
+    except Exception:
+        return 0.01
+
+
+def resolve_kelly_fraction(
+    signal_type: str = "BREAKOUT",
+    backtest_path: str = "backtest_results.json",
+    stats_override: Optional[Dict[str, Any]] = None,
+) -> Tuple[float, str]:
+    """
+    Resolves the chosen risk fraction and its diagnostic source.
+    Buckets realized stats by signal_type (BREAKOUT/PULLBACK/SPRING) if >=30 closed trades;
+    else checks universe-wide stats if >=30 closed trades;
+    else falls back to flat RISK_PCT (0.01) with 'flat-fallback'.
+    Read-only; never writes to backtest archive.
+    """
+    if stats_override is not None:
+        wr = stats_override.get("win_rate", 0.0)
+        win_r = stats_override.get("avg_win_R", 0.0)
+        loss_r = stats_override.get("avg_loss_R", 1.0)
+        trades_cnt = stats_override.get("trades", 30)
+        src = stats_override.get("source", f"Kelly-{signal_type.upper()}")
+        if trades_cnt >= 30:
+            kf = kelly_fraction(wr, win_r, loss_r)
+            return kf, src
+        return RISK_PCT, "flat-fallback"
+
+    if not os.path.exists(backtest_path):
+        return RISK_PCT, "flat-fallback"
+
+    try:
+        with open(backtest_path, "r", encoding="utf-8") as f:
+            bt_data = json.load(f)
+
+        trades = bt_data.get("trades", [])
+        stype_upper = str(signal_type).upper()
+
+        # 1) Check bucket by signal_type
+        bucket_trades = [t for t in trades if str(t.get("signal_type", "")).upper() == stype_upper]
+        if len(bucket_trades) >= 30:
+            wins = [t for t in bucket_trades if float(t.get("pnl", 0.0)) > 0]
+            losses = [t for t in bucket_trades if float(t.get("pnl", 0.0)) <= 0]
+            wr = len(wins) / len(bucket_trades)
+            win_r = float(np.mean([t["r_multiple"] for t in wins])) if wins else 0.0
+            loss_r = float(np.mean([t["r_multiple"] for t in losses])) if losses else 1.0
+            kf = kelly_fraction(wr, win_r, loss_r)
+            return kf, f"Kelly-{stype_upper}"
+
+        # 2) Fallback to universe-wide backtest stats if >= 30 trades
+        if len(trades) >= 30:
+            wins = [t for t in trades if float(t.get("pnl", 0.0)) > 0]
+            losses = [t for t in trades if float(t.get("pnl", 0.0)) <= 0]
+            wr = float(bt_data.get("win_rate", len(wins) / len(trades)))
+            win_r = float(bt_data.get("avg_win_R", float(np.mean([t["r_multiple"] for t in wins])) if wins else 0.0))
+            loss_r = float(bt_data.get("avg_loss_R", float(np.mean([t["r_multiple"] for t in losses])) if losses else 1.0))
+            kf = kelly_fraction(wr, win_r, loss_r)
+            return kf, "Kelly-Universe"
+
+        # 3) Flat fallback when < 30 closed trades
+        return RISK_PCT, "flat-fallback"
+    except Exception:
+        return RISK_PCT, "flat-fallback"
+
+
+def calculate_position_size(
+    entry: float,
+    stop: float,
+    signal_type: str = "BREAKOUT",
+    capital: float = CAPITAL,
+    adv20_rupees: Optional[float] = None,
+    current_heat: float = 0.0,
+    stats_override: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """
+    Computes position size via Half-Kelly fraction hard-capped inside survival envelope.
+    Ordering invariant: "Kelly sets the bet size; survival caps still clamp it."
+    """
+    risk_per_unit = entry - stop
+    if risk_per_unit <= 0 or entry <= 0:
+        return {
+            "qty": 0,
+            "chosen_kelly_f": RISK_PCT,
+            "sizing_source": "flat-fallback",
+            "risk_amount": 0.0,
+            "gap_based_qty": 0,
+            "risk_based_qty": 0,
+            "gap_qty_applied": False,
+        }
+
+    chosen_kelly_f, sizing_source = resolve_kelly_fraction(
+        signal_type=signal_type,
+        stats_override=stats_override,
+    )
+
+    # 1. Bet size from Kelly fraction
+    risk_rupees = capital * chosen_kelly_f
+    risk_based_qty = math.floor(risk_rupees / risk_per_unit)
+
+    # 2. Kelly sets the bet size; survival caps still clamp it.
+    # a) Gap survival cap (20% worst-case gap cannot exceed 2.5% of capital)
+    gap_based_qty = math.floor((capital * MAX_GAP_LOSS_PCT) / (entry * WORST_CASE_GAP_PCT))
+
+    # b) 1.5% single-name risk ceiling clamp
+    max_single_risk_qty = math.floor((capital * 0.015) / risk_per_unit)
+
+    shares = min(risk_based_qty, gap_based_qty, max_single_risk_qty)
+
+    # c) Size-aware ADV liquidity cap (<= 1.0% of 20-day ADV)
+    if adv20_rupees is not None and adv20_rupees > 0:
+        max_adv_value = MAX_POSITION_ADV_PCT * adv20_rupees
+        adv_cap_qty = math.floor(max_adv_value / entry)
+        shares = min(shares, adv_cap_qty)
+
+    # d) Concurrent portfolio heat ceiling (total heat <= 5% of capital)
+    if current_heat > 0:
+        rem_heat = max(0.0, (capital * MAX_TOTAL_HEAT_PCT) - current_heat)
+        heat_cap_qty = math.floor(rem_heat / risk_per_unit)
+        shares = min(shares, heat_cap_qty)
+
+    qty = max(0, int(shares))
+    risk_amount = qty * risk_per_unit
+
+    return {
+        "qty": qty,
+        "chosen_kelly_f": chosen_kelly_f,
+        "sizing_source": sizing_source,
+        "risk_amount": risk_amount,
+        "gap_based_qty": gap_based_qty,
+        "risk_based_qty": risk_based_qty,
+        "gap_qty_applied": bool(gap_based_qty < risk_based_qty),
+    }
+
+
 def calculate_position_risk_parameters(
     entry: float,
     atr: float,
     signal_type: str = "BREAKOUT",
     low_price: Optional[float] = None,
     capital: float = CAPITAL,
+    adv20_rupees: Optional[float] = None,
+    current_heat: float = 0.0,
+    stats_override: Optional[Dict[str, Any]] = None,
 ) -> Optional[Dict[str, Any]]:
     """
     Standard position sizing, ATR stop loss, 9% floor cap, and 2R profit targets.
@@ -2200,9 +2366,18 @@ def calculate_position_risk_parameters(
     # Sizing and target (gap / circuit survival sizing)
     risk_per_unit = entry - stop
     target = entry + (TARGET_R_MULTIPLE * risk_per_unit)
-    gap_based_qty = math.floor((capital * MAX_GAP_LOSS_PCT) / (entry * WORST_CASE_GAP_PCT))
-    risk_based_qty = math.floor((capital * RISK_PCT) / risk_per_unit)
-    qty = min(risk_based_qty, gap_based_qty)
+
+    # Kelly sets the bet size; survival caps still clamp it.
+    size_res = calculate_position_size(
+        entry=entry,
+        stop=stop,
+        signal_type=signal_type,
+        capital=capital,
+        adv20_rupees=adv20_rupees,
+        current_heat=current_heat,
+        stats_override=stats_override,
+    )
+    qty = size_res["qty"]
     if qty <= 0:
         return None
 
@@ -2215,9 +2390,11 @@ def calculate_position_risk_parameters(
         "Qty": int(qty),
         "Risk Per Unit": round(risk_per_unit, 2),
         "Risk Amount": round(risk_amount, 2),
-        "gap_based_qty": gap_based_qty,
-        "risk_based_qty": risk_based_qty,
-        "gap_qty_applied": bool(gap_based_qty < risk_based_qty),
+        "gap_based_qty": size_res["gap_based_qty"],
+        "risk_based_qty": size_res["risk_based_qty"],
+        "gap_qty_applied": size_res["gap_qty_applied"],
+        "chosen_kelly_f": size_res["chosen_kelly_f"],
+        "sizing_source": size_res["sizing_source"],
     }
 
 
@@ -2317,6 +2494,8 @@ def scan_symbol(symbol: str) -> Optional[Dict[str, Any]]:
     risk_per_unit = risk_params["Risk Per Unit"]
     risk_amount = risk_params["Risk Amount"]
     gap_qty_applied = risk_params["gap_qty_applied"]
+    chosen_kelly_f = risk_params.get("chosen_kelly_f", RISK_PCT)
+    sizing_source = risk_params.get("sizing_source", "flat-fallback")
 
     # Size-aware cap: max_position_value = 0.015 * ADV20_rupees (notional <= 1.5% of avg daily turnover)
     max_position_value = MAX_POSITION_ADV_PCT * adv20_rupees
@@ -2358,6 +2537,8 @@ def scan_symbol(symbol: str) -> Optional[Dict[str, Any]]:
         "warn_event": bool(get_next_event(symbol, curr_date) and 0 <= get_next_event(symbol, curr_date)["days_to_event"] <= 3),
         "mtf_confluence": calculate_mtf_confluence(df, daily_trend_ok=bool(last_row.get("TREND_OK", True))),
         "hurst": calculate_hurst_exponent(df),
+        "sizing_source": sizing_source,
+        "chosen_kelly_f": chosen_kelly_f,
     }
     sig_dict["thesis_card"] = build_thesis_card(sig_dict)
     return sig_dict

@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-10-26T22:26:12.464275+05:30",
+  "updated_at": "2026-10-26T22:30:46.555176+05:30",
   "market_ok": false,
   "vol_regime": {
     "bucket": "NORMAL",
@@ -33,7 +33,7 @@
       "mtf_confluence": true,
       "hurst": 0.567,
       "ofi20": 0.1,
-      "thesis_card": "GRADE C | RS n/a | Base 1/4 (65d)\nTrend ✓ / Setup Consolidating / Sector Neutral / MTF ✓\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
+      "thesis_card": "GRADE C | RS n/a | Base 1/4 (65d)\nTrend \u2713 / Setup Consolidating / Sector Neutral / MTF \u2713\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
     },
     {
       "Symbol": "ANANDRATHI",
@@ -60,7 +60,7 @@
       "mtf_confluence": true,
       "hurst": 0.682,
       "ofi20": 0.29,
-      "thesis_card": "GRADE C | RS n/a | Base 1/4 (83d)\nTrend ✓ / Setup Consolidating / Sector Neutral / MTF ✓\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
+      "thesis_card": "GRADE C | RS n/a | Base 1/4 (83d)\nTrend \u2713 / Setup Consolidating / Sector Neutral / MTF \u2713\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
     },
     {
       "Symbol": "ATHERENERG",
@@ -87,7 +87,7 @@
       "mtf_confluence": true,
       "hurst": 0.588,
       "ofi20": 0.024,
-      "thesis_card": "GRADE C | RS n/a | Base 2/4 (35d)\nTrend ✓ / Setup Consolidating / Sector Neutral / MTF ✓\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
+      "thesis_card": "GRADE C | RS n/a | Base 2/4 (35d)\nTrend \u2713 / Setup Consolidating / Sector Neutral / MTF \u2713\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
     }
   ],
   "scanned_count": 100,
@@ -97,7 +97,7 @@
     "prev_close": 22600.0,
     "chg_pct": 0.68,
     "last_bar_date": "2026-10-26",
-    "as_of_ist": "2026-10-26T22:26:12.546323+05:30",
+    "as_of_ist": "2026-10-26T22:30:46.693980+05:30",
     "breadth_above_sma50": 15.0,
     "breadth_above_sma200": 39.0,
     "universe_size": 100,
@@ -269,6 +269,13 @@
     "confidence": "neutral"
   },
   "internals_history": [
+    {
+      "date": "2026-10-26",
+      "net_advance": 32,
+      "up_down_vol_ratio": 5.78,
+      "ratio": 5.78,
+      "oscillator": 0.0
+    },
     {
       "date": "2026-10-26",
       "net_advance": 32,

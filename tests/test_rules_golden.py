@@ -62,10 +62,10 @@ def build_scenario_dataframe(scenario: str) -> pd.DataFrame:
         # Prior 20-day high: set high of day 242 to 205.0 (becomes HIGH20 ceiling)
         high[242] = 205.0
 
-        # Days 250 to 258: 9 days of coiling / volatility dry-up (tight range=0.3, volume=300,000)
+        # Days 250 to 258: 9 days of coiling / volatility dry-up (tight range=0.3, volume=300,000, buy-side clustering)
         for j in range(250, 259):
-            high[j] = close[j] + 0.15
-            low[j] = close[j] - 0.15
+            high[j] = close[j] + 0.05
+            low[j] = close[j] - 0.25
             volume[j] = 300000.0
 
         if scenario == "textbook":

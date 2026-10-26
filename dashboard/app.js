@@ -68,14 +68,14 @@ const TERMS = {
     anchor: "glossary-hurst"
   },
   "Order-Flow Imbalance (CLV proxy)": {
-    short: "Volume-weighted Close Location Value proxy measuring buying vs selling pressure over 20 days.",
-    long: "approximation from daily bars, not true order-book depth; use alongside OBV + institutional footprint, never alone. Computes CLV = ((close-low)-(high-close))/(high-low) and sums CLV * volume over 20 days divided by total volume. Bands: >=0.4 (Strong Buy), 0.1..0.4 (Buy), -0.1..0.1 (Neutral), -0.4..-0.1 (Sell), <=-0.4 (Strong Sell).",
+    short: "Volume-weighted Close Location Value proxy measuring buying vs selling pressure over 20 days. Upgrades breakout gate with OFI >= 0.10.",
+    long: "approximation from daily bars, not true order-book depth; use alongside OBV + institutional footprint, never alone. Breakouts require OBV 20-day high AND ofi20 >= 0.10 (OFI_GATE); falls back to OBV-only if <20 bars. Computes CLV = ((close-low)-(high-close))/(high-low) and sums CLV * volume over 20 days divided by total volume. Bands: >=0.4 (Strong Buy), 0.1..0.4 (Buy), -0.1..0.1 (Neutral), -0.4..-0.1 (Sell), <=-0.4 (Strong Sell).",
     where_used: "Near Buy (Expandable Row), On Deck Card, Help Guide",
     anchor: "glossary-ofi"
   },
   "OFI": {
-    short: "Order-Flow Imbalance proxy over 20 days.",
-    long: "approximation from daily bars, not true order-book depth; use alongside OBV + institutional footprint, never alone. Signed [-1, 1] read of whether volume clustered near session highs (accumulation) or lows (distribution).",
+    short: "Order-Flow Imbalance proxy over 20 days. Breakout volume composite gate (>=0.10).",
+    long: "approximation from daily bars, not true order-book depth; use alongside OBV + institutional footprint, never alone. Signed [-1, 1] read of whether volume clustered near session highs (accumulation) or lows (distribution). Combined with OBV 20d high on breakouts.",
     where_used: "Near Buy (Expandable Row), On Deck Card, Help Guide",
     anchor: "glossary-ofi"
   },

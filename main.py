@@ -91,6 +91,7 @@ MOMENTUM_RANK_TOP = 20
 RS_SLOPE_WEEKS = 4
 BREADTH_THRUST_THRESHOLD = 2.0
 HURST_GATE = 0.50
+OFI_GATE = 0.10
 
 # File paths & sources
 SYMBOL_SOURCE_URL = "https://www.niftyindices.com/IndexConstituent/ind_niftysmallcap100list.csv"
@@ -1161,7 +1162,13 @@ def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
     df["OBV"] = (df["Volume"] * obv_dir).cumsum()
     df["OBV_HIGH20"] = df["OBV"].rolling(20).max().shift(1)
     if "OBV_CONFIRM" not in df.columns:
-        df["OBV_CONFIRM"] = df["OBV"] > df["OBV_HIGH20"]
+        obv_ok = df["OBV"] > df["OBV_HIGH20"]
+        ofi_val = calculate_ofi20(df)
+        if ofi_val is not None:
+            df["OBV_CONFIRM"] = obv_ok & (ofi_val >= OFI_GATE)
+        else:
+            # Fall back to OBV-only on absent/insufficient history (<20 bars)
+            df["OBV_CONFIRM"] = obv_ok
 
     # Trend Filter (Minervini / O'Neil style)
     df["TREND_OK"] = (
@@ -2948,6 +2955,19 @@ def diagnose(symbol: str) -> Optional[Dict[str, Any]]:
         "hurst": calculate_hurst_exponent(df),
         "ofi20": calculate_ofi20(df),
     }
+
+    # Diagnostic rationale when breakout setup is suppressed by entry gates
+    if bool(last_row.get("BREAKOUT", False)):
+        obv_high20 = last_row.get("OBV_HIGH20")
+        obv_val = last_row.get("OBV")
+        obv_is_ok = bool(obv_val > obv_high20) if (obv_val is not None and obv_high20 is not None and not pd.isna(obv_high20)) else False
+        ofi_v = diag_dict["ofi20"]
+        if obv_is_ok and ofi_v is not None and ofi_v < OFI_GATE:
+            print(f"breakout rejected: OBV ok but ofi20={ofi_v:.2f} sell-side clustering")
+        h_v = diag_dict["hurst"]
+        if h_v is not None and h_v < HURST_GATE:
+            print(f"breakout rejected: H={h_v:.2f} choppy")
+
     diag_dict["thesis_card"] = build_thesis_card(diag_dict)
     return diag_dict
 

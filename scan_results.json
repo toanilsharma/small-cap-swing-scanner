@@ -1,47 +1,108 @@
 {
-  "updated_at": "2026-10-25T15:08:30.924044+05:30",
+  "updated_at": "2026-10-26T15:56:23.269509+05:30",
   "market_ok": false,
+  "vol_regime": {
+    "bucket": "NORMAL",
+    "sigma_ann_pct": 23.22,
+    "percentile": 76.0
+  },
   "signals": [],
   "watchlist": [
+    {
+      "Symbol": "ACUTAAS",
+      "Sector": "^NSEI",
+      "SectorBullish": "no",
+      "Trend": "YES",
+      "Coiling": "no",
+      "DistToBreakout%": 0.53,
+      "Close": 3348.8,
+      "VolDryup": "no",
+      "RsiInRange": "YES",
+      "RSI14": 62.1,
+      "ATR14": 125.08,
+      "score": 50,
+      "grade": "C",
+      "Score": 50,
+      "Grade": "C",
+      "rs_rating": null,
+      "base_maturity": 1,
+      "days_in_base": 65,
+      "inst_footprint": "unknown",
+      "next_event": null,
+      "warn_event": false,
+      "mtf_confluence": true,
+      "hurst": 0.567,
+      "ofi20": 0.1,
+      "thesis_card": "GRADE C | RS n/a | Base 1/4 (65d)\nTrend ✓ / Setup Consolidating / Sector Neutral / MTF ✓\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
+    },
     {
       "Symbol": "ANANDRATHI",
       "Sector": "^NSEI",
       "SectorBullish": "no",
       "Trend": "YES",
       "Coiling": "no",
-      "DistToBreakout%": 0.28,
-      "Close": 2235.0,
+      "DistToBreakout%": 0.54,
+      "Close": 2230.0,
       "VolDryup": "no",
-      "RsiInRange": "no",
-      "RSI14": 66.9,
-      "ATR14": 49.65,
-      "score": 44,
+      "RsiInRange": "YES",
+      "RSI14": 64.5,
+      "ATR14": 49.08,
+      "score": 50,
       "grade": "C",
-      "Score": 44,
+      "Score": 50,
       "Grade": "C",
       "rs_rating": null,
-      "base_maturity": 2,
-      "days_in_base": 82,
+      "base_maturity": 1,
+      "days_in_base": 83,
       "inst_footprint": "unknown",
       "next_event": null,
       "warn_event": false,
       "mtf_confluence": true,
-      "thesis_card": "GRADE C | RS n/a | Base 2/4 (82d)\nTrend \u2713 / Setup Consolidating / Sector Neutral / MTF \u2713\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
+      "hurst": 0.682,
+      "ofi20": 0.29,
+      "thesis_card": "GRADE C | RS n/a | Base 1/4 (83d)\nTrend ✓ / Setup Consolidating / Sector Neutral / MTF ✓\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
+    },
+    {
+      "Symbol": "ATHERENERG",
+      "Sector": "^NSEI",
+      "SectorBullish": "no",
+      "Trend": "YES",
+      "Coiling": "no",
+      "DistToBreakout%": -1.54,
+      "Close": 1575.0,
+      "VolDryup": "no",
+      "RsiInRange": "no",
+      "RSI14": 65.5,
+      "ATR14": 79.2,
+      "score": 45,
+      "grade": "C",
+      "Score": 45,
+      "Grade": "C",
+      "rs_rating": null,
+      "base_maturity": 2,
+      "days_in_base": 35,
+      "inst_footprint": "unknown",
+      "next_event": null,
+      "warn_event": false,
+      "mtf_confluence": true,
+      "hurst": 0.588,
+      "ofi20": 0.024,
+      "thesis_card": "GRADE C | RS n/a | Base 2/4 (35d)\nTrend ✓ / Setup Consolidating / Sector Neutral / MTF ✓\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
     }
   ],
   "scanned_count": 100,
   "market_summary": {
     "source": "^NSEI",
-    "last_close": 22600.0,
-    "prev_close": 22687.65,
-    "chg_pct": -0.39,
-    "last_bar_date": "2026-10-23",
-    "as_of_ist": "2026-10-25T15:08:31.051216+05:30",
-    "breadth_above_sma50": 9.0,
-    "breadth_above_sma200": 37.0,
+    "last_close": 22753.2,
+    "prev_close": 22600.0,
+    "chg_pct": 0.68,
+    "last_bar_date": "2026-10-26",
+    "as_of_ist": "2026-10-26T15:56:23.366085+05:30",
+    "breadth_above_sma50": 15.0,
+    "breadth_above_sma200": 39.0,
     "universe_size": 100,
-    "advancers": 8,
-    "decliners": 92,
+    "advancers": 66,
+    "decliners": 34,
     "unchanged": 0
   },
   "on_deck": [],
@@ -49,38 +110,56 @@
     {
       "symbol": "STLTECH.NS",
       "rs_rating": 99,
-      "close": 826.65,
+      "close": 867.55,
       "sector": "^NSEI"
     },
     {
       "symbol": "CUPID.NS",
       "rs_rating": 98,
-      "close": 306.45,
+      "close": 314.05,
       "sector": "^NSEI"
     },
     {
       "symbol": "HFCL.NS",
       "rs_rating": 97,
-      "close": 240.07,
+      "close": 244.63,
+      "sector": "^NSEI"
+    },
+    {
+      "symbol": "ATHERENERG.NS",
+      "rs_rating": 95,
+      "close": 1575.0,
       "sector": "^NSEI"
     },
     {
       "symbol": "CHENNPETRO.NS",
       "rs_rating": 91,
-      "close": 1475.6,
+      "close": 1521.4,
+      "sector": "^NSEI"
+    },
+    {
+      "symbol": "ACUTAAS.NS",
+      "rs_rating": 90,
+      "close": 3348.8,
       "sector": "^NSEI"
     },
     {
       "symbol": "ANANDRATHI.NS",
       "rs_rating": 81,
-      "close": 2235.0,
+      "close": 2230.0,
+      "sector": "^NSEI"
+    },
+    {
+      "symbol": "KARURVYSYA.NS",
+      "rs_rating": 77,
+      "close": 337.7,
       "sector": "^NSEI"
     }
   ],
   "inst_summary": {
     "accumulation_count": 0,
     "churn_count": 0,
-    "unknown_count": 1,
+    "unknown_count": 3,
     "symbols_accumulating": []
   },
   "deals_stale": true,
@@ -95,79 +174,107 @@
       {
         "sector": "^NSEI",
         "n": 97,
-        "pct_above_sma50": 9.3,
-        "avg_ret_126d": 5.0,
+        "pct_above_sma50": 15.5,
+        "avg_ret_126d": 7.3,
         "on_deck_count": 0,
-        "score": 6.15
+        "score": 9.94
       },
       {
         "sector": "^NSEBANK",
         "n": 2,
         "pct_above_sma50": 0.0,
-        "avg_ret_126d": -3.1,
+        "avg_ret_126d": -0.9,
         "on_deck_count": 0,
-        "score": -0.93
+        "score": -0.27
       },
       {
         "sector": "^CNXREALTY",
         "n": 1,
         "pct_above_sma50": 0.0,
-        "avg_ret_126d": -7.9,
+        "avg_ret_126d": -7.4,
         "on_deck_count": 0,
-        "score": -2.37
+        "score": -2.22
       }
     ],
     "sector_map": {
       "^NSEI": {
         "sector": "^NSEI",
         "n": 97,
-        "pct_above_sma50": 9.3,
-        "avg_ret_126d": 5.0,
+        "pct_above_sma50": 15.5,
+        "avg_ret_126d": 7.3,
         "on_deck_count": 0,
-        "score": 6.15
+        "score": 9.94
       },
       "^NSEBANK": {
         "sector": "^NSEBANK",
         "n": 2,
         "pct_above_sma50": 0.0,
-        "avg_ret_126d": -3.1,
+        "avg_ret_126d": -0.9,
         "on_deck_count": 0,
-        "score": -0.93
+        "score": -0.27
       },
       "^CNXREALTY": {
         "sector": "^CNXREALTY",
         "n": 1,
         "pct_above_sma50": 0.0,
-        "avg_ret_126d": -7.9,
+        "avg_ret_126d": -7.4,
         "on_deck_count": 0,
-        "score": -2.37
+        "score": -2.22
       }
     },
     "sectors": {
       "^NSEI": {
         "sector": "^NSEI",
         "n": 97,
-        "pct_above_sma50": 9.3,
-        "avg_ret_126d": 5.0,
+        "pct_above_sma50": 15.5,
+        "avg_ret_126d": 7.3,
         "on_deck_count": 0,
-        "score": 6.15
+        "score": 9.94
       },
       "^NSEBANK": {
         "sector": "^NSEBANK",
         "n": 2,
         "pct_above_sma50": 0.0,
-        "avg_ret_126d": -3.1,
+        "avg_ret_126d": -0.9,
         "on_deck_count": 0,
-        "score": -0.93
+        "score": -0.27
       },
       "^CNXREALTY": {
         "sector": "^CNXREALTY",
         "n": 1,
         "pct_above_sma50": 0.0,
-        "avg_ret_126d": -7.9,
+        "avg_ret_126d": -7.4,
         "on_deck_count": 0,
-        "score": -2.37
+        "score": -2.22
       }
     }
-  }
+  },
+  "hurst_summary": {
+    "trending": 3,
+    "random": 0,
+    "meanrev": 0,
+    "unknown": 0
+  },
+  "ofi_summary": {
+    "strong_buy": 0,
+    "buy": 2,
+    "neutral": 1,
+    "sell": 0,
+    "strong_sell": 0
+  },
+  "market_internals": {
+    "oscillator": 0.0,
+    "up_down_vol_ratio": 5.78,
+    "breadth_thrust": false,
+    "confidence": "neutral"
+  },
+  "internals_history": [
+    {
+      "date": "2026-10-26",
+      "net_advance": 32,
+      "up_down_vol_ratio": 5.78,
+      "ratio": 5.78,
+      "oscillator": 0.0
+    }
+  ]
 }

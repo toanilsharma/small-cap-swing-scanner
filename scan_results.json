@@ -1,10 +1,10 @@
 {
-  "updated_at": "2026-10-27T21:32:34.469196+05:30",
+  "updated_at": "2026-10-28T16:17:12.332126+05:30",
   "market_ok": false,
   "vol_regime": {
-    "bucket": "HIGH",
-    "sigma_ann_pct": 24.73,
-    "percentile": 83.6
+    "bucket": "NORMAL",
+    "sigma_ann_pct": 24.0,
+    "percentile": 79.6
   },
   "signals": [],
   "watchlist": [
@@ -14,80 +14,80 @@
       "SectorBullish": "no",
       "Trend": "YES",
       "Coiling": "no",
-      "DistToBreakout%": -1.74,
-      "Close": 851.85,
+      "DistToBreakout%": -1.3,
+      "Close": 879.45,
       "VolDryup": "no",
       "RsiInRange": "YES",
-      "RSI14": 57.5,
-      "ATR14": 28.76,
+      "RSI14": 64.9,
+      "ATR14": 29.95,
       "score": 50,
       "grade": "C",
       "Score": 50,
       "Grade": "C",
       "rs_rating": null,
       "base_maturity": 1,
-      "days_in_base": 62,
+      "days_in_base": 63,
       "inst_footprint": "unknown",
       "next_event": null,
       "warn_event": false,
       "mtf_confluence": true,
-      "hurst": 0.607,
-      "ofi20": 0.145,
-      "thesis_card": "GRADE C | RS n/a | Base 1/4 (62d)\nTrend \u2713 / Setup Consolidating / Sector Neutral / MTF \u2713\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
+      "hurst": 0.643,
+      "ofi20": 0.25,
+      "thesis_card": "GRADE C | RS n/a | Base 1/4 (63d)\nTrend ✓ / Setup Consolidating / Sector Neutral / MTF ✓\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
     },
     {
-      "Symbol": "ACUTAAS",
+      "Symbol": "NAVINFLUOR",
       "Sector": "^NSEI",
       "SectorBullish": "no",
       "Trend": "YES",
       "Coiling": "no",
-      "DistToBreakout%": -11.3,
-      "Close": 3793.3,
+      "DistToBreakout%": 1.22,
+      "Close": 8501.0,
       "VolDryup": "no",
-      "RsiInRange": "no",
-      "RSI14": 73.6,
-      "ATR14": 157.59,
-      "score": 45,
+      "RsiInRange": "YES",
+      "RSI14": 50.3,
+      "ATR14": 269.07,
+      "score": 50,
       "grade": "C",
-      "Score": 45,
-      "Grade": "C",
-      "rs_rating": null,
-      "base_maturity": 3,
-      "days_in_base": 106,
-      "inst_footprint": "unknown",
-      "next_event": null,
-      "warn_event": false,
-      "mtf_confluence": true,
-      "hurst": 0.639,
-      "ofi20": 0.294,
-      "thesis_card": "GRADE C | RS n/a | Base 3/4 (106d)\nTrend \u2713 / Setup Consolidating / Sector Neutral / MTF \u2713\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
-    },
-    {
-      "Symbol": "ATHERENERG",
-      "Sector": "^NSEI",
-      "SectorBullish": "no",
-      "Trend": "YES",
-      "Coiling": "no",
-      "DistToBreakout%": -3.05,
-      "Close": 1674.0,
-      "VolDryup": "no",
-      "RsiInRange": "no",
-      "RSI14": 69.2,
-      "ATR14": 76.48,
-      "score": 45,
-      "grade": "C",
-      "Score": 45,
+      "Score": 50,
       "Grade": "C",
       "rs_rating": null,
       "base_maturity": 1,
-      "days_in_base": 58,
+      "days_in_base": 95,
       "inst_footprint": "unknown",
       "next_event": null,
       "warn_event": false,
       "mtf_confluence": true,
-      "hurst": 0.617,
-      "ofi20": 0.092,
-      "thesis_card": "GRADE C | RS n/a | Base 1/4 (58d)\nTrend \u2713 / Setup Consolidating / Sector Neutral / MTF \u2713\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
+      "hurst": 0.583,
+      "ofi20": 0.025,
+      "thesis_card": "GRADE C | RS n/a | Base 1/4 (95d)\nTrend ✓ / Setup Consolidating / Sector Neutral / MTF ✓\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
+    },
+    {
+      "Symbol": "PPLPHARMA",
+      "Sector": "^NSEI",
+      "SectorBullish": "no",
+      "Trend": "YES",
+      "Coiling": "no",
+      "DistToBreakout%": -8.8,
+      "Close": 232.8,
+      "VolDryup": "no",
+      "RsiInRange": "no",
+      "RSI14": 71.4,
+      "ATR14": 8.89,
+      "score": 45,
+      "grade": "C",
+      "Score": 45,
+      "Grade": "C",
+      "rs_rating": null,
+      "base_maturity": 2,
+      "days_in_base": 67,
+      "inst_footprint": "unknown",
+      "next_event": null,
+      "warn_event": false,
+      "mtf_confluence": true,
+      "hurst": 0.635,
+      "ofi20": 0.551,
+      "thesis_card": "GRADE C | RS n/a | Base 2/4 (67d)\nTrend ✓ / Setup Consolidating / Sector Neutral / MTF ✓\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
     },
     {
       "Symbol": "ANANDRATHI",
@@ -95,157 +95,157 @@
       "SectorBullish": "no",
       "Trend": "YES",
       "Coiling": "no",
-      "DistToBreakout%": -0.75,
-      "Close": 2259.0,
+      "DistToBreakout%": 0.12,
+      "Close": 2264.6,
       "VolDryup": "no",
       "RsiInRange": "no",
-      "RSI14": 66.4,
-      "ATR14": 49.46,
+      "RSI14": 69.8,
+      "ATR14": 49.12,
       "score": 45,
       "grade": "C",
       "Score": 45,
       "Grade": "C",
       "rs_rating": null,
       "base_maturity": 1,
-      "days_in_base": 84,
+      "days_in_base": 85,
       "inst_footprint": "unknown",
       "next_event": null,
       "warn_event": false,
       "mtf_confluence": true,
-      "hurst": 0.684,
-      "ofi20": 0.3,
-      "thesis_card": "GRADE C | RS n/a | Base 1/4 (84d)\nTrend \u2713 / Setup Consolidating / Sector Neutral / MTF \u2713\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
+      "hurst": 0.701,
+      "ofi20": 0.282,
+      "thesis_card": "GRADE C | RS n/a | Base 1/4 (85d)\nTrend ✓ / Setup Consolidating / Sector Neutral / MTF ✓\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
     },
     {
-      "Symbol": "BEML",
+      "Symbol": "GLAND",
       "Sector": "^NSEI",
       "SectorBullish": "no",
       "Trend": "YES",
       "Coiling": "no",
-      "DistToBreakout%": 3.08,
-      "Close": 1998.6,
+      "DistToBreakout%": 4.0,
+      "Close": 3049.0,
       "VolDryup": "no",
       "RsiInRange": "YES",
-      "RSI14": 46.7,
-      "ATR14": 80.2,
-      "score": 43,
+      "RSI14": 42.0,
+      "ATR14": 108.29,
+      "score": 39,
       "grade": "C",
-      "Score": 43,
+      "Score": 39,
       "Grade": "C",
       "rs_rating": null,
       "base_maturity": 1,
-      "days_in_base": 25,
+      "days_in_base": 54,
       "inst_footprint": "unknown",
       "next_event": null,
       "warn_event": false,
       "mtf_confluence": true,
-      "hurst": 0.616,
-      "ofi20": 0.16,
-      "thesis_card": "GRADE C | RS n/a | Base 1/4 (25d)\nTrend \u2713 / Setup Consolidating / Sector Neutral / MTF \u2713\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
+      "hurst": 0.578,
+      "ofi20": 0.183,
+      "thesis_card": "GRADE C | RS n/a | Base 1/4 (54d)\nTrend ✓ / Setup Consolidating / Sector Neutral / MTF ✓\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
     },
     {
-      "Symbol": "CHENNPETRO",
+      "Symbol": "ATHERENERG",
       "Sector": "^NSEI",
       "SectorBullish": "no",
       "Trend": "YES",
       "Coiling": "no",
-      "DistToBreakout%": 3.49,
-      "Close": 1573.8,
+      "DistToBreakout%": 3.15,
+      "Close": 1650.0,
       "VolDryup": "no",
-      "RsiInRange": "YES",
-      "RSI14": 61.2,
-      "ATR14": 95.74,
-      "score": 41,
+      "RsiInRange": "no",
+      "RSI14": 66.0,
+      "ATR14": 76.19,
+      "score": 32,
       "grade": "C",
-      "Score": 41,
+      "Score": 32,
       "Grade": "C",
       "rs_rating": null,
       "base_maturity": 1,
-      "days_in_base": 53,
+      "days_in_base": 59,
       "inst_footprint": "unknown",
       "next_event": null,
       "warn_event": false,
       "mtf_confluence": true,
-      "hurst": 0.568,
-      "ofi20": 0.182,
-      "thesis_card": "GRADE C | RS n/a | Base 1/4 (53d)\nTrend \u2713 / Setup Consolidating / Sector Neutral / MTF \u2713\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
+      "hurst": 0.603,
+      "ofi20": 0.114,
+      "thesis_card": "GRADE C | RS n/a | Base 1/4 (59d)\nTrend ✓ / Setup Consolidating / Sector Neutral / MTF ✓\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
     }
   ],
   "scanned_count": 100,
   "market_summary": {
     "source": "^NSEI",
-    "last_close": 22749.75,
-    "prev_close": 22753.2,
-    "chg_pct": -0.02,
-    "last_bar_date": "2026-10-27",
-    "as_of_ist": "2026-10-27T21:32:34.698676+05:30",
-    "breadth_above_sma50": 20.0,
-    "breadth_above_sma200": 43.0,
+    "last_close": 22698.85,
+    "prev_close": 22749.75,
+    "chg_pct": -0.22,
+    "last_bar_date": "2026-10-28",
+    "as_of_ist": "2026-10-28T16:17:12.588604+05:30",
+    "breadth_above_sma50": 27.0,
+    "breadth_above_sma200": 46.0,
     "universe_size": 100,
-    "advancers": 82,
-    "decliners": 18,
-    "unchanged": 0
+    "advancers": 59,
+    "decliners": 40,
+    "unchanged": 1
   },
   "on_deck": [],
   "leaders_board": [
     {
       "symbol": "STLTECH.NS",
       "rs_rating": 99,
-      "close": 910.9,
+      "close": 879.4,
       "sector": "^NSEI"
     },
     {
       "symbol": "CUPID.NS",
       "rs_rating": 98,
-      "close": 316.6,
+      "close": 314.55,
       "sector": "^NSEI"
     },
     {
       "symbol": "HFCL.NS",
       "rs_rating": 97,
-      "close": 250.11,
+      "close": 242.81,
+      "sector": "^NSEI"
+    },
+    {
+      "symbol": "WELCORP.NS",
+      "rs_rating": 96,
+      "close": 2564.3,
       "sector": "^NSEI"
     },
     {
       "symbol": "ATHERENERG.NS",
-      "rs_rating": 95,
-      "close": 1674.0,
+      "rs_rating": 94,
+      "close": 1650.0,
       "sector": "^NSEI"
     },
     {
       "symbol": "ACUTAAS.NS",
-      "rs_rating": 93,
-      "close": 3793.3,
+      "rs_rating": 91,
+      "close": 3710.0,
       "sector": "^NSEI"
     },
     {
       "symbol": "CHENNPETRO.NS",
-      "rs_rating": 92,
-      "close": 1573.8,
+      "rs_rating": 90,
+      "close": 1521.4,
       "sector": "^NSEI"
     },
     {
       "symbol": "SONACOMS.NS",
       "rs_rating": 89,
-      "close": 851.85,
+      "close": 879.45,
       "sector": "^NSEI"
     },
     {
       "symbol": "GLAND.NS",
       "rs_rating": 88,
-      "close": 2960.3,
+      "close": 3049.0,
       "sector": "^NSEI"
     },
     {
-      "symbol": "ANANDRATHI.NS",
-      "rs_rating": 80,
-      "close": 2259.0,
-      "sector": "^NSEI"
-    },
-    {
-      "symbol": "KARURVYSYA.NS",
-      "rs_rating": 78,
-      "close": 350.6,
+      "symbol": "NAVINFLUOR.NS",
+      "rs_rating": 82,
+      "close": 8501.0,
       "sector": "^NSEI"
     }
   ],
@@ -267,78 +267,78 @@
       {
         "sector": "^NSEI",
         "n": 97,
-        "pct_above_sma50": 20.6,
-        "avg_ret_126d": 11.3,
+        "pct_above_sma50": 27.8,
+        "avg_ret_126d": 9.7,
         "on_deck_count": 0,
-        "score": 13.69
+        "score": 16.81
       },
       {
         "sector": "^NSEBANK",
         "n": 2,
         "pct_above_sma50": 0.0,
-        "avg_ret_126d": -2.3,
+        "avg_ret_126d": -1.3,
         "on_deck_count": 0,
-        "score": -0.69
+        "score": -0.39
       },
       {
         "sector": "^CNXREALTY",
         "n": 1,
         "pct_above_sma50": 0.0,
-        "avg_ret_126d": -5.1,
+        "avg_ret_126d": -8.8,
         "on_deck_count": 0,
-        "score": -1.53
+        "score": -2.64
       }
     ],
     "sector_map": {
       "^NSEI": {
         "sector": "^NSEI",
         "n": 97,
-        "pct_above_sma50": 20.6,
-        "avg_ret_126d": 11.3,
+        "pct_above_sma50": 27.8,
+        "avg_ret_126d": 9.7,
         "on_deck_count": 0,
-        "score": 13.69
+        "score": 16.81
       },
       "^NSEBANK": {
         "sector": "^NSEBANK",
         "n": 2,
         "pct_above_sma50": 0.0,
-        "avg_ret_126d": -2.3,
+        "avg_ret_126d": -1.3,
         "on_deck_count": 0,
-        "score": -0.69
+        "score": -0.39
       },
       "^CNXREALTY": {
         "sector": "^CNXREALTY",
         "n": 1,
         "pct_above_sma50": 0.0,
-        "avg_ret_126d": -5.1,
+        "avg_ret_126d": -8.8,
         "on_deck_count": 0,
-        "score": -1.53
+        "score": -2.64
       }
     },
     "sectors": {
       "^NSEI": {
         "sector": "^NSEI",
         "n": 97,
-        "pct_above_sma50": 20.6,
-        "avg_ret_126d": 11.3,
+        "pct_above_sma50": 27.8,
+        "avg_ret_126d": 9.7,
         "on_deck_count": 0,
-        "score": 13.69
+        "score": 16.81
       },
       "^NSEBANK": {
         "sector": "^NSEBANK",
         "n": 2,
         "pct_above_sma50": 0.0,
-        "avg_ret_126d": -2.3,
+        "avg_ret_126d": -1.3,
         "on_deck_count": 0,
-        "score": -0.69
+        "score": -0.39
       },
       "^CNXREALTY": {
         "sector": "^CNXREALTY",
         "n": 1,
         "pct_above_sma50": 0.0,
-        "avg_ret_126d": -5.1,
+        "avg_ret_126d": -8.8,
         "on_deck_count": 0,
-        "score": -1.53
+        "score": -2.64
       }
     }
   },
@@ -349,15 +349,15 @@
     "unknown": 0
   },
   "ofi_summary": {
-    "strong_buy": 0,
-    "buy": 5,
+    "strong_buy": 1,
+    "buy": 4,
     "neutral": 1,
     "sell": 0,
     "strong_sell": 0
   },
   "market_internals": {
-    "oscillator": 3.75,
-    "up_down_vol_ratio": 11.84,
+    "oscillator": 2.52,
+    "up_down_vol_ratio": 4.45,
     "breadth_thrust": false,
     "confidence": "strong"
   },
@@ -403,6 +403,13 @@
       "up_down_vol_ratio": 11.84,
       "ratio": 11.84,
       "oscillator": 3.75
+    },
+    {
+      "date": "2026-10-28",
+      "net_advance": 19,
+      "up_down_vol_ratio": 4.45,
+      "ratio": 4.45,
+      "oscillator": 2.52
     }
   ]
 }

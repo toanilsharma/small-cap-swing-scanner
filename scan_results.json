@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-11-11T17:35:41.757870+05:30",
+  "updated_at": "2026-11-11T23:34:47.622094+05:30",
   "market_ok": true,
   "vol_regime": {
     "bucket": "NORMAL",
@@ -33,7 +33,7 @@
       "mtf_confluence": true,
       "hurst": 0.623,
       "ofi20": -0.092,
-      "thesis_card": "GRADE B | RS n/a | Base 4/4 (28d)\nTrend ✓ / Setup Coiling / Sector Neutral / MTF ✓\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
+      "thesis_card": "GRADE B | RS n/a | Base 4/4 (28d)\nTrend \u2713 / Setup Coiling / Sector Neutral / MTF \u2713\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
     },
     {
       "Symbol": "URBANCO",
@@ -60,7 +60,7 @@
       "mtf_confluence": true,
       "hurst": 0.636,
       "ofi20": 0.003,
-      "thesis_card": "GRADE B | RS n/a | Base 1/4 (24d)\nTrend ✓ / Setup Coiling / Sector Neutral / MTF ✓\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
+      "thesis_card": "GRADE B | RS n/a | Base 1/4 (24d)\nTrend \u2713 / Setup Coiling / Sector Neutral / MTF \u2713\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
     },
     {
       "Symbol": "IIFL",
@@ -87,7 +87,7 @@
       "mtf_confluence": true,
       "hurst": 0.68,
       "ofi20": 0.129,
-      "thesis_card": "GRADE B | RS n/a | Base 1/4 (91d)\nTrend ✓ / Setup Consolidating / Sector Neutral / MTF ✓\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
+      "thesis_card": "GRADE B | RS n/a | Base 1/4 (91d)\nTrend \u2713 / Setup Consolidating / Sector Neutral / MTF \u2713\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
     },
     {
       "Symbol": "ATHERENERG",
@@ -114,7 +114,7 @@
       "mtf_confluence": true,
       "hurst": 0.656,
       "ofi20": 0.241,
-      "thesis_card": "GRADE C | RS n/a | Base 1/4 (68d)\nTrend ✓ / Setup Consolidating / Sector Neutral / MTF ✓\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
+      "thesis_card": "GRADE C | RS n/a | Base 1/4 (68d)\nTrend \u2713 / Setup Consolidating / Sector Neutral / MTF \u2713\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
     },
     {
       "Symbol": "KARURVYSYA",
@@ -141,7 +141,7 @@
       "mtf_confluence": true,
       "hurst": 0.538,
       "ofi20": 0.024,
-      "thesis_card": "GRADE C | RS n/a | Base 2/4 (78d)\nTrend ✓ / Setup Consolidating / Sector Neutral / MTF ✓\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
+      "thesis_card": "GRADE C | RS n/a | Base 2/4 (78d)\nTrend \u2713 / Setup Consolidating / Sector Neutral / MTF \u2713\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
     },
     {
       "Symbol": "CUB",
@@ -168,7 +168,7 @@
       "mtf_confluence": true,
       "hurst": 0.576,
       "ofi20": -0.132,
-      "thesis_card": "GRADE C | RS n/a | Base 1/4 (94d)\nTrend ✓ / Setup Consolidating / Sector Neutral / MTF ✓\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
+      "thesis_card": "GRADE C | RS n/a | Base 1/4 (94d)\nTrend \u2713 / Setup Consolidating / Sector Neutral / MTF \u2713\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
     },
     {
       "Symbol": "PPLPHARMA",
@@ -195,7 +195,7 @@
       "mtf_confluence": true,
       "hurst": 0.593,
       "ofi20": 0.48,
-      "thesis_card": "GRADE C | RS n/a | Base 1/4 (76d)\nTrend ✓ / Setup Consolidating / Sector Neutral / MTF ✓\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
+      "thesis_card": "GRADE C | RS n/a | Base 1/4 (76d)\nTrend \u2713 / Setup Consolidating / Sector Neutral / MTF \u2713\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
     },
     {
       "Symbol": "NAVINFLUOR",
@@ -222,7 +222,7 @@
       "mtf_confluence": true,
       "hurst": 0.609,
       "ofi20": 0.322,
-      "thesis_card": "GRADE C | RS n/a | Base 2/4 (104d)\nTrend ✓ / Setup Consolidating / Sector Neutral / MTF ✓\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
+      "thesis_card": "GRADE C | RS n/a | Base 2/4 (104d)\nTrend \u2713 / Setup Consolidating / Sector Neutral / MTF \u2713\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
     },
     {
       "Symbol": "SAILIFE",
@@ -249,7 +249,7 @@
       "mtf_confluence": true,
       "hurst": 0.688,
       "ofi20": 0.48,
-      "thesis_card": "GRADE C | RS n/a | Base 2/4 (69d)\nTrend ✓ / Setup Consolidating / Sector Neutral / MTF ✓\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
+      "thesis_card": "GRADE C | RS n/a | Base 2/4 (69d)\nTrend \u2713 / Setup Consolidating / Sector Neutral / MTF \u2713\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
     },
     {
       "Symbol": "SONACOMS",
@@ -276,7 +276,7 @@
       "mtf_confluence": true,
       "hurst": 0.617,
       "ofi20": 0.324,
-      "thesis_card": "GRADE C | RS n/a | Base 1/4 (72d)\nTrend ✓ / Setup Consolidating / Sector Neutral / MTF ✓\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
+      "thesis_card": "GRADE C | RS n/a | Base 1/4 (72d)\nTrend \u2713 / Setup Consolidating / Sector Neutral / MTF \u2713\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
     },
     {
       "Symbol": "BEML",
@@ -303,7 +303,7 @@
       "mtf_confluence": true,
       "hurst": 0.617,
       "ofi20": 0.037,
-      "thesis_card": "GRADE C | RS n/a | Base 2/4 (65d)\nTrend ✓ / Setup Consolidating / Sector Neutral / MTF ✓\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
+      "thesis_card": "GRADE C | RS n/a | Base 2/4 (65d)\nTrend \u2713 / Setup Consolidating / Sector Neutral / MTF \u2713\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
     },
     {
       "Symbol": "ANANDRATHI",
@@ -330,7 +330,7 @@
       "mtf_confluence": true,
       "hurst": 0.718,
       "ofi20": 0.403,
-      "thesis_card": "GRADE C | RS n/a | Base 3/4 (90d)\nTrend ✓ / Setup Consolidating / Sector Neutral / MTF ✓\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
+      "thesis_card": "GRADE C | RS n/a | Base 3/4 (90d)\nTrend \u2713 / Setup Consolidating / Sector Neutral / MTF \u2713\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
     },
     {
       "Symbol": "ACUTAAS",
@@ -357,7 +357,7 @@
       "mtf_confluence": true,
       "hurst": 0.631,
       "ofi20": 0.236,
-      "thesis_card": "GRADE C | RS n/a | Base 2/4 (116d)\nTrend ✓ / Setup Consolidating / Sector Neutral / MTF ✓\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
+      "thesis_card": "GRADE C | RS n/a | Base 2/4 (116d)\nTrend \u2713 / Setup Consolidating / Sector Neutral / MTF \u2713\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
     },
     {
       "Symbol": "JYOTICNC",
@@ -384,7 +384,7 @@
       "mtf_confluence": true,
       "hurst": 0.64,
       "ofi20": 0.131,
-      "thesis_card": "GRADE C | RS n/a | Base 1/4 (34d)\nTrend ✓ / Setup Consolidating / Sector Neutral / MTF ✓\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
+      "thesis_card": "GRADE C | RS n/a | Base 1/4 (34d)\nTrend \u2713 / Setup Consolidating / Sector Neutral / MTF \u2713\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
     },
     {
       "Symbol": "LALPATHLAB",
@@ -411,7 +411,7 @@
       "mtf_confluence": true,
       "hurst": 0.586,
       "ofi20": 0.039,
-      "thesis_card": "GRADE C | RS n/a | Base 3/4 (75d)\nTrend ✓ / Setup Consolidating / Sector Neutral / MTF ✓\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
+      "thesis_card": "GRADE C | RS n/a | Base 3/4 (75d)\nTrend \u2713 / Setup Consolidating / Sector Neutral / MTF \u2713\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
     },
     {
       "Symbol": "WOCKPHARMA",
@@ -438,7 +438,7 @@
       "mtf_confluence": true,
       "hurst": 0.641,
       "ofi20": 0.081,
-      "thesis_card": "GRADE C | RS n/a | Base 2/4 (24d)\nTrend ✓ / Setup Consolidating / Sector Neutral / MTF ✓\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
+      "thesis_card": "GRADE C | RS n/a | Base 2/4 (24d)\nTrend \u2713 / Setup Consolidating / Sector Neutral / MTF \u2713\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
     },
     {
       "Symbol": "GLAND",
@@ -465,7 +465,7 @@
       "mtf_confluence": true,
       "hurst": 0.603,
       "ofi20": 0.187,
-      "thesis_card": "GRADE C | RS n/a | Base 1/4 (63d)\nTrend ✓ / Setup Consolidating / Sector Neutral / MTF ✓\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
+      "thesis_card": "GRADE C | RS n/a | Base 1/4 (63d)\nTrend \u2713 / Setup Consolidating / Sector Neutral / MTF \u2713\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
     }
   ],
   "scanned_count": 100,
@@ -475,7 +475,7 @@
     "prev_close": 25044.65,
     "chg_pct": 0.84,
     "last_bar_date": "2026-11-11",
-    "as_of_ist": "2026-11-11T17:35:41.788511+05:30",
+    "as_of_ist": "2026-11-11T23:34:47.680937+05:30",
     "breadth_above_sma50": 50.0,
     "breadth_above_sma200": 53.0,
     "universe_size": 100,
@@ -653,7 +653,7 @@
     "strong_sell": 0
   },
   "market_internals": {
-    "oscillator": 0.31,
+    "oscillator": 1.6,
     "up_down_vol_ratio": 2.86,
     "breadth_thrust": false,
     "confidence": "strong"
@@ -847,6 +847,13 @@
       "up_down_vol_ratio": 2.86,
       "ratio": 2.86,
       "oscillator": 0.31
+    },
+    {
+      "date": "2026-11-11",
+      "net_advance": 52,
+      "up_down_vol_ratio": 2.86,
+      "ratio": 2.86,
+      "oscillator": 1.6
     }
   ]
 }

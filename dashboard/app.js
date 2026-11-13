@@ -3539,7 +3539,14 @@ function initPositionSizer() {
 // PORTFOLIO CORRELATION & CONCENTRATION HEATMAP (SC-B)
 // =====================================================================
 function renderCorrelationCards(correlationData, openPositions) {
-  const currentPositions = openPositions || _cachedOpenPositions || [];
+  let currentPositions = openPositions || _cachedOpenPositions || [];
+  if (currentPositions && !Array.isArray(currentPositions)) {
+    if (Array.isArray(currentPositions.positions)) {
+      currentPositions = currentPositions.positions;
+    } else {
+      currentPositions = [];
+    }
+  }
   renderCorrelationSection(
     "nearBuyCorrelationCard",
     "nearBuyConcentrationPill",
@@ -3565,7 +3572,11 @@ function renderCorrelationSection(cardId, pillId, alertId, gridId, corrData, ope
   const grid = document.getElementById(gridId);
   if (!card) return;
 
-  if (!openPositions || openPositions.length === 0) {
+  const positions = Array.isArray(openPositions)
+    ? openPositions
+    : (openPositions && Array.isArray(openPositions.positions) ? openPositions.positions : []);
+
+  if (positions.length === 0) {
     card.style.display = "block";
     if (pill) {
       pill.className = "badge badge-neutral";
@@ -3580,13 +3591,13 @@ function renderCorrelationSection(cardId, pillId, alertId, gridId, corrData, ope
 
   card.style.display = "block";
 
-  if (openPositions.length === 1) {
+  if (positions.length === 1) {
     if (pill) {
       pill.className = "badge badge-success";
       pill.textContent = "1 Position (0 Overlap)";
     }
     if (alertEl) alertEl.style.display = "none";
-    const sym = openPositions[0].symbol;
+    const sym = positions[0].symbol;
     const beta = corrData && corrData.betas && corrData.betas[sym] != null ? corrData.betas[sym] : 1.0;
     if (grid) {
       grid.innerHTML = `<div style="font-size: 12.5px; color: var(--text-muted); padding: 6px 0;"><strong>${escapeHtml(sym)}</strong>: Beta to Small-Cap Universe Basket = <strong>${beta}</strong> (Single position, 0 portfolio concentration risk).</div>`;
@@ -3604,7 +3615,7 @@ function renderCorrelationSection(cardId, pillId, alertId, gridId, corrData, ope
     alertEl.style.display = isWarning ? "block" : "none";
   }
 
-  const symbols = openPositions.map(p => p.symbol);
+  const symbols = positions.map(p => p.symbol);
   const pairMap = {};
   if (corrData && corrData.pairs) {
     for (const p of corrData.pairs) {
@@ -3669,6 +3680,11 @@ function renderCorrelationSection(cardId, pillId, alertId, gridId, corrData, ope
 
 // 2. Render Tab: Open Positions
 async function renderOpenPositions(positions) {
+  const posList = Array.isArray(positions)
+    ? positions
+    : (positions && Array.isArray(positions.positions) ? positions.positions : []);
+  positions = posList;
+
   const countBadge = document.getElementById("openCountBadge");
   const countCard = document.getElementById("openPositionsCount");
   const totalPnlCard = document.getElementById("openTotalPnl");
@@ -4099,6 +4115,10 @@ function initHistoryListeners() {
 }
 
 function renderHistory(trades) {
+  const tradeList = Array.isArray(trades)
+    ? trades
+    : (trades && Array.isArray(trades.trades) ? trades.trades : []);
+  trades = tradeList;
   _cachedTradesData = trades;
   const tableBody = document.getElementById("tradesBody");
   const countStatus = document.getElementById("historyCountStatus");
@@ -4315,6 +4335,11 @@ function renderEquityCurveChart(trades) {
 // 4. Render Tab: Statistics (LIVE results, not backtest)
 // =====================================================================
 function renderStats(trades) {
+  const tradeList = Array.isArray(trades)
+    ? trades
+    : (trades && Array.isArray(trades.trades) ? trades.trades : []);
+  trades = tradeList;
+
   const statTotal = document.getElementById("statTotalTrades");
   const statWinRate = document.getElementById("statWinRate");
   const statTotalPnl = document.getElementById("statTotalPnl");
@@ -4727,9 +4752,6 @@ function renderHelpMath() {
     window.addEventListener("load", tryRender, { once: true });
   }
 }
-    window.addEventListener("load", tryRender, { once: true });
-  }
-}
 
 // =====================================================================
 // TERM SEARCH, INLINE DEFINITIONS & TAB BANNERS
@@ -5132,7 +5154,7 @@ function openTradingViewModal(symbol) {
   `;
 
   modal.style.display = "flex";
-  document.body.style.overflow = "hidden"; // Prevent background scrolling
+  if (document.body) document.body.style.overflow = "hidden"; // Prevent background scrolling
 }
 
 function closeTradingViewModal() {
@@ -5140,7 +5162,7 @@ function closeTradingViewModal() {
   const widgetContainer = document.getElementById("tvWidgetContainer");
   if (modal) modal.style.display = "none";
   if (widgetContainer) widgetContainer.innerHTML = ""; // Clear iframe to free memory and stop audio/network
-  document.body.style.overflow = "";
+  if (document.body) document.body.style.overflow = "";
 }
 
 function initTradingViewModalListeners() {
@@ -5421,13 +5443,13 @@ function openPostMortemModal(trade) {
   }
 
   modal.style.display = "flex";
-  document.body.style.overflow = "hidden";
+  if (document.body) document.body.style.overflow = "hidden";
 }
 
 function closePostMortemModal() {
   const modal = document.getElementById("postMortemModal");
   if (modal) modal.style.display = "none";
-  document.body.style.overflow = "";
+  if (document.body) document.body.style.overflow = "";
   _activePostMortemTrade = null;
 }
 

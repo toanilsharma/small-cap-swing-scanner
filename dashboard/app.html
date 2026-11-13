@@ -1404,7 +1404,7 @@
                   </div>
                   <div class="phase-math-box">
                     <div class="latex-display">
-                      $$ (t - t_{\text{entry}} > 8\text{ sessions}) \quad \land \quad (P_{\text{close}}(t) \le P_{\text{entry}}) \implies \text{EXIT\_AT\_CLOSE}(\text{Qty}_{\text{pos}}) $$
+                      $$ (t - t_{\text{entry}} &gt; 8\text{ sessions}) \quad \land \quad (P_{\text{close}}(t) \le P_{\text{entry}}) \implies \text{EXIT\_AT\_CLOSE}(\text{Qty}_{\text{pos}}) $$
                     </div>
                   </div>
                 </div>
@@ -1512,7 +1512,7 @@
                   </div>
                   <div class="quant-rule-formula">
                     <div class="latex-display">
-                      $$ \forall t, \quad P_t > \text{SMA}_{50}(t) > \text{SMA}_{150}(t) > \text{SMA}_{200}(t) \quad \land \quad \frac{d}{dt}\text{SMA}_{200}(t) > 0 \quad \land \quad P_t \ge 1.30 \cdot \min_{\tau \in [t-252, t]} P_\tau \quad \land \quad P_t \ge 0.75 \cdot \max_{\tau \in [t-252, t]} P_\tau $$
+                      $$ \forall t, \quad P_t &gt; \text{SMA}_{50}(t) &gt; \text{SMA}_{150}(t) &gt; \text{SMA}_{200}(t) \quad \land \quad \frac{d}{dt}\text{SMA}_{200}(t) &gt; 0 \quad \land \quad P_t \ge 1.30 \cdot \min_{\tau \in [t-252, t]} P_\tau \quad \land \quad P_t \ge 0.75 \cdot \max_{\tau \in [t-252, t]} P_\tau $$
                     </div>
                   </div>
                 </div>
@@ -1676,7 +1676,7 @@
                   </div>
                   <div class="quant-rule-formula">
                     <div class="latex-display">
-                      $$ \text{Runner Exit Signal} \iff P_{\text{close}}(t) < \text{EMA}_{20}(t) \implies \text{LIQUIDATE}\left(Q_{\text{runner}}\right) \text{ at Close} $$
+                      $$ \text{Runner Exit Signal} \iff P_{\text{close}}(t) &lt; \text{EMA}_{20}(t) \implies \text{LIQUIDATE}\left(Q_{\text{runner}}\right) \text{ at Close} $$
                     </div>
                   </div>
                 </div>
@@ -1690,7 +1690,7 @@
                   </div>
                   <div class="quant-rule-formula">
                     <div class="latex-display">
-                      $$ (t - t_{\text{entry}} > 8\text{ sessions}) \land (P_{\text{close}}(t) \le P_{\text{entry}}) \implies \text{LIQUIDATE}\left(Q_{\text{total}}\right) \text{ at Close} $$
+                      $$ (t - t_{\text{entry}} &gt; 8\text{ sessions}) \land (P_{\text{close}}(t) \le P_{\text{entry}}) \implies \text{LIQUIDATE}\left(Q_{\text{total}}\right) \text{ at Close} $$
                     </div>
                   </div>
                 </div>
@@ -1718,7 +1718,7 @@
                   </div>
                   <div class="quant-rule-formula">
                     <div class="latex-display">
-                      $$ \text{Percentile}_{\mathcal{U}}\left(\text{RS}_{\text{Mansfield}}(t)\right) \ge 70 \quad \land \quad \frac{d}{dt}\left(\frac{P_{\text{stock}}(t)}{P_{\text{NIFTY}}(t)}\right)_{20d} > 0 $$
+                      $$ \text{Percentile}_{\mathcal{U}}\left(\text{RS}_{\text{Mansfield}}(t)\right) \ge 70 \quad \land \quad \frac{d}{dt}\left(\frac{P_{\text{stock}}(t)}{P_{\text{NIFTY}}(t)}\right)_{20d} &gt; 0 $$
                     </div>
                   </div>
                 </div>
@@ -2686,7 +2686,7 @@
                     </td>
                     <td>
                       <div class="latex-display">
-                        $$ \forall \tau > t_{\text{entry}}, \quad P_\tau < P_{\text{entry}} \implies \frac{dQ}{d\tau} \equiv 0 $$
+                        $$ \forall \tau &gt; t_{\text{entry}}, \quad P_\tau &lt; P_{\text{entry}} \implies \frac{dQ}{d\tau} \equiv 0 $$
                       </div>
                     </td>
                     <td>Losers average losers. When price trades below entry, original thesis is falsified. Adding capital into losing positions is strictly prohibited.</td>
@@ -2712,7 +2712,7 @@
                     </td>
                     <td>
                       <div class="latex-display">
-                        $$ (t - t_{\text{entry}} > 8 \text{ sessions}) \land (P_t \le P_{\text{entry}}) \implies \text{LIQUIDATE}(Q_{\text{all}}) $$
+                        $$ (t - t_{\text{entry}} &gt; 8 \text{ sessions}) \land (P_t \le P_{\text{entry}}) \implies \text{LIQUIDATE}(Q_{\text{all}}) $$
                       </div>
                     </td>
                     <td>High-velocity breakouts follow through within 3&ndash;5 sessions. Lingering dead money is liquidated on session 8 to recycle purchasing power.</td>

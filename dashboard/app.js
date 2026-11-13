@@ -4663,8 +4663,8 @@ function initHelpCenter() {
     }
   });
 
-  // 4. Sticky TOC active state handling
-  const tocLinks = document.querySelectorAll(".help-toc-link");
+  // 4. Top Executive Navigation Ribbon active state handling
+  const tocLinks = document.querySelectorAll(".help-nav-pill, .help-toc-link");
   tocLinks.forEach(link => {
     link.addEventListener("click", () => {
       tocLinks.forEach(l => l.classList.remove("active"));
@@ -4672,7 +4672,7 @@ function initHelpCenter() {
     });
   });
 
-  // Scrollspy for TOC
+  // Scrollspy for Help Ribbon
   const sections = document.querySelectorAll(".help-section");
   if (sections.length > 0 && tocLinks.length > 0) {
     window.addEventListener("scroll", () => {
@@ -4703,7 +4703,7 @@ function renderHelpMath() {
   function tryRender() {
     if (typeof renderMathInElement === "function") {
       const helpContainer = document.getElementById("tabHelp");
-      if (helpContainer) {
+      if (helpContainer && !helpContainer.dataset.mathRendered) {
         try {
           renderMathInElement(helpContainer, {
             delimiters: [
@@ -4714,6 +4714,7 @@ function renderHelpMath() {
             ],
             throwOnError: false
           });
+          helpContainer.dataset.mathRendered = "true";
         } catch (err) {
           console.warn("KaTeX rendering error:", err);
         }
@@ -4723,6 +4724,9 @@ function renderHelpMath() {
 
   tryRender();
   if (typeof renderMathInElement !== "function") {
+    window.addEventListener("load", tryRender, { once: true });
+  }
+}
     window.addEventListener("load", tryRender, { once: true });
   }
 }

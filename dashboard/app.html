@@ -19,8 +19,7 @@
   <!-- KaTeX for rendering pure Math LaTeX -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
-    onload="if (window.renderMathInElement) renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}], throwOnError: false});"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
 </head>
 <body>
   <!-- Header Bar -->
@@ -1073,28 +1072,36 @@
     <!-- TAB 5: HELP CENTER & HANDBOOK -->
     <section id="tabHelp" class="tab-content">
       <div class="help-layout">
-        <!-- Sticky Table of Contents -->
-        <aside class="help-sidebar">
-          <div class="help-toc-card">
-            <h3 class="help-toc-title">Handbook Guide</h3>
-            <nav class="help-toc-nav">
-              <a href="#help-start" class="help-toc-link active"><span>🚀</span> Start Here</a>
-              <a href="#help-playbook" class="help-toc-link"><span>🛒</span> Trader's Playbook</a>
-              <a href="#help-rules-regulations" class="help-toc-link"><span>⚖️</span> System Rules &amp; Invariants</a>
-              <a href="#help-architecture" class="help-toc-link"><span>⚙️</span> How It Works</a>
-              <a href="#help-glossary" class="help-toc-link"><span>📚</span> Indicator Glossary</a>
-              <a href="#help-rules" class="help-toc-link"><span>🎨</span> Rules in Pictures</a>
-              <a href="#help-telegram" class="help-toc-link"><span>💬</span> Telegram Commands</a>
-              <a href="#help-commandments" class="help-toc-link"><span>🛡️</span> Risk Commandments</a>
-              <a href="#help-faq" class="help-toc-link"><span>❓</span> FAQ</a>
-            </nav>
-            <div class="help-badge-info">
-              <span>Synchronized with <code>main.py</code></span>
+        <!-- TOP EXECUTIVE HEADER & NAV RIBBON (Replaces small sidebar card, expanding content to full screen) -->
+        <header class="help-executive-header" id="helpHeaderNav">
+          <div class="help-header-top-bar">
+            <div class="help-header-brand-group">
+              <span class="help-live-dot" title="Operational"></span>
+              <span class="help-header-eyebrow">QUANTITATIVE TRADING TERMINAL MANUAL &bull; INVARIANTS</span>
+              <span class="help-sync-pill">Synchronized with <code>main.py</code></span>
+            </div>
+            <div class="help-header-meta-group">
+              <span class="help-meta-chip">⚡ Daily 4:15 PM Scan</span>
+              <span class="help-meta-chip">🛡️ 1% Capital Risk</span>
+              <span class="help-meta-chip">📡 Telegram Journal</span>
             </div>
           </div>
-        </aside>
 
-        <!-- Main Content Area -->
+          <!-- Sticky Horizontal Navigation Ribbon -->
+          <nav class="help-nav-ribbon" aria-label="Help Sections Navigation">
+            <a href="#help-start" class="help-nav-pill active"><span class="pill-icon">🚀</span> Start Here</a>
+            <a href="#help-playbook" class="help-nav-pill"><span class="pill-icon">🛒</span> Trader's Playbook</a>
+            <a href="#help-rules-regulations" class="help-nav-pill"><span class="pill-icon">⚖️</span> Rules &amp; Invariants</a>
+            <a href="#help-architecture" class="help-nav-pill"><span class="pill-icon">⚙️</span> How It Works</a>
+            <a href="#help-glossary" class="help-nav-pill"><span class="pill-icon">📚</span> Indicator Glossary</a>
+            <a href="#help-rules" class="help-nav-pill"><span class="pill-icon">🎨</span> Rules in Pictures</a>
+            <a href="#help-telegram" class="help-nav-pill"><span class="pill-icon">💬</span> Telegram Commands</a>
+            <a href="#help-commandments" class="help-nav-pill"><span class="pill-icon">🛡️</span> Risk Commandments</a>
+            <a href="#help-faq" class="help-nav-pill"><span class="pill-icon">❓</span> FAQ</a>
+          </nav>
+        </header>
+
+        <!-- Main Content Area (100% Full Screen Width) -->
         <div class="help-content">
           <!-- SECTION 1: START HERE -->
           <article id="help-start" class="help-section">
@@ -1304,12 +1311,12 @@
                   </div>
                   <div class="phase-math-box">
                     <div class="latex-display">
-                      $$ \text{Size}_{\text{final}} = \min \left( \left\lfloor \frac{\text{Capital} \times \text{RiskPct}}{\text{Entry} - \text{SL}} \right\rfloor, \; \left\lfloor \frac{\text{Capital} \times \text{MaxGapLossPct}}{\text{Entry} \times \text{WorstCaseGapPct}} \right\rfloor, \; \left\lfloor \frac{0.01 \times \text{ADV}_{20}}{\text{Entry}} \right\rfloor \right) $$
+                      $$ \text{Size}_{\text{final}} = \min \left( \left\lfloor \frac{\text{Capital} \times \text{RiskPct}}{P_{\text{entry}} - \text{SL}} \right\rfloor, \; \left\lfloor \frac{\text{Capital} \times \text{MaxGapLossPct}}{P_{\text{entry}} \times \text{WorstCaseGapPct}} \right\rfloor, \; \left\lfloor \frac{0.01 \times \text{ADV}_{20}}{P_{\text{entry}}} \right\rfloor \right) $$
                       $$ \begin{aligned}
-                      &\text{Parameters}: \quad \text{Capital} = ₹200{,}000, \quad \text{RiskPct} = 0.01 \; (1\%), \quad \mathcal{R}_{\text{budget}} = ₹200{,}000 \times 0.01 = ₹2{,}000.00 \\
-                      &\text{Stop-Loss}: \quad \text{Entry} = ₹100.00, \quad \text{ATR}_{14} = ₹2.00 \implies \text{SL} = \text{Entry} - (2.5 \times \text{ATR}_{14}) = 100.00 - 5.00 = ₹95.00 \\
-                      &\text{Unit Risk}: \quad \Delta \mathcal{R} = \text{Entry} - \text{SL} = ₹100.00 - ₹95.00 = ₹5.00 \quad (5.0\% \le 9.0\%\text{ Max Floor}) \\
-                      &\text{Execution}: \quad \text{Size} = \left\lfloor \frac{₹2{,}000.00}{₹5.00} \right\rfloor = \mathbf{400\text{ units}}, \quad \text{Target}_{+2\mathcal{R}} = \text{Entry} + (2 \times \Delta \mathcal{R}) = 100.00 + 10.00 = \mathbf{₹110.00}
+                      &\text{Parameters}: \quad \text{Capital} = \text{₹}200{,}000, \quad \text{RiskPct} = 0.01 \; (1\%), \quad \mathcal{R}_{\text{budget}} = \text{₹}200{,}000 \times 0.01 = \text{₹}2{,}000.00 \\
+                      &\text{Stop-Loss}: \quad P_{\text{entry}} = \text{₹}100.00, \quad \text{ATR}_{14} = \text{₹}2.00 \implies \text{SL} = P_{\text{entry}} - (2.5 \times \text{ATR}_{14}) = \text{₹}95.00 \\
+                      &\text{Unit Risk}: \quad \Delta \mathcal{R} = P_{\text{entry}} - \text{SL} = \text{₹}100.00 - \text{₹}95.00 = \text{₹}5.00 \quad (5.0\% \le 9.0\%\text{ Max Floor}) \\
+                      &\text{Execution}: \quad \text{Size} = \left\lfloor \frac{\text{₹}2{,}000.00}{\text{₹}5.00} \right\rfloor = \mathbf{400\text{ units}}, \quad \text{Target}_{+2\mathcal{R}} = P_{\text{entry}} + (2 \times \Delta \mathcal{R}) = \mathbf{\text{₹}110.00}
                       \end{aligned} $$
                     </div>
                   </div>
@@ -1368,7 +1375,7 @@
                   </div>
                   <div class="phase-math-box">
                     <div class="latex-display">
-                      $$ P_t \le \text{SL} \implies \text{AUTO\_EXIT}(\text{Qty}_{\text{pos}}) \;\land\; \text{LOG}(\texttt{/sell}) \;\land\; \text{RevengeLock} = \top $$
+                      $$ P_t \le \text{SL} \implies \text{AUTO\_EXIT}(\text{Qty}_{\text{pos}}) \quad \land \quad \text{LOG}(\text{/sell}) \quad \land \quad \text{RevengeLock} = \text{Active} $$
                     </div>
                   </div>
                 </div>
@@ -1382,8 +1389,8 @@
                   </div>
                   <div class="phase-math-box">
                     <div class="latex-display">
-                      $$ P_t \ge \text{Target}_{+2\mathcal{R}} \implies \text{SELL}\left(\left\lfloor \frac{\text{Qty}}{2} \right\rfloor\right) \;\land\; \text{SL}_t \gets \max(\text{SL}_{t-1}, \text{Entry}) \;\land\; \text{SL}_{\text{trail}} \gets \text{EMA}_{20}(t) $$
-                      $$ \frac{P_t - \text{Entry}}{\text{Entry}} \ge +0.08 \implies \text{SL}_t \gets \max(\text{SL}_{t-1}, \text{Entry}) \quad (\text{Breakeven Ratchet Floor}) $$
+                      $$ P_t \ge \text{Target}_{+2\mathcal{R}} \implies \text{SELL}\left(\left\lfloor 0.50 \cdot \text{Qty} \right\rfloor\right) \quad \land \quad \text{SL}_t \gets \max(\text{SL}_{t-1}, P_{\text{entry}}) \quad \land \quad \text{SL}_{\text{trail}} \gets \text{EMA}_{20}(t) $$
+                      $$ \frac{P_t - P_{\text{entry}}}{P_{\text{entry}}} \ge +0.08 \implies \text{SL}_t \gets \max(\text{SL}_{t-1}, P_{\text{entry}}) \quad (\text{Breakeven Ratchet Floor}) $$
                     </div>
                   </div>
                 </div>
@@ -1397,7 +1404,7 @@
                   </div>
                   <div class="phase-math-box">
                     <div class="latex-display">
-                      $$ (\Delta \tau_{\text{held}} \gt 8\text{ trading days}) \;\land\; (P_{\text{close}}(t) \le \text{Entry}) \implies \text{EXIT\_AT\_CLOSE}(\text{Qty}_{\text{pos}}) $$
+                      $$ (t - t_{\text{entry}} > 8\text{ sessions}) \quad \land \quad (P_{\text{close}}(t) \le P_{\text{entry}}) \implies \text{EXIT\_AT\_CLOSE}(\text{Qty}_{\text{pos}}) $$
                     </div>
                   </div>
                 </div>
@@ -1411,7 +1418,7 @@
                   </div>
                   <div class="phase-math-box">
                     <div class="latex-display">
-                      $$ \Delta t_{\text{event}} \le 3\text{ calendar days} \implies \text{EXIT\_PRE\_EVENT}(\text{Qty}_{\text{pos}}, \forall P_t) $$
+                      $$ \Delta t_{\text{event}} \le 3\text{ days} \implies \text{FORCE\_EXIT\_OPEN\_POSITION}(\text{Qty}_{\text{pos}}) $$
                     </div>
                   </div>
                 </div>

@@ -1358,8 +1358,9 @@ body {
   }
 
   .help-content {
-    max-width: 72ch;
+    max-width: 100%;
     width: 100%;
+    min-width: 0;
     display: flex;
     flex-direction: column;
     gap: clamp(24px, 4vw, 36px);
@@ -1786,13 +1787,34 @@ body {
 }
 
 /* TELEGRAM COMMAND TABLE */
-.telegram-cmd-table td code {
+.telegram-cmd-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.telegram-cmd-table th,
+.telegram-cmd-table td {
+  padding: 10px 12px;
+  vertical-align: top;
+  white-space: normal !important;
+  word-break: break-word;
+}
+.telegram-cmd-table td code,
+.telegram-cmd-code {
   background: rgba(79, 70, 229, 0.15);
   color: #a5b4fc;
-  padding: 3px 6px;
+  padding: 2px 6px;
   border-radius: 4px;
-  font-size: 12px;
+  font-size: 11.5px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  word-break: break-word;
+  display: inline-block;
+}
+
+.help-section .table-scroll {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
 }
 
 /* RISK COMMANDMENTS */
@@ -4127,28 +4149,38 @@ th .term-lookup {
 .playbook-card.collapsed .playbook-content {
   display: none !important;
 }
-.playbook-steps-grid,
+.playbook-steps-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
+  gap: 18px;
+  width: 100%;
+}
 .playbook-scenarios-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(min(270px, 100%), 1fr));
+  gap: 18px;
+  width: 100%;
 }
 .playbook-step,
 .playbook-scenario {
-  background: rgba(0, 0, 0, 0.25);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 14px 16px;
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 16px 18px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   position: relative;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  overflow: hidden;
+  box-sizing: border-box;
+  min-width: 0;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 .playbook-step:hover,
 .playbook-scenario:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  transform: translateY(-2px);
+  border-color: rgba(56, 189, 248, 0.4);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
 }
 .playbook-step-badge,
 .scenario-badge {
@@ -4187,9 +4219,22 @@ th .term-lookup {
 }
 .playbook-step-title,
 .scenario-title {
-  font-size: 13.5px;
+  font-size: 14px;
   font-weight: 700;
   color: #fff;
+}
+.playbook-step-summary,
+.scenario-directive {
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: #cbd5e1;
+}
+.scenario-directive {
+  background: rgba(255, 255, 255, 0.03);
+  border-left: 2px solid var(--accent, #38bdf8);
+  padding: 6px 10px;
+  border-radius: 0 4px 4px 0;
+  font-weight: 500;
 }
 .playbook-step-desc,
 .scenario-desc {
@@ -4211,10 +4256,10 @@ th .term-lookup {
   white-space: pre-wrap;
 }
 .playbook-formula-box {
-  background: #0d1117;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: #090d15;
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 6px;
-  padding: 8px 12px;
+  padding: 6px 10px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -4222,6 +4267,13 @@ th .term-lookup {
   font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
   font-size: 12px;
   color: #38bdf8;
+  overflow: hidden;
+}
+.playbook-formula-box .latex-display {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
 }
 .playbook-formula-box code {
   color: #38bdf8;
@@ -4234,20 +4286,28 @@ th .term-lookup {
   padding: 6px 12px;
   white-space: nowrap;
   font-family: inherit;
-  min-height: 44px;
+  min-height: 38px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 .playbook-worked-example {
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.45);
   border-left: 3px solid #10b981;
   padding: 10px 12px;
   border-radius: 0 6px 6px 0;
-  font-size: 11.5px;
+  font-size: 12px;
   color: #cbd5e1;
   line-height: 1.6;
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  overflow: hidden;
+}
+.worked-example-header {
+  font-size: 11.5px;
+  color: #94a3b8;
+  margin-bottom: 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 /* 3. COLOR PILLS (WCAG-AA CONTRAST) */
@@ -5281,51 +5341,69 @@ th .term-lookup {
    ===================================================================== */
 .math-rules-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr));
-  gap: 16px;
-  margin-top: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(min(360px, 100%), 1fr));
+  gap: 18px;
+  margin-top: 18px;
+  width: 100%;
 }
 
 .math-rule-card {
-  background: linear-gradient(145deg, rgba(30, 41, 59, 0.6) 0%, rgba(15, 23, 42, 0.7) 100%);
+  background: linear-gradient(145deg, rgba(30, 41, 59, 0.55) 0%, rgba(15, 23, 42, 0.75) 100%);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: var(--radius-md);
+  border-radius: 10px;
   padding: 18px 20px;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  transition: border-color 0.2s ease, transform 0.2s ease;
+  overflow: hidden;
+  box-sizing: border-box;
+  min-width: 0;
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .math-rule-card:hover {
   border-color: rgba(56, 189, 248, 0.4);
   transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
 }
 
 .math-rule-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 10px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  padding-bottom: 8px;
+  padding-bottom: 10px;
 }
 
 .math-rule-num {
-  font-family: var(--font-mono);
+  font-family: var(--font-mono, monospace);
   font-size: 11px;
   font-weight: 700;
-  color: var(--accent);
+  color: var(--accent, #38bdf8);
   background: rgba(56, 189, 248, 0.12);
   padding: 2px 8px;
   border-radius: 4px;
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  flex-shrink: 0;
 }
 
 .math-rule-title {
-  font-size: 13.5px;
+  font-size: 14px;
   font-weight: 700;
   color: #fff;
   flex: 1;
+}
+
+.math-rule-desc {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #94a3b8;
+  background: rgba(255, 255, 255, 0.02);
+  border-left: 2px solid var(--accent, #38bdf8);
+  padding: 6px 10px;
+  border-radius: 0 4px 4px 0;
+  margin: 0;
 }
 
 .math-rule-body {
@@ -5334,23 +5412,46 @@ th .term-lookup {
   gap: 10px;
   font-size: 13px;
   color: #cbd5e1;
+  overflow: hidden;
+  min-width: 0;
 }
 
 .latex-display {
-  background: rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(11, 15, 25, 0.85);
+  border: 1px solid rgba(56, 189, 248, 0.15);
   border-radius: 6px;
-  padding: 10px 14px;
-  overflow-x: auto;
-  font-size: 14px;
+  padding: 8px 12px;
+  overflow-x: hidden !important; /* NO HORIZONTAL SCROLLER */
+  overflow-y: hidden !important;
+  font-size: clamp(12px, 1.05vw, 13.5px);
   color: #f1f5f9;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .katex-display {
-  margin: 6px 0 !important;
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding: 4px 0;
+  margin: 4px 0 !important;
+  overflow-x: hidden !important; /* NO HORIZONTAL SCROLLER */
+  overflow-y: hidden !important;
+  padding: 2px 0 !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.katex {
+  font-size: 1.02em !important;
+  white-space: normal !important;
+}
+
+.katex-display > .katex {
+  white-space: normal !important;
+  text-align: left !important;
+  display: block !important;
+}
+
+.katex-display > .katex > .katex-html {
+  overflow-wrap: break-word;
+  white-space: normal !important;
 }
 
 /* =====================================================================

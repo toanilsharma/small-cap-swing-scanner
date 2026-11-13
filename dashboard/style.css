@@ -108,9 +108,10 @@ body {
 /* 3. SINGLE UNIFIED PAGE CONTAINER */
 .page-container {
   width: 100%;
-  max-width: 1400px;
+  max-width: 100%;
   margin-inline: auto;
-  padding-inline: clamp(12px, 3vw, 24px);
+  padding-inline: clamp(16px, 2.5vw, 36px);
+  box-sizing: border-box;
 }
 
 /* LOGIN PAGE */
@@ -1602,16 +1603,16 @@ body {
   border-radius: 10px;
   padding: clamp(12px, 2vw, 20px);
   margin: 16px 0;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
+  overflow: hidden;
   width: 100%;
+  box-sizing: border-box;
 }
 
 .flowchart-svg,
 .schematic-svg {
   display: block;
   width: 100%;
-  max-width: 800px;
+  max-width: 1000px;
   height: auto;
   margin: 0 auto;
 }
@@ -1619,8 +1620,8 @@ body {
 /* SCHEMATICS & RESPONSIVE GRIDS */
 .schematics-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
-  gap: clamp(12px, 2vw, 22px);
+  grid-template-columns: repeat(auto-fit, minmax(min(480px, 100%), 1fr));
+  gap: clamp(16px, 2vw, 24px);
   width: 100%;
 }
 
@@ -1716,8 +1717,8 @@ body {
 
 .glossary-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
-  gap: clamp(12px, 2vw, 18px);
+  grid-template-columns: repeat(auto-fit, minmax(min(420px, 100%), 1fr));
+  gap: 20px;
   width: 100%;
 }
 
@@ -5337,109 +5338,333 @@ th .term-lookup {
 }
 
 /* =====================================================================
-   PURE MATH LATEX & RULES/REGULATIONS SECTION STYLING
+   PURE MATH LATEX & QUANT SPECIFICATION ARCHITECTURE
    ===================================================================== */
-.math-rules-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(360px, 100%), 1fr));
-  gap: 18px;
-  margin-top: 18px;
-  width: 100%;
-}
-
-.math-rule-card {
-  background: linear-gradient(145deg, rgba(30, 41, 59, 0.55) 0%, rgba(15, 23, 42, 0.75) 100%);
+.quant-panel {
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.75) 0%, rgba(10, 14, 23, 0.9) 100%);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
-  padding: 18px 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  border-radius: 12px;
   overflow: hidden;
+  margin-bottom: 24px;
+  width: 100%;
   box-sizing: border-box;
-  min-width: 0;
-  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
-.math-rule-card:hover {
-  border-color: rgba(56, 189, 248, 0.4);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+.quant-panel-header {
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 16px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
-.math-rule-header {
+.quant-panel-title {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  padding-bottom: 10px;
+  gap: 12px;
 }
 
-.math-rule-num {
+.quant-panel-num {
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--accent, #38bdf8);
+  background: rgba(56, 189, 248, 0.12);
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  letter-spacing: 0.05em;
+}
+
+.quant-panel-title h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+}
+
+.quant-panel-scope {
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+  color: #94a3b8;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 3px 10px;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.quant-panel-body {
+  padding: 18px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.quant-rule-row {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 16px 20px;
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 24px;
+  align-items: start;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.quant-rule-row:hover {
+  border-color: rgba(56, 189, 248, 0.35);
+  background: rgba(15, 23, 42, 0.5);
+}
+
+@media (max-width: 960px) {
+  .quant-rule-row {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}
+
+.quant-rule-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.quant-rule-tag {
   font-family: var(--font-mono, monospace);
   font-size: 11px;
   font-weight: 700;
   color: var(--accent, #38bdf8);
-  background: rgba(56, 189, 248, 0.12);
-  padding: 2px 8px;
+  letter-spacing: 0.06em;
+  background: rgba(56, 189, 248, 0.1);
+  padding: 2px 7px;
   border-radius: 4px;
-  border: 1px solid rgba(56, 189, 248, 0.25);
-  flex-shrink: 0;
+  align-self: flex-start;
 }
 
-.math-rule-title {
-  font-size: 14px;
+.quant-rule-name {
+  font-size: 14.5px;
   font-weight: 700;
-  color: #fff;
-  flex: 1;
-}
-
-.math-rule-desc {
-  font-size: 12.5px;
-  line-height: 1.5;
-  color: #94a3b8;
-  background: rgba(255, 255, 255, 0.02);
-  border-left: 2px solid var(--accent, #38bdf8);
-  padding: 6px 10px;
-  border-radius: 0 4px 4px 0;
+  color: #f1f5f9;
   margin: 0;
 }
 
-.math-rule-body {
+.quant-rule-note {
+  font-size: 12.5px;
+  color: #94a3b8;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.quant-rule-formula {
+  min-width: 0;
+  width: 100%;
+}
+
+/* WIDE PLAYBOOK COCKPIT */
+.playbook-cockpit {
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.75) 0%, rgba(10, 14, 23, 0.9) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 28px;
+  width: 100%;
+  box-sizing: border-box;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.playbook-cockpit-header {
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 16px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.cockpit-title-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cockpit-icon {
+  font-size: 18px;
+}
+
+.cockpit-title-text {
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.01em;
+}
+
+.cockpit-body {
+  padding: 20px 24px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 16px;
+}
+
+.execution-phase-row {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 18px 22px;
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 24px;
+  align-items: start;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.execution-phase-row:hover {
+  border-color: rgba(56, 189, 248, 0.35);
+  background: rgba(15, 23, 42, 0.5);
+}
+
+@media (max-width: 960px) {
+  .execution-phase-row {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}
+
+.phase-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.phase-badge {
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 3px 8px;
+  border-radius: 4px;
+  align-self: flex-start;
+}
+
+.phase-badge.buy-phase {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.phase-badge.sell-phase {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.phase-badge.exit-phase {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.phase-title {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+
+.phase-desc {
+  font-size: 12.5px;
+  color: #94a3b8;
+  line-height: 1.45;
+}
+
+.phase-math-box {
+  min-width: 0;
+  width: 100%;
+}
+
+/* CAPITAL GOVERNANCE MATRIX TABLE */
+.governance-matrix-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.governance-matrix-table th {
+  background: rgba(255, 255, 255, 0.03);
+  padding: 12px 16px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  text-align: left;
+}
+
+.governance-matrix-table td {
+  padding: 14px 16px;
   font-size: 13px;
   color: #cbd5e1;
-  overflow: hidden;
-  min-width: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  vertical-align: middle;
+}
+
+.governance-matrix-table tr:hover td {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.gov-num-pill {
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--accent, #38bdf8);
+  background: rgba(56, 189, 248, 0.12);
+  padding: 2px 8px;
+  border-radius: 4px;
 }
 
 .latex-display {
-  background: rgba(11, 15, 25, 0.85);
-  border: 1px solid rgba(56, 189, 248, 0.15);
-  border-radius: 6px;
-  padding: 8px 12px;
-  overflow-x: hidden !important; /* NO HORIZONTAL SCROLLER */
+  background: rgba(11, 15, 25, 0.92);
+  border: 1px solid rgba(56, 189, 248, 0.18);
+  border-left: 3px solid var(--accent, #38bdf8);
+  border-radius: 8px;
+  padding: 10px 16px;
+  overflow-x: hidden !important; /* STRICTLY NO SCROLLER */
   overflow-y: hidden !important;
-  font-size: clamp(12px, 1.05vw, 13.5px);
-  color: #f1f5f9;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  font-size: 14.5px;
+  color: #f8fafc;
   width: 100%;
   box-sizing: border-box;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.latex-display::-webkit-scrollbar,
+.katex-display::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 .katex-display {
-  margin: 4px 0 !important;
-  overflow-x: hidden !important; /* NO HORIZONTAL SCROLLER */
+  margin: 6px 0 !important;
+  overflow-x: hidden !important; /* STRICTLY NO SCROLLER */
   overflow-y: hidden !important;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
   padding: 2px 0 !important;
   max-width: 100% !important;
   box-sizing: border-box !important;
 }
 
 .katex {
-  font-size: 1.02em !important;
+  font-size: 1.05em !important;
   white-space: normal !important;
 }
 
@@ -5452,6 +5677,12 @@ th .term-lookup {
 .katex-display > .katex > .katex-html {
   overflow-wrap: break-word;
   white-space: normal !important;
+  display: block !important;
+}
+
+.katex-display .base {
+  white-space: normal !important;
+  display: inline-block !important;
 }
 
 /* =====================================================================

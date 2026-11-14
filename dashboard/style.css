@@ -5576,7 +5576,20 @@ th .term-lookup {
 /* CAPITAL GOVERNANCE MATRIX TABLE */
 .governance-matrix-table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
+}
+
+.table-scroll {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden !important;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+.table-scroll::-webkit-scrollbar {
+  display: none !important;
 }
 
 .governance-matrix-table th {
@@ -5597,6 +5610,8 @@ th .term-lookup {
   color: #cbd5e1;
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
   vertical-align: middle;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .governance-matrix-table tr:hover td {
@@ -5615,46 +5630,47 @@ th .term-lookup {
 
 .latex-display {
   background: rgba(6, 11, 20, 0.95);
-  border: 1px solid rgba(56, 189, 248, 0.25);
+  border: 1px solid rgba(56, 189, 248, 0.22);
   border-left: 3px solid #38bdf8;
   border-radius: 8px;
-  padding: 14px 20px;
-  font-size: 15px;
+  padding: 12px 18px;
+  font-size: clamp(12.5px, 0.95vw, 14px);
   color: #f8fafc;
   width: 100%;
   box-sizing: border-box;
   box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.5);
-  overflow-x: auto;
-  overflow-y: hidden;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(56, 189, 248, 0.25) transparent;
+  overflow-x: hidden !important; /* STRICTLY NO HORIZONTAL SCROLLER */
+  overflow-y: hidden !important;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
 }
 
 .latex-display::-webkit-scrollbar {
-  height: 4px;
-}
-.latex-display::-webkit-scrollbar-thumb {
-  background: rgba(56, 189, 248, 0.3);
-  border-radius: 4px;
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 .katex-display {
-  margin: 6px 0 !important;
+  margin: 4px 0 !important;
   padding: 2px 0 !important;
   text-align: left !important;
   max-width: 100% !important;
   box-sizing: border-box !important;
-  overflow-x: auto !important;
+  overflow-x: hidden !important; /* STRICTLY NO SCROLLER */
   overflow-y: hidden !important;
   scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
 }
 
 .katex-display::-webkit-scrollbar {
   display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 .katex {
-  font-size: 1.15em !important;
+  font-size: 1.02em !important;
   color: #f8fafc !important;
   text-rendering: optimizeLegibility !important;
 }
@@ -5664,7 +5680,7 @@ th .term-lookup {
   display: block !important;
 }
 
-/* Maintain horizontal mathematical continuity so formulas are crystal-clear English math */
+/* Maintain horizontal mathematical continuity so formulas are crystal-clear English math without vertical squishing */
 .katex .base {
   white-space: nowrap !important;
 }

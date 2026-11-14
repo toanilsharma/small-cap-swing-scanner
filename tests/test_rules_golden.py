@@ -72,8 +72,8 @@ def build_scenario_dataframe(scenario: str) -> pd.DataFrame:
             # Scenario (a): Valid breakout ~1% above prior 20d high (205), volume spike 2.0x, 3-day rising volume, strong close
             close[-1] = 207.0
             high[-1] = 207.2
-            low[-1] = 204.0
-            open_[-1] = 205.0
+            low[-1] = 205.2
+            open_[-1] = 205.5
             volume[-3] = 310000.0
             volume[-2] = 350000.0
             volume[-1] = 1900000.0
@@ -81,8 +81,8 @@ def build_scenario_dataframe(scenario: str) -> pd.DataFrame:
             # Scenario (c): Identical breakout price but weak volume (~0.8x avg)
             close[-1] = 207.0
             high[-1] = 207.2
-            low[-1] = 204.0
-            open_[-1] = 205.0
+            low[-1] = 205.2
+            open_[-1] = 205.5
             volume[-1] = 800000.0
         elif scenario == "coil_no_breakout":
             # Scenario (d): Coiling continues, close remains strictly below prior 20d high
@@ -109,8 +109,8 @@ def build_scenario_dataframe(scenario: str) -> pd.DataFrame:
             # Scenario (g): Breakout setup identical to textbook, but OBV non-confirmation blocks signal
             close[-1] = 207.0
             high[-1] = 207.2
-            low[-1] = 204.0
-            open_[-1] = 205.0
+            low[-1] = 205.2
+            open_[-1] = 205.5
             volume[-3] = 310000.0
             volume[-2] = 350000.0
             volume[-1] = 1900000.0
@@ -118,8 +118,8 @@ def build_scenario_dataframe(scenario: str) -> pd.DataFrame:
             # Scenario (h): Breakout setup identical to textbook, but RS slope < +2 percentile points/week
             close[-1] = 207.0
             high[-1] = 207.2
-            low[-1] = 204.0
-            open_[-1] = 205.0
+            low[-1] = 205.2
+            open_[-1] = 205.5
             volume[-3] = 310000.0
             volume[-2] = 350000.0
             volume[-1] = 1900000.0
@@ -127,8 +127,8 @@ def build_scenario_dataframe(scenario: str) -> pd.DataFrame:
             # Scenario (i): Breakout setup identical to textbook, but fails momentum rank cutoff
             close[-1] = 207.0
             high[-1] = 207.2
-            low[-1] = 204.0
-            open_[-1] = 205.0
+            low[-1] = 205.2
+            open_[-1] = 205.5
             volume[-3] = 310000.0
             volume[-2] = 350000.0
             volume[-1] = 1900000.0

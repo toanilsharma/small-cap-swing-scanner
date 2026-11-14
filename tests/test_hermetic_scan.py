@@ -38,6 +38,15 @@ def execute_full_scan_pipeline() -> Tuple[List[Dict[str, Any]], List[Dict[str, A
         else:
             main.send_telegram(wl_text, kind="proactive", msg_type="watchlist")
 
+    # 2b. Position management alerts
+    open_positions = main.load_open_positions()
+    pos_alerts = main.generate_position_management_alerts(open_positions)
+    for p_alert in pos_alerts:
+        if is_digest:
+            main._DIGEST_MESSAGES.append(("scan", p_alert))
+        else:
+            main.send_telegram(p_alert, kind="proactive", msg_type="scan")
+
     # 3. Digest aggregation if enabled
     if is_digest and main._DIGEST_MESSAGES:
         enable_flags = settings.get("enable", {})

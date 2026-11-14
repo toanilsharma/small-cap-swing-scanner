@@ -4724,11 +4724,11 @@ function initHelpCenter() {
   renderHelpMath();
 }
 
-function renderHelpMath() {
+function renderHelpMath(force = false) {
   function tryRender() {
     if (typeof renderMathInElement === "function") {
       const helpContainer = document.getElementById("tabHelp");
-      if (helpContainer && !helpContainer.dataset.mathRendered) {
+      if (helpContainer && (!helpContainer.dataset.mathRendered || force)) {
         try {
           renderMathInElement(helpContainer, {
             delimiters: [
@@ -4749,7 +4749,7 @@ function renderHelpMath() {
 
   tryRender();
   if (typeof renderMathInElement !== "function") {
-    window.addEventListener("load", tryRender, { once: true });
+    window.addEventListener("load", () => tryRender(), { once: true });
   }
 }
 
@@ -5071,47 +5071,59 @@ document.addEventListener("DOMContentLoaded", () => {
         targetContent.classList.add("active");
       }
       if (targetTabId === "tabHelp") {
-        renderHelpMath();
+        renderHelpMath(true);
       }
     });
   });
 
+  // Safe modular initialization sequence
+  const safeInit = (fn, name) => {
+    try {
+      if (typeof fn === "function") fn();
+    } catch (e) {
+      console.warn(`Init error in ${name}:`, e);
+    }
+  };
+
   // Initialize Help Center
-  initHelpCenter();
+  safeInit(initHelpCenter, "initHelpCenter");
 
   // Initialize Term Search, Inline Definitions & Tab Banners
-  initTabGuideBanners();
-  initTermSearchAndLookups();
+  safeInit(initTabGuideBanners, "initTabGuideBanners");
+  safeInit(initTermSearchAndLookups, "initTermSearchAndLookups");
 
   // Initialize TradingView Modal Listeners (Phase 2 Item #3)
-  initTradingViewModalListeners();
+  safeInit(initTradingViewModalListeners, "initTradingViewModalListeners");
 
   // Initialize Phase 3 Listeners (Items #7, #8, #9, #10)
-  initGttListeners();
-  initScanArchiveListeners();
-  initPostMortemListeners();
-  initHistoryListeners();
-  initCsvExportListeners();
+  safeInit(initGttListeners, "initGttListeners");
+  safeInit(initScanArchiveListeners, "initScanArchiveListeners");
+  safeInit(initPostMortemListeners, "initPostMortemListeners");
+  safeInit(initHistoryListeners, "initHistoryListeners");
+  safeInit(initCsvExportListeners, "initCsvExportListeners");
 
   // Initialize SC-3 Collapsible Sections (Leaders Board & On Deck)
-  initCollapsibleSections();
+  safeInit(initCollapsibleSections, "initCollapsibleSections");
 
   // Initialize SC-5 Backtest Tab Listeners
-  initBacktestListeners();
+  safeInit(initBacktestListeners, "initBacktestListeners");
 
   // Initialize SC-6 Trader's Playbook Listeners (Buy & Sell Cards)
-  initPlaybookListeners();
+  safeInit(initPlaybookListeners, "initPlaybookListeners");
 
   // Initialize SC-UX1: Responsive Header Menu & Playbook Cheat Strip
-  initHeaderMenu();
-  initPlaybookCheatStrip();
+  safeInit(initHeaderMenu, "initHeaderMenu");
+  safeInit(initPlaybookCheatStrip, "initPlaybookCheatStrip");
+
+  // Initialize Watchlist filter chips and search listeners immediately
+  safeInit(initWatchlistFilterListeners, "initWatchlistFilterListeners");
 
   // Keep IST Live chip ticking every 30 seconds
   setInterval(updateIstLiveChip, 30000);
 
   // Initial load if on app page
   if (document.getElementById("watchlistTable")) {
-    initPositionSizer();
+    safeInit(initPositionSizer, "initPositionSizer");
     loadAllData();
 
     // Auto-refresh every 5 minutes (300,000 ms)
@@ -5968,9 +5980,9 @@ function initPlaybookListeners() {
 function initHeaderMenu() {
   const moreBtn = document.getElementById("headerMoreBtn");
   const dropdownMenu = document.getElementById("headerDropdownMenu");
-  const overflowSearchBtn = document.getElementById("overflowSearchBtn");
-  const overflowRefreshBtn = document.getElementById("overflowRefreshBtn");
-  const overflowLogoutBtn = document.getElementById("overflowLogoutBtn");
+  const overflowSearchBtn = document.getElementById("mobileSearchBtn") || document.getElementById("overflowSearchBtn");
+  const overflowRefreshBtn = document.getElementById("mobileRefreshBtn") || document.getElementById("overflowRefreshBtn");
+  const overflowLogoutBtn = document.getElementById("mobileLogoutBtn") || document.getElementById("overflowLogoutBtn");
 
   if (!moreBtn || !dropdownMenu) return;
 
@@ -6015,7 +6027,7 @@ function initHeaderMenu() {
 function initPlaybookCheatStrip() {
   const cheatStrip = document.getElementById("playbookCheatStrip");
   const collapsedBadge = document.getElementById("playbookCollapsedBadge");
-  const fullPlaybookBtn = document.getElementById("openFullPlaybookBtn");
+  const fullPlaybookBtn = document.getElementById("fullPlaybookBtn") || document.getElementById("openFullPlaybookBtn");
   const helpTabBtn = document.getElementById("helpTabBtn");
 
   function openFullPlaybook() {

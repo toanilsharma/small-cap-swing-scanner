@@ -1185,7 +1185,7 @@
                     <span class="timeline-step-title">7. Manage Mechanically</span>
                     <span class="timeline-step-time">Next Sessions</span>
                   </div>
-                  <p class="timeline-step-desc">Place your Stop-Loss GTT order on your broker terminal. If profit reaches <strong>+8%</strong>, immediately ratchet stop loss to entry (breakeven). If trade makes zero progress in <strong>5 trading days</strong>, cut it via the time stop.</p>
+                  <p class="timeline-step-desc">Place your Stop-Loss GTT order on your broker terminal. If unrealized profit reaches <strong>+1.0R</strong>, immediately ratchet stop loss to <strong>Entry &times; 1.0035</strong> (breakeven + statutory fee buffer). If trade makes zero progress in <strong>5 trading days</strong> and closes below the 10-day EMA, cut it via the time stop.</p>
                 </div>
               </div>
 
@@ -1314,9 +1314,9 @@
                       $$ \text{Size}_{\text{final}} = \min \left( \left\lfloor \frac{\text{Capital} \times \text{RiskPct}}{P_{\text{entry}} - \text{SL}} \right\rfloor, \; \left\lfloor \frac{\text{Capital} \times \text{MaxGapLossPct}}{P_{\text{entry}} \times \text{WorstCaseGapPct}} \right\rfloor, \; \left\lfloor \frac{0.01 \times \text{ADV}_{20}}{P_{\text{entry}}} \right\rfloor \right) $$
                       $$ \begin{aligned}
                       &\text{Parameters}: \quad \text{Capital} = \text{₹}200{,}000, \quad \text{RiskPct} = 0.01 \; (1\%), \quad \mathcal{R}_{\text{budget}} = \text{₹}200{,}000 \times 0.01 = \text{₹}2{,}000.00 \\
-                      &\text{Stop-Loss}: \quad P_{\text{entry}} = \text{₹}100.00, \quad \text{ATR}_{14} = \text{₹}2.00 \implies \text{SL} = P_{\text{entry}} - (2.5 \times \text{ATR}_{14}) = \text{₹}95.00 \\
-                      &\text{Unit Risk}: \quad \Delta \mathcal{R} = P_{\text{entry}} - \text{SL} = \text{₹}100.00 - \text{₹}95.00 = \text{₹}5.00 \quad (5.0\% \le 9.0\%\text{ Max Floor}) \\
-                      &\text{Execution}: \quad \text{Size} = \left\lfloor \frac{\text{₹}2{,}000.00}{\text{₹}5.00} \right\rfloor = \mathbf{400\text{ units}}, \quad \text{Target}_{+2\mathcal{R}} = P_{\text{entry}} + (2 \times \Delta \mathcal{R}) = \mathbf{\text{₹}110.00}
+                      &\text{Stop-Loss}: \quad P_{\text{entry}} = \text{₹}100.00, \quad \text{ATR}_{14} = \text{₹}2.00 \implies \text{SL} = P_{\text{entry}} - (2.0 \times \text{ATR}_{14}) = \text{₹}96.00 \\
+                      &\text{Unit Risk}: \quad \Delta \mathcal{R} = P_{\text{entry}} - \text{SL} = \text{₹}100.00 - \text{₹}96.00 = \text{₹}4.00 \quad (4.0\% \le 8.5\%\text{ Max Floor}) \\
+                      &\text{Execution}: \quad \text{Size} = \left\lfloor \frac{\text{₹}2{,}000.00}{\text{₹}4.00} \right\rfloor = \mathbf{500\text{ units}}, \quad \text{Target}_{+2\mathcal{R}} = P_{\text{entry}} + (2 \times \Delta \mathcal{R}) = \mathbf{\text{₹}108.00}
                       \end{aligned} $$
                     </div>
                   </div>
@@ -1331,7 +1331,8 @@
                   </div>
                   <div class="phase-math-box">
                     <div class="latex-display">
-                      $$ P_{\text{trigger}} = P_{\text{pivot}}, \quad P_{\text{limit}} = P_{\text{trigger}} \times (1 + \delta_{\text{slippage}}) = P_{\text{trigger}} \times 1.005, \quad \text{Validity} = \text{GTC} \lor \tau \le 7\text{ days}, \quad \text{OrderType} \neq \text{MARKET} $$
+                      $$ P_{\text{trigger}} = P_{\text{pivot}}, \quad P_{\text{limit}} = P_{\text{trigger}} \times (1 + \delta_{\text{slippage}}) = P_{\text{trigger}} \times 1.005 $$
+                      $$ \text{Validity} = \text{GTC} \lor \tau \le 7\text{ days}, \quad \text{OrderType} \neq \text{MARKET} $$
                     </div>
                   </div>
                 </div>
@@ -1384,13 +1385,13 @@
                 <div class="execution-phase-row">
                   <div class="phase-meta">
                     <span class="phase-badge buy-phase">SCENARIO B</span>
-                    <div class="phase-title">Asymmetric $+2\mathcal{R}$ Take-Profit &amp; Breakeven Ratchet</div>
-                    <div class="phase-desc">Locks in gain by selling 50% shares at +2R target, ratchets stop to entry (breakeven), and trails runner on 20 EMA.</div>
+                    <div class="phase-title">Asymmetric $+2\mathcal{R}$ Take-Profit &amp; Breakeven Ratchet (+0.35% Fee Buffer)</div>
+                    <div class="phase-desc">Locks in gain by selling 50% shares at +2R target, ratchets stop to Entry &times; 1.0035 (breakeven + statutory fee buffer) when unrealized gain reaches +1.0R, and trails runner on 20 EMA.</div>
                   </div>
                   <div class="phase-math-box">
                     <div class="latex-display">
-                      $$ P_t \ge \text{Target}_{+2\mathcal{R}} \implies \text{SELL}\left(\left\lfloor 0.50 \cdot \text{Qty} \right\rfloor\right) \quad \land \quad \text{SL}_t \gets \max(\text{SL}_{t-1}, P_{\text{entry}}) \quad \land \quad \text{SL}_{\text{trail}} \gets \text{EMA}_{20}(t) $$
-                      $$ \frac{P_t - P_{\text{entry}}}{P_{\text{entry}}} \ge +0.08 \implies \text{SL}_t \gets \max(\text{SL}_{t-1}, P_{\text{entry}}) \quad (\text{Breakeven Ratchet Floor}) $$
+                      $$ P_t \ge \text{Target}_{+2\mathcal{R}} \implies \text{SELL}\left(\left\lfloor 0.50 \cdot \text{Qty} \right\rfloor\right) \quad \land \quad \text{SL}_t \gets \max(\text{SL}_{t-1}, P_{\text{entry}} \times 1.0035) $$
+                      $$ \text{Unrealized Gain} \ge +1.0R \implies \text{SL} \gets \text{Entry} \times 1.0035 \quad (\text{Fee-Buffered Ratchet}) $$
                     </div>
                   </div>
                 </div>
@@ -1399,12 +1400,12 @@
                 <div class="execution-phase-row">
                   <div class="phase-meta">
                     <span class="phase-badge sell-phase">SCENARIO C</span>
-                    <div class="phase-title">8-Day Dead-Money Time Stop</div>
-                    <div class="phase-desc">Opportunity cost protection. Liquidates stalled positions after 8 sessions of zero forward momentum.</div>
+                    <div class="phase-title">5-Day Dead-Money Time Stop (Refined)</div>
+                    <div class="phase-desc">Opportunity cost protection. Liquidates stalled positions after 5 trading days only if price fails to hold above entry AND closes below the 10-day EMA.</div>
                   </div>
                   <div class="phase-math-box">
                     <div class="latex-display">
-                      $$ (t - t_{\text{entry}} &gt; 8\text{ sessions}) \quad \land \quad (P_{\text{close}}(t) \le P_{\text{entry}}) \implies \text{EXIT\_AT\_CLOSE}(\text{Qty}_{\text{pos}}) $$
+                      $$ (\Delta t_{\text{held}} \ge 5\text{ days}) \land (P_{\text{close}} \le \text{Entry}) \land (P_{\text{close}} &lt; \text{EMA}_{10}) \implies \text{EXIT AT CLOSE } (100\%) $$
                     </div>
                   </div>
                 </div>
@@ -1447,15 +1448,15 @@
                 <div class="quant-rule-row">
                   <div class="quant-rule-meta">
                     <span class="quant-rule-tag">RULE 01</span>
-                    <h4 class="quant-rule-name">Market Regime Filter (O'Neil M-Rule)</h4>
-                    <p class="quant-rule-note">Capital deployment strictly prohibited when market evaluates to Defensive regime. Cash is an active sovereign position.</p>
+                    <h4 class="quant-rule-name">Market Regime Filter (Nifty Smallcap 100 ^CNXSC)</h4>
+                    <p class="quant-rule-note">Capital deployment strictly prohibited when Nifty Smallcap 100 index (^CNXSC) evaluates to Defensive regime (with Nifty 50 as secondary macro regime). Cash is an active sovereign position.</p>
                   </div>
                   <div class="quant-rule-formula">
                     <div class="latex-display">
                       $$ \text{Regime}(t) = \begin{cases}
-                      \text{Confirmed Uptrend}, & \text{if } P_{\text{\textasciicircum NSEI}}(t) \gt \text{SMA}_{50}(t) \gt \text{SMA}_{200}(t) \;\land\; \dfrac{d}{dt}\text{SMA}_{200}(t) \gt 0 \\[8pt]
-                      \text{Uptrend Under Pressure}, & \text{if } \text{SMA}_{200}(t) \lt P_{\text{\textasciicircum NSEI}}(t) \le \text{SMA}_{50}(t) \\[8pt]
-                      \text{Defensive / Cash}, & \text{if } P_{\text{\textasciicircum NSEI}}(t) \le \text{SMA}_{200}(t) \;\lor\; \sum_{i=0}^{24} \mathbf{1}_{\text{DistributionDay}}(t-i) \ge 5
+                      \text{Confirmed Uptrend}, & \text{if } P_{\text{\textasciicircum CNXSC}}(t) \gt \text{SMA}_{50}(t) \gt \text{SMA}_{200}(t) \;\land\; \dfrac{d}{dt}\text{SMA}_{200}(t) \gt 0 \\[8pt]
+                      \text{Uptrend Under Pressure}, & \text{if } \text{SMA}_{200}(t) \lt P_{\text{\textasciicircum CNXSC}}(t) \le \text{SMA}_{50}(t) \\[8pt]
+                      \text{Defensive / Cash}, & \text{if } P_{\text{\textasciicircum CNXSC}}(t) \le \text{SMA}_{200}(t) \;\lor\; \sum_{i=0}^{24} \mathbf{1}_{\text{DistributionDay}}(t-i) \ge 5
                       \end{cases} $$
                       $$ \text{Regime}(t) = \text{Defensive} \implies \forall s \in \mathcal{U}, \; \text{OrderExecutionAllowed}(s) = \bot \;\land\; \text{Score}_{\max}(s) \le 50 $$
                     </div>
@@ -1549,12 +1550,13 @@
                 <div class="quant-rule-row">
                   <div class="quant-rule-meta">
                     <span class="quant-rule-tag">RULE 07</span>
-                    <h4 class="quant-rule-name">Breakout Volume Expansion &amp; Close Quality</h4>
-                    <p class="quant-rule-note">Breakout candle requires institutional volume expansion &ge;2.0&times; 50-day average and session close within the upper 40% of the daily range.</p>
+                    <h4 class="quant-rule-name">Breakout Quality, Exhaustion Cap &amp; Institutional Delivery Accumulation Gate</h4>
+                    <p class="quant-rule-note">Requires volume expansion &ge;2.0&times; 20-day average, session close in upper 40% (CLV &ge; 0.60), non-exhaustion range &le;2.2&times; ATR<sub>14</sub>, pivot extension &le;4%, and authentic delivery accumulation (&ge;35% delivery or &ge;1.5&times; 20-day delivery volume).</p>
                   </div>
                   <div class="quant-rule-formula">
                     <div class="latex-display">
-                      $$ V_{\text{breakout}} \ge 2.0 \times \overline{V}_{50}(t) \quad \land \quad \text{CLV}_t = \frac{P_{\text{close}} - P_{\text{low}}}{P_{\text{high}} - P_{\text{low}}} \ge 0.60 \quad (\text{Top 40\% Range}) $$
+                      $$ V_{\text{breakout}} \ge 2.0 \times \bar{V}_{20} \quad \land \quad \text{CLV} \ge 60\% \quad \land \quad \text{Range} \le 2.2 \times \text{ATR}_{14} \quad \land \quad P_{\text{close}} \le P_{\text{pivot}} \times 1.04 $$
+                      $$ \text{DeliveryGate} \iff \Big( \text{DelivPct} \ge 35\% \;\lor\; \text{DelivVol} \ge 1.5 \times \overline{\text{DelivVol}}_{20d} \Big) \quad [\text{Fallback: CMF}_{20} \ge -0.05 \land \text{OBV High}] $$
                     </div>
                   </div>
                 </div>
@@ -1575,12 +1577,13 @@
                 <div class="quant-rule-row">
                   <div class="quant-rule-meta">
                     <span class="quant-rule-tag">RULE 08</span>
-                    <h4 class="quant-rule-name">Fixed-Fractional Sizing &amp; Dual Liquidity Boundary</h4>
-                    <p class="quant-rule-note">Shares are sized to risk exactly 1% of total capital, capped by a 2.5% portfolio limit on a 20% gap-down and 1% of 50-day average daily volume.</p>
+                    <h4 class="quant-rule-name">Tiered Fixed-Fractional Sizing &amp; Sector Concentration Guard</h4>
+                    <p class="quant-rule-note">Risk budget tiered by setup grade: 1.5% for Grade A+ (Score &ge; 80), 1.0% for Grade A (Score &ge; 70). Capped at 2.5% portfolio gap loss and 1% of ADV<sub>20</sub>. Sector concentration strictly capped at max 2 positions per industry.</p>
                   </div>
                   <div class="quant-rule-formula">
                     <div class="latex-display">
-                      $$ Q^* = \min \left( \left\lfloor \frac{\mathcal{C}_{\text{portfolio}} \times 0.01}{P_{\text{entry}} - \text{SL}_{\text{eff}}} \right\rfloor, \; \left\lfloor \frac{\mathcal{C}_{\text{portfolio}} \times 0.025}{P_{\text{entry}} \times 0.20} \right\rfloor, \; \left\lfloor 0.01 \times \overline{V}_{50} \right\rfloor \right) $$
+                      $$ \mathcal{R}_{\text{budget}} = \begin{cases} 0.015 \times \mathcal{C}_{\text{portfolio}} \quad (₹3{,}000), & \text{if Grade A}^+ \; (\text{Score} \ge 80) \\[4pt] 0.010 \times \mathcal{C}_{\text{portfolio}} \quad (₹2{,}000), & \text{if Grade A} \; (\text{Score} \ge 70) \end{cases} $$
+                      $$ Q^* = \min \left( \left\lfloor \frac{\mathcal{R}_{\text{budget}}}{P_{\text{entry}} - \text{SL}_{\text{eff}}} \right\rfloor, \; \left\lfloor \frac{\mathcal{C}_{\text{portfolio}} \times 0.025}{P_{\text{entry}} \times 0.20} \right\rfloor, \; \left\lfloor \frac{0.01 \times \text{ADV}_{20}}{P_{\text{entry}}} \right\rfloor \right) \quad \land \quad N_{\text{sector}} \le 2 $$
                     </div>
                   </div>
                 </div>
@@ -1589,12 +1592,13 @@
                 <div class="quant-rule-row">
                   <div class="quant-rule-meta">
                     <span class="quant-rule-tag">RULE 09</span>
-                    <h4 class="quant-rule-name">Volatility Stop-Loss &amp; Risk Ceiling</h4>
-                    <p class="quant-rule-note">Initial stop is set at Entry &minus; 2.5 &times; ATR<sub>14</sub>, governed by an uncompromising hard ceiling of 9% maximum risk.</p>
+                    <h4 class="quant-rule-name">Volatility Stop-Loss (2.0&times; ATR) &amp; 8.5% Hard Risk Ceiling</h4>
+                    <p class="quant-rule-note">Initial stop is set at Entry &minus; 2.0 &times; ATR<sub>14</sub>, bounded by an uncompromising hard ceiling of 8.5% maximum risk.</p>
                   </div>
                   <div class="quant-rule-formula">
                     <div class="latex-display">
-                      $$ \text{SL}_{\text{raw}} = P_{\text{entry}} - (2.5 \times \text{ATR}_{14}(t)), \quad \text{SL}_{\text{eff}} = \max\left(\text{SL}_{\text{raw}}, \; 0.91 \times P_{\text{entry}}\right) \implies \frac{P_{\text{entry}} - \text{SL}_{\text{eff}}}{P_{\text{entry}}} \le 9.0\% $$
+                      $$ \text{SL}_{\text{raw}} = \text{Entry} - (2.0 \times \text{ATR}_{14}) $$
+                      $$ \text{SL}_{\text{effective}} = \max(\text{SL}_{\text{raw}}, \; \text{Entry} \times 0.915) \quad (\text{Max Risk Ceiling} \le 8.5\%) $$
                     </div>
                   </div>
                 </div>
@@ -1603,12 +1607,13 @@
                 <div class="quant-rule-row">
                   <div class="quant-rule-meta">
                     <span class="quant-rule-tag">RULE 15</span>
-                    <h4 class="quant-rule-name">Portfolio Heat Gauge &amp; Max Concurrent Positions</h4>
-                    <p class="quant-rule-note">Total cumulative open risk across all positions cannot exceed 5% of portfolio (₹10,000 on ₹2L). Maximum 3 simultaneous small-cap trades allowed.</p>
+                    <h4 class="quant-rule-name">Portfolio Heat Gauge &amp; Sector Cap</h4>
+                    <p class="quant-rule-note">Total cumulative open risk across concurrent positions cannot exceed 5% of portfolio (₹10,000 on ₹2,00,000 capital). Tiered risk budget: 1.0% for Grade A / 1.5% for Grade A+ (or up to 5 concurrent positions at 1.0% each). Sector exposure is strictly capped at max 1 position per sector (or 2 when max positions = 5).</p>
                   </div>
                   <div class="quant-rule-formula">
                     <div class="latex-display">
-                      $$ \mathcal{H}_{\text{portfolio}}(t) = \sum_{k=1}^{N_{\text{active}}} \left( P_{\text{entry}, k} - \text{SL}_k(t) \right) \times Q_k \le 0.05 \times \mathcal{C}_{\text{portfolio}} \quad \land \quad N_{\text{active}}(t) \le 3 $$
+                      $$ \mathcal{H}_{\text{portfolio}}(t) = \sum_{k=1}^{N_{\text{active}}} \left( P_{\text{entry}, k} - \text{SL}_k(t) \right) \times Q_k \le 0.05 \times \mathcal{C}_{\text{portfolio}} \quad (₹10{,}000 \text{ Max Heat}) $$
+                      $$ N_{\text{active}} \le 5 \quad \land \quad \mathcal{R}_{\text{trade}} \in \{0.010, 0.015\} \times \mathcal{C}_{\text{portfolio}} \quad \land \quad \text{Sector Exposure} \le 1\text{ position per sector} $$
                     </div>
                   </div>
                 </div>
@@ -1657,12 +1662,13 @@
                 <div class="quant-rule-row">
                   <div class="quant-rule-meta">
                     <span class="quant-rule-tag">RULE 11</span>
-                    <h4 class="quant-rule-name">Asymmetric +2R Exit &amp; Breakeven Ratchet</h4>
-                    <p class="quant-rule-note">Sell 50% shares at +2R profit target. Ratchet stop loss to entry (breakeven) automatically upon hitting +8% unrealized gain or +2R target.</p>
+                    <h4 class="quant-rule-name">Asymmetric +2R Exit &amp; Fee-Buffered Breakeven Ratchet</h4>
+                    <p class="quant-rule-note">Sell 50% shares at +2R profit target. Ratchet stop loss to entry + 0.35% statutory fee buffer when unrealized gain reaches +1R or at +2R partial target.</p>
                   </div>
                   <div class="quant-rule-formula">
                     <div class="latex-display">
-                      $$ P_t \ge P_{\text{entry}} + 2\mathcal{R} \implies \text{SELL}\left(\left\lfloor 0.50 \cdot Q^* \right\rfloor\right) \quad \land \quad \left(\frac{P_t - P_{\text{entry}}}{P_{\text{entry}}} \ge +0.08 \lor P_t \ge P_{\text{entry}} + 2\mathcal{R}\right) \implies \text{SL}(t) \gets P_{\text{entry}} $$
+                      $$ P_t \ge P_{\text{entry}} + 2\Delta\mathcal{R} \implies \text{SELL}\left(\left\lfloor 0.50 \cdot Q^* \right\rfloor\right) \quad \land \quad \text{SL}_t \gets \max(\text{SL}_{t-1}, P_{\text{entry}} \times 1.0035) $$
+                      $$ \text{Unrealized Gain} \ge +1.0R \implies \text{SL} \gets \text{Entry} \times 1.0035 \quad (\text{Breakeven + Fee Buffer Ratchet}) $$
                     </div>
                   </div>
                 </div>
@@ -1685,12 +1691,12 @@
                 <div class="quant-rule-row">
                   <div class="quant-rule-meta">
                     <span class="quant-rule-tag">RULE 13</span>
-                    <h4 class="quant-rule-name">8-Day Dead-Money Momentum Time Stop</h4>
-                    <p class="quant-rule-note">If trade makes zero upward progress after 8 trading sessions and price is at or below entry, exit to redeploy capital into high-momentum setups.</p>
+                    <h4 class="quant-rule-name">5-Day Dead-Money Momentum Time Stop (Refined)</h4>
+                    <p class="quant-rule-note">Opportunity cost defense: exits at close after 5 trading days only if price fails to hold above entry AND closes below the rising 10-day EMA.</p>
                   </div>
                   <div class="quant-rule-formula">
                     <div class="latex-display">
-                      $$ (t - t_{\text{entry}} &gt; 8\text{ sessions}) \land (P_{\text{close}}(t) \le P_{\text{entry}}) \implies \text{LIQUIDATE}\left(Q_{\text{total}}\right) \text{ at Close} $$
+                      $$ (\Delta t_{\text{held}} \ge 5\text{ days}) \land (P_{\text{close}} \le \text{Entry}) \land (P_{\text{close}} &lt; \text{EMA}_{10}) \implies \text{EXIT AT CLOSE } (100\%) $$
                     </div>
                   </div>
                 </div>
@@ -1713,12 +1719,28 @@
                 <div class="quant-rule-row">
                   <div class="quant-rule-meta">
                     <span class="quant-rule-tag">RULE 17</span>
-                    <h4 class="quant-rule-name">Cross-Sectional Relative Strength (RS &ge; 70) &amp; Slope</h4>
-                    <p class="quant-rule-note">Stock must rank in top 30% of relative strength (RS &ge; 70) and exhibit positive 4-week RS line slope against NIFTY index.</p>
+                    <h4 class="quant-rule-name">Relative Strength Percentile (RS &ge; 70) &amp; Slope Benchmark</h4>
+                    <p class="quant-rule-note">Stock must rank in top 30% of relative strength (RS &ge; 70) and exhibit positive 4-week RS line slope against Nifty Smallcap 100 (^CNXSC), with Nifty 50 (^NSEI) as secondary macro regime.</p>
                   </div>
                   <div class="quant-rule-formula">
                     <div class="latex-display">
-                      $$ \text{Percentile}_{\mathcal{U}}\left(\text{RS}_{\text{Mansfield}}(t)\right) \ge 70 \quad \land \quad \frac{d}{dt}\left(\frac{P_{\text{stock}}(t)}{P_{\text{NIFTY}}(t)}\right)_{20d} &gt; 0 $$
+                      $$ \text{RS}_{\text{score}} = 0.40 \cdot \text{Ret}_{63d} + 0.20 \cdot \text{Ret}_{126d} + 0.20 \cdot \text{Ret}_{189d} + 0.20 \cdot \text{Ret}_{252d} \implies \text{Percentile} \ge 70 $$
+                      $$ \frac{d}{dt}\left(\frac{P_{\text{stock}}(t)}{P_{\text{\textasciicircum CNXSC}}(t)}\right)_{20d} &gt; 0 \quad (\text{Positive RS Slope vs Nifty Smallcap 100 Benchmark}) $$
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Rule 18 -->
+                <div class="quant-rule-row">
+                  <div class="quant-rule-meta">
+                    <span class="quant-rule-tag">RULE 18</span>
+                    <h4 class="quant-rule-name">NSE Surveillance &amp; Circuit Filter Gate</h4>
+                    <p class="quant-rule-note">Reject stocks in Trade-to-Trade (BE/BZ series), Long-Term ASM (Stages 2–4), GSM, or restricted daily circuit bands (&lt;10%) to eliminate liquidity traps.</p>
+                  </div>
+                  <div class="quant-rule-formula">
+                    <div class="latex-display">
+                      $$ \text{Series} = \text{EQ} \quad \land \quad \text{ASM Stage} \notin \{2, 3, 4\} \quad \land \quad \text{GSM} = \text{False} \quad \land \quad \text{Circuit Band} \ge 10\% $$
+                      $$ \forall t \in [t-10, t], \quad \left| \frac{P_t}{P_{t-1}} - 1 \right| \le 0.21 \quad (\text{Corporate Action / Split Glitch Sanitizer}) $$
                     </div>
                   </div>
                 </div>
@@ -2317,7 +2339,7 @@
               <div class="glossary-card" id="glossary-ofi">
                 <div class="glossary-card-header"><span class="glossary-term">Order-Flow Imbalance (CLV proxy)</span><span class="glossary-category">Volume Integrity</span></div>
                 <p class="glossary-meaning">approximation from daily bars, not true order-book depth; use alongside OBV + institutional footprint, never alone.</p>
-                <div class="glossary-section-row"><span class="glossary-label">Formula:</span><span class="glossary-threshold">CLV_day = ((Close - Low) - (High - Close)) / (High - Low) in [-1, 1]; MFI20 = &sum;(CLV &times; Vol) / &sum;(Vol) over 20 days.</span></div>
+                <div class="glossary-section-row"><span class="glossary-label">Formula:</span><span class="glossary-threshold">CLV_day = ((Close - Low) - (High - Close)) / (High - Low) in [-1, 1]; CMF20 = &sum;(CLV &times; Vol) / &sum;(Vol) over 20 days (Chaikin Money Flow 20-day).</span></div>
                 <div class="glossary-section-row"><span class="glossary-label">Breakout Gate:</span><span class="glossary-threshold">OBV prints 20-day high AND ofi20 &ge; 0.10 (OFI_GATE). Fall back to OBV-only if history &lt; 20 bars.</span></div>
                 <div class="glossary-section-row"><span class="glossary-label">main.py Bands:</span><span class="glossary-threshold">&ge; +0.4 (Strong Buy / Green); +0.1 to +0.4 (Buy / Lime); -0.1 to +0.1 (Neutral / Gray); -0.4 to -0.1 (Sell / Orange); &le; -0.4 (Strong Sell / Red).</span></div>
                 <div class="glossary-section-row"><span class="glossary-label">Limitation &amp; Honesty:</span><span class="glossary-example">approximation from daily bars, not true order-book depth; use alongside OBV + institutional footprint, never alone.</span></div>
@@ -2708,14 +2730,14 @@
                   <tr>
                     <td>
                       <span class="gov-num-pill">CMD 06</span><br>
-                      <strong style="color: #fff; font-size: 13.5px;">8-Day Momentum Time Stop</strong>
+                      <strong style="color: #fff; font-size: 13.5px;">5-Day Momentum Time Stop (Refined)</strong>
                     </td>
                     <td>
                       <div class="latex-display">
-                        $$ (t - t_{\text{entry}} &gt; 8 \text{ sessions}) \land (P_t \le P_{\text{entry}}) \implies \text{LIQUIDATE}(Q_{\text{all}}) $$
+                        $$ (\Delta t_{\text{held}} \ge 5\text{ days}) \land (P_{\text{close}} \le \text{Entry}) \land (P_{\text{close}} &lt; \text{EMA}_{10}) \implies \text{EXIT AT CLOSE } (100\%) $$
                       </div>
                     </td>
-                    <td>High-velocity breakouts follow through within 3&ndash;5 sessions. Lingering dead money is liquidated on session 8 to recycle purchasing power.</td>
+                    <td>High-velocity smallcap breakouts follow through within 3&ndash;5 sessions. Unprofitable dead money failing to hold above entry and closing below the 10-day EMA is liquidated at close on session 5 to recycle purchasing power.</td>
                   </tr>
 
                   <tr>

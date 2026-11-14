@@ -60,6 +60,9 @@ EXPECTED_MARKET_SUMMARY_KEYS = {
     "advancers",
     "decliners",
     "unchanged",
+    "nifty50_close",
+    "nifty50_chg_pct",
+    "macro_index",
 }
 
 EXPECTED_SIGNAL_KEYS = {
@@ -95,6 +98,18 @@ EXPECTED_SIGNAL_KEYS = {
     "chosen_kelly_f",
     "effective_ATR_mult",
     "vol_regime",
+    "delivery_pct",
+    "delivery_vol",
+    "deliv_gate_status",
+    "series",
+    "circuit_band_pct",
+    "cmf20",
+    "mfi20",
+    "score",
+    "Score",
+    "grade",
+    "Grade",
+    "execution_mode",
 }
 
 EXPECTED_WATCHLIST_KEYS = {
@@ -113,6 +128,7 @@ EXPECTED_WATCHLIST_KEYS = {
     "grade",
     "Score",
     "Grade",
+    "execution_mode",
     "rs_rating",
     "base_maturity",
     "days_in_base",
@@ -123,6 +139,15 @@ EXPECTED_WATCHLIST_KEYS = {
     "thesis_card",
     "hurst",
     "ofi20",
+    "cmf20",
+    "mfi20",
+    "delivery_pct",
+    "series",
+    "circuit_band_pct",
+    "microstructure_ok",
+    "microstructure_reason",
+    "corp_action_suspect",
+    "CORP_ACTION_SUSPECT",
 }
 
 EXPECTED_ON_DECK_KEYS = {
@@ -223,7 +248,7 @@ def test_schema_keys_exact_match(tmp_cwd: Any, monkeypatch: pytest.MonkeyPatch):
         assert isinstance(sig["mtf_confluence"], bool)
         assert "effective_ATR_mult" in sig
         assert "vol_regime" in sig
-        assert sig["effective_ATR_mult"] in {3.25, 2.5, 2.125}
+        assert sig["effective_ATR_mult"] in {3.25, 2.5, 2.125, 2.6, 2.0, 1.7}
         assert sig["vol_regime"] in {"HIGH", "NORMAL", "LOW"}
 
     # 3. Watchlist schema

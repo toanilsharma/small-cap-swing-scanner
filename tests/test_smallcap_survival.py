@@ -151,16 +151,17 @@ def test_heat_cap_blocks_buy(tmp_cwd: Any):
     """
     today_str = datetime.date.today().isoformat()
 
-    # Case A: 3 open positions already exist
+    # Case A: Max concurrent open positions already exist across distinct sectors
+    sectors = ["NIFTY_IT", "NIFTY_PHARMA", "NIFTY_AUTO", "NIFTY_METAL", "NIFTY_FMCG"]
     open_positions = [
-        {"symbol": f"P{i}.NS", "entry_date": today_str, "entry_price": 100.0, "qty": 10, "stop": 91.0}
-        for i in range(3)
+        {"symbol": f"P{i}.NS", "entry_date": today_str, "entry_price": 100.0, "qty": 10, "stop": 91.0, "sector": sectors[i % len(sectors)]}
+        for i in range(main.MAX_CONCURRENT_SMALLCAP)
     ]
     main.save_open_positions(open_positions)
     main.save_trades([])
 
     reply_concurrent = main.handle_telegram_command("/buy NEWPOS 100 10 91")
-    assert "BUY REJECTED" in reply_concurrent, "4th concurrent position must be rejected"
+    assert "BUY REJECTED" in reply_concurrent, "Excess concurrent position must be rejected"
     assert "Maximum concurrent" in reply_concurrent
 
     # Case B: Exceeding 5% total heat limit (Capital = 200,000 -> 5% = 10,000)

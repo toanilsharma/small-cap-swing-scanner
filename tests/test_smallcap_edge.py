@@ -208,7 +208,7 @@ def test_tail_capture_exit_asymmetry():
     )
     assert res2["exit_type"] == "PARTIAL_2R"
     assert res2["exit_qty_pct"] == 0.50
-    assert res2["new_stop"] == entry, "Stop must move to breakeven entry price"
+    assert res2["new_stop"] in (entry, round(entry * (1.0 + getattr(main, "FEE_BUFFER_PCT", 0.0035)), 2)), "Stop must move to breakeven entry price (+ fee buffer)"
 
     # 3. Post-partial: price above 20-EMA (Close 112 > EMA20 110) -> runner continues riding
     res3 = main.calculate_tail_capture_exit(

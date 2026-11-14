@@ -3,6 +3,8 @@ Daily NIFTY Midcap 100 Swing-Trading Scanner with Telegram Alerts.
 Implements momentum trend-following and pullback setups with discipline rules.
 """
 
+import urllib.request
+import urllib3
 import datetime
 import io
 import json
@@ -43,13 +45,17 @@ CAPITAL = 200000
 RISK_PCT = 0.01
 SEND_NO_SIGNAL_MESSAGE = True
 SEND_WATCHLIST = True
-ATR_STOP_MULTIPLIER = 2.5
+ATR_STOP_MULTIPLIER = 2.0
 TARGET_R_MULTIPLE = 2.0
-MAX_STOP_LOSS_PCT = 0.09
+MAX_STOP_LOSS_PCT = 0.085
 VOLUME_SPIKE_MULTIPLIER = 2.0
 VOLUME_SPIKE_MIN = 2.0
 SETUP_WINDOW_DAYS = 10
-INDEX_SYMBOL = "^NSEI"
+INDEX_SYMBOL = "^CNXSC"
+INDEX_FALLBACKS = ["NIFTYSMLCAP100.NS", "^NSEI"]
+SECONDARY_MACRO_SYMBOL = "^NSEI"
+ACTIVE_BENCHMARK_SYMBOL = "^CNXSC"
+FEE_BUFFER_PCT = 0.0035
 USE_LARGE_CAP_CRASH_CHECK = False
 BASKET_MIN_SYMBOLS_PCT = 0.80
 BASKET_DRAWDOWN_GUARD_PCT = -0.07
@@ -78,7 +84,8 @@ CIRCUIT_PROXIMITY_PCT = 0.02
 EARNINGS_BLACKOUT_DAYS = 5
 
 # Portfolio heat & drawdown limits (Elder circuit-breaker)
-MAX_CONCURRENT_SMALLCAP = 3
+MAX_CONCURRENT_SMALLCAP = 5
+MAX_SECTOR_CONCURRENT = 2
 MAX_TOTAL_HEAT_PCT = 0.05
 DAILY_STOP_PCT = 0.02
 MONTHLY_STOP_PCT = 0.06
@@ -86,7 +93,7 @@ MONTHLY_STOP_PCT = 0.06
 # Execution flags
 ENABLE_PULLBACK = True
 ENABLE_SQUEEZE = True
-TIME_STOP_DAYS = 8
+TIME_STOP_DAYS = 5
 MOMENTUM_RANK_TOP = 20
 RS_SLOPE_WEEKS = 4
 BREADTH_THRUST_THRESHOLD = 2.0
@@ -103,9 +110,15 @@ TG_OFFSET_FILE = "tg_offset.txt"
 ALERT_SETTINGS_FILE = "alert_settings.json"
 SCAN_RESULTS_FILE = "scan_results.json"
 CIRCUITS_FILE = "circuits.json"
+NSE_SURVEILLANCE_FILE = "nse_surveillance.json"
+NSE_DELIVERY_FILE = "nse_delivery.json"
 EARNINGS_FILE = "earnings_dates.json"
 DEALS_FILE = "deals.json"
 EVENTS_FILE = "events.json"
+
+MIN_CIRCUIT_BAND_PCT = 0.10  # Strictly block 2% and 5% circuit bands (Rule 18)
+MIN_DELIVERY_PCT = 35.0      # Minimum institutional delivery % (Rule 07 Upgrade)
+DELIVERY_VOL_SPIKE_MULT = 1.5  # 1.5x 20d average delivery volume (Rule 07 Upgrade)
 
 IST_TZ = datetime.timezone(datetime.timedelta(hours=5, minutes=30))
 
@@ -695,6 +708,25 @@ def get_history(symbol: str) -> Optional[pd.DataFrame]:
 # =====================================================================
 # 5) SMALL-CAP EDGE HELPER FUNCTIONS & INDICATORS
 # =====================================================================
+def check_corp_action_glitch(df: Optional[pd.DataFrame]) -> bool:
+    """
+    Corporate Action / Split / Bonus Sanitizer (yfinance glitch guard):
+    Checks the last 10 daily bars for single-day unadjusted price jumps where
+    abs(Close[t] / Close[t-1] - 1) > 0.21 (exceeding the 20% NSE circuit limit).
+    Returns True if suspect corporate action / unadjusted split/bonus detected.
+    """
+    if df is None or len(df) < 2 or "Close" not in df.columns:
+        return False
+    try:
+        recent_closes = pd.to_numeric(df["Close"].iloc[-11:], errors="coerce").dropna()
+        if len(recent_closes) < 2:
+            return False
+        pct_changes = (recent_closes / recent_closes.shift(1) - 1.0).abs().dropna()
+        return bool((pct_changes > 0.21).any())
+    except Exception:
+        return False
+
+
 def calculate_vol_adj_return(df: pd.DataFrame) -> Optional[float]:
     """
     Volatility-adjusted 6-month return:
@@ -879,36 +911,53 @@ def calculate_tail_capture_exit(
     ema20: float,
     partial_taken: bool = False,
     time_stop_days: int = TIME_STOP_DAYS,
+    ema10: Optional[float] = None,
+    vol_5d_avg: Optional[float] = None,
+    breakout_vol: Optional[float] = None,
 ) -> Dict[str, Any]:
     """
-    Tail-capture exit asymmetry:
-    - At +2R: take 50% partial and move stop to breakeven (entry_price).
+    Tail-capture exit asymmetry & R-multiple breakeven ratchet:
+    - Rule 11: Ratchet stop-loss to Entry * 1.0035 (breakeven + 0.35% round-trip NSE statutory fee buffer)
+      when Unrealized_Gain >= 1.0 * Risk_Per_Share (+1R) OR at +2R partial profit booking.
+    - At +2R: take 50% partial profit and lock stop to fee-buffered breakeven.
     - Trail remaining 50%: exit on 20-EMA close (Close < EMA20).
-    - 8-day TIME_STOP applies ONLY to positions NOT in profit (Close <= entry_price).
-      Winners ride the trail; losers get cut by time.
+    - Rule 13: 5-Day dead-money time stop triggers after 5 trading days (holding_days >= 5)
+      ONLY IF Close <= Entry AND (Close < EMA10 OR Volume_5d_Avg > Breakout_Volume).
+      Do not auto-exit healthy low-volume pullbacks holding above the rising 10-day EMA.
     """
     r_unit = max(1e-4, entry_price - initial_stop)
+    target_1r = entry_price + (1.0 * r_unit)
     target_2r = entry_price + (2.0 * r_unit)
+    fee_buffered_be = round(entry_price * (1.0 + FEE_BUFFER_PCT), 2)
 
-    effective_stop = entry_price if partial_taken else initial_stop
+    # Ratchet stop to fee-buffered breakeven if +1R reached or partial already taken
+    if partial_taken or (current_close >= target_1r):
+        effective_stop = max(initial_stop, fee_buffered_be)
+    else:
+        effective_stop = initial_stop
+
+    # 1. Stop loss breach check
     if current_low <= effective_stop or current_close < effective_stop:
+        is_be = (effective_stop >= entry_price)
         return {
-            "exit_type": "BREAKEVEN_STOP" if partial_taken else "STOP_LOSS",
+            "exit_type": "BREAKEVEN_STOP" if is_be else "STOP_LOSS",
             "exit_qty_pct": 1.0,
             "new_stop": effective_stop,
             "partial_taken": partial_taken,
-            "reason": f"Hit {'breakeven' if partial_taken else 'initial'} stop (₹{effective_stop:.2f})",
+            "reason": f"Hit {'fee-buffered breakeven (+0.35%)' if is_be else 'initial'} stop (₹{effective_stop:.2f})",
         }
 
+    # 2. +2R Partial profit booking
     if not partial_taken and current_close >= target_2r:
         return {
             "exit_type": "PARTIAL_2R",
             "exit_qty_pct": 0.50,
-            "new_stop": entry_price,
+            "new_stop": max(effective_stop, fee_buffered_be),
             "partial_taken": True,
-            "reason": f"Hit +2R target (₹{target_2r:.2f}): take 50% partial, stop moved to breakeven",
+            "reason": f"Hit +2R target (₹{target_2r:.2f}): take 50% partial, stop ratcheted to breakeven + 0.35% fee buffer (₹{fee_buffered_be:.2f})",
         }
 
+    # 3. 20-EMA Trail exit for runner
     if partial_taken and current_close < ema20:
         return {
             "exit_type": "EMA20_TRAIL",
@@ -918,15 +967,23 @@ def calculate_tail_capture_exit(
             "reason": f"Close (₹{current_close:.2f}) dropped below 20-EMA (₹{ema20:.2f}): trail exit triggered",
         }
 
+    # 4. Refined 5-day dead-money time stop (Rule 13)
     if holding_days >= time_stop_days:
         if current_close <= entry_price:
-            return {
-                "exit_type": "TIME_STOP",
-                "exit_qty_pct": 1.0,
-                "new_stop": effective_stop,
-                "partial_taken": partial_taken,
-                "reason": f"8-day time stop reached ({holding_days} days) and position not in profit",
-            }
+            should_exit_time = True
+            if ema10 is not None or (vol_5d_avg is not None and breakout_vol is not None):
+                below_ema10 = (ema10 is not None and current_close < ema10)
+                churning_vol = (vol_5d_avg is not None and breakout_vol is not None and vol_5d_avg > breakout_vol)
+                should_exit_time = below_ema10 or churning_vol
+
+            if should_exit_time:
+                return {
+                    "exit_type": "TIME_STOP",
+                    "exit_qty_pct": 1.0,
+                    "new_stop": effective_stop,
+                    "partial_taken": partial_taken,
+                    "reason": f"5-day dead-money time stop ({holding_days} days): Close <= Entry and no momentum follow-through",
+                }
 
     return {
         "exit_type": None,
@@ -1026,9 +1083,9 @@ def compute_hurst_summary(items: List[Dict[str, Any]]) -> Dict[str, int]:
 def calculate_ofi20(df: Optional[pd.DataFrame]) -> Optional[float]:
     """
     Compute order-flow imbalance (OFI) proxy via Close Location Value (CLV)
-    weighted by volume over a fixed 20-day window.
+    weighted by volume over a fixed 20-day window, equivalent to Chaikin Money Flow (CMF20).
     CLV_day = ((close - low) - (high - close)) / (high - low) in [-1, 1] (0 if high == low).
-    MFI20 = sum(CLV_day * volume_day over 20 days) / sum(volume over 20 days).
+    CMF20 = sum(CLV_day * volume_day over 20 days) / sum(volume over 20 days).
     Returns signed float in [-1.0, 1.0] rounded to 3 decimal places, or None if <20 bars.
     Deterministic, fixed 20-day window, no randomness, zero division/crash risk.
     """
@@ -1057,9 +1114,9 @@ def calculate_ofi20(df: Optional[pd.DataFrame]) -> Optional[float]:
         if tot_vol <= 0:
             return 0.0
 
-        mfi20 = float(np.sum(clv * volumes)) / tot_vol
-        mfi20 = max(-1.0, min(1.0, mfi20))
-        return round(mfi20, 3)
+        cmf20 = float(np.sum(clv * volumes)) / tot_vol
+        cmf20 = max(-1.0, min(1.0, cmf20))
+        return round(cmf20, 3)
     except Exception:
         return None
 
@@ -1112,6 +1169,7 @@ def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
 
     # Moving averages of Volume
     df["VOL5"] = df["Volume"].rolling(5).mean()
+    df["VOL20"] = df["Volume"].rolling(20).mean()
     df["VOL50"] = df["Volume"].rolling(50).mean()
 
     # Range calculations (High - Low)
@@ -1152,7 +1210,8 @@ def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
     df["HIGH20"] = df["High"].rolling(20).max().shift(1)
     df["LOW20"] = df["Low"].rolling(20).min().shift(1)
 
-    # 20-day Exponential Moving Average
+    # 10-day & 20-day Exponential Moving Averages
+    df["EMA10"] = df["Close"].ewm(span=10, adjust=False).mean()
     df["EMA20"] = df["Close"].ewm(span=20, adjust=False).mean()
 
     # On-Balance Volume (OBV) & 20-day OBV high
@@ -1203,25 +1262,31 @@ def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
     coiling = df["SETUP_OK"] | (df["SQUEEZE_ON"] if ENABLE_SQUEEZE else False)
     df["SETUP_WINDOW"] = coiling.astype(float).rolling(SETUP_WINDOW_DAYS).max().shift(1) > 0
 
-    # Breakout triggers
-    df["BREAKOUT"] = (df["Close"] > df["HIGH20"]) & (df["Close"].shift(1) <= df["HIGH20"])
+    # Rule 07 Breakout triggers & Exhaustion Rejection Gate:
+    raw_breakout = (df["Close"] > df["HIGH20"]) & (df["Close"].shift(1) <= df["HIGH20"])
+    safe_atr = df["ATR14"].replace(0, np.nan)
+    is_exhausted = ((df["High"] - df["Low"]) > (2.2 * safe_atr)) | (df["Close"] > (df["HIGH20"] * 1.04))
+    df["BREAKOUT_EXHAUSTED"] = is_exhausted.fillna(False)
+    df["BREAKOUT"] = raw_breakout & (~df["BREAKOUT_EXHAUSTED"])
     
-    # Small-cap volume spike: >= 2.0x 50-day average volume AND 3-day rising volume across breakout window
+    # Small-cap volume spike: >= 2.0x 20-day / 50-day average volume AND 3-day rising volume across breakout window
     vol_today = df["Volume"]
     vol_yesterday = df["Volume"].shift(1)
     vol_2days_ago = df["Volume"].shift(2)
     vol50 = df["VOL50"]
-    vol_spike_today = vol_today >= (VOLUME_SPIKE_MIN * vol50)
+    vol20 = df["VOL20"]
+    vol_spike_today = (vol_today >= (VOLUME_SPIKE_MIN * vol50)) | (vol_today >= (VOLUME_SPIKE_MIN * vol20))
     vol_rising_3day = (vol_today > vol_yesterday) & (vol_yesterday > vol_2days_ago) & (vol_2days_ago >= 0.3 * vol50)
     df["VOL_SPIKE"] = vol_spike_today & vol_rising_3day
 
-    # Strong close (>60% of candle's range)
+    # Strong close / CLV (>= 60% of candle's range)
     safe_hl = (df["High"] - df["Low"]).replace(0, np.nan)
-    df["STRONG_CLOSE"] = ((df["Close"] - df["Low"]) / safe_hl) > 0.60
+    df["STRONG_CLOSE"] = ((df["Close"] - df["Low"]) / safe_hl) >= 0.60
 
-    # Rising RS slope gate (slope >= +2 percentile-points / week)
+    # Rising RS slope gate against benchmark (^CNXSC) (slope >= +2 percentile-points / week)
     if "RS_SLOPE_OK" not in df.columns:
-        slope_val = calculate_weekly_rs_slope(df)
+        bench_df = get_cached_index_df()
+        slope_val = calculate_weekly_rs_slope(df, df_benchmark=bench_df)
         df["RS_SLOPE_OK"] = slope_val >= 2.0
 
     # Momentum rank cutoff gate (volatility-adjusted 6-month return > 0)
@@ -1278,6 +1343,7 @@ def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
         "SQUEEZE_ON",
         "SETUP_WINDOW",
         "BREAKOUT",
+        "BREAKOUT_EXHAUSTED",
         "VOL_SPIKE",
         "STRONG_CLOSE",
         "OBV_CONFIRM",
@@ -1303,12 +1369,23 @@ _BASKET_CACHE: Optional[pd.DataFrame] = None
 
 
 def get_cached_index_df() -> Optional[pd.DataFrame]:
-    """Retrieve and cache the benchmark index history."""
-    global _INDEX_CACHE
+    """
+    Retrieve and cache the benchmark index history.
+    Uses Nifty Smallcap 100 (^CNXSC) as primary benchmark,
+    falling back to NIFTYSMLCAP100.NS or ^NSEI if unavailable.
+    """
+    global _INDEX_CACHE, ACTIVE_BENCHMARK_SYMBOL
     if _INDEX_CACHE is None:
-        idx_df = get_history(INDEX_SYMBOL)
-        if idx_df is not None and not idx_df.empty:
-            _INDEX_CACHE = add_indicators(idx_df)
+        candidates = [INDEX_SYMBOL] + [fb for fb in INDEX_FALLBACKS if fb != INDEX_SYMBOL]
+        for sym in candidates:
+            try:
+                idx_df = get_history(sym)
+                if idx_df is not None and not idx_df.empty and len(idx_df) >= 20:
+                    _INDEX_CACHE = add_indicators(idx_df)
+                    ACTIVE_BENCHMARK_SYMBOL = sym
+                    break
+            except Exception:
+                continue
     return _INDEX_CACHE
 
 
@@ -1577,6 +1654,255 @@ def check_circuit_proximity(symbol: str, df: pd.DataFrame) -> Tuple[bool, Option
         return True, f"Within 2% of lower circuit band (₹{lower_band:.2f})"
 
     return False, None
+
+
+# =====================================================================
+# RULE 18: NSE MICROSTRUCTURE, SERIES, CIRCUIT BAND & SURVEILLANCE GATE
+# =====================================================================
+_NSE_METADATA_CACHE: Dict[str, Dict[str, Any]] = {}
+_DELIVERY_DATA_CACHE: Dict[str, Dict[str, Any]] = {}
+
+
+def get_nse_microstructure_metadata(symbol: str, df: Optional[pd.DataFrame] = None) -> Dict[str, Any]:
+    """
+    Fetches or resolves NSE equity metadata for symbol:
+    - series: 'EQ', 'BE', 'BZ', etc.
+    - band_pct: e.g. 0.20, 0.10, 0.05, 0.02
+    - asm_stage: int (0 if none, 1..4)
+    - is_gsm: bool
+    - source: 'live_nse' | 'cached_json' | 'price_action_fallback'
+    
+    Graceful fallback sequence:
+    1. In-memory cache
+    2. Cached nse_surveillance.json and circuits.json
+    3. Live NSE quote API (with timeout & browser headers)
+    4. Price action band estimation from recent df daily bars
+    """
+    clean_sym = symbol.replace(".NS", "").upper()
+    if clean_sym in _NSE_METADATA_CACHE:
+        return _NSE_METADATA_CACHE[clean_sym]
+
+    # Check cached JSON files first
+    surv_file_data = {}
+    if os.path.exists(NSE_SURVEILLANCE_FILE):
+        try:
+            with open(NSE_SURVEILLANCE_FILE, "r", encoding="utf-8") as f:
+                surv_file_data = json.load(f)
+        except Exception:
+            surv_file_data = {}
+
+    circuits = load_circuits()
+
+    cached_entry = surv_file_data.get(clean_sym, surv_file_data.get(symbol, {}))
+    known_band = circuits.get(symbol, circuits.get(clean_sym, cached_entry.get("band_pct")))
+
+    series = str(cached_entry.get("series", "EQ")).upper()
+    band_pct = float(known_band) if known_band is not None else None
+    asm_stage = int(cached_entry.get("asm_stage", 0))
+    is_gsm = bool(cached_entry.get("gsm", False) or cached_entry.get("is_gsm", False))
+    source = "cached_json" if (cached_entry or known_band is not None) else None
+
+    # If missing band or surveillance info, attempt live fetch from NSE
+    if source is None or band_pct is None:
+        try:
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+                "Accept": "application/json, text/plain, */*",
+                "Accept-Language": "en-US,en;q=0.9",
+            }
+            quote_url = f"https://www.nseindia.com/api/quote-equity?symbol={clean_sym}"
+            req = urllib.request.Request(quote_url, headers=headers)
+            with urllib.request.urlopen(req, timeout=3) as resp:
+                if resp.status == 200:
+                    raw_text = resp.read().decode("utf-8")
+                    data = json.loads(raw_text)
+                    if isinstance(data, dict):
+                        info = data.get("info", {})
+                        series = str(info.get("series", series or "EQ")).upper()
+
+                        price_info = data.get("priceInfo", {})
+                        p_band = price_info.get("pPriceBand")
+                        if p_band is not None:
+                            p_band_str = str(p_band).replace("%", "").strip()
+                            try:
+                                val = float(p_band_str)
+                                band_pct = val / 100.0 if val > 1.0 else val
+                            except Exception:
+                                band_pct = 0.20
+
+                        sec_info = data.get("securityInfo", {})
+                        surv_dict = sec_info.get("surveillance", {})
+                        surv_text = (str(surv_dict.get("surv", "")) + " " + str(surv_dict.get("desc", ""))).upper()
+                        if "GSM" in surv_text:
+                            is_gsm = True
+                        if "LT-ASM" in surv_text or "LONG TERM ASM" in surv_text or "ASM" in surv_text:
+                            if any(k in surv_text for k in ["STAGE 4", "STAGE IV", "STAGE 3", "STAGE III", "STAGE 2", "STAGE II"]):
+                                asm_stage = 2
+                            elif any(k in surv_text for k in ["STAGE 1", "STAGE I"]):
+                                asm_stage = 1
+                            else:
+                                asm_stage = 2
+                        source = "live_nse"
+        except Exception:
+            pass
+
+    # Circuit band fallback if unresolved: default to standard 10% minimum band
+    if band_pct is None:
+        band_pct = DEFAULT_CIRCUIT_BAND
+        source = source or "default_fallback"
+
+    result = {
+        "symbol": clean_sym,
+        "series": series,
+        "band_pct": band_pct,
+        "asm_stage": asm_stage,
+        "is_gsm": is_gsm,
+        "source": source or "default_fallback",
+    }
+    _NSE_METADATA_CACHE[clean_sym] = result
+    return result
+
+
+def check_nse_microstructure_gate(symbol: str, df: Optional[pd.DataFrame] = None) -> Tuple[bool, Optional[str]]:
+    """
+    Rule 18: NSE Microstructure, Series, Circuit Band & Surveillance Gate
+    Filters out retail pump-and-dumps and SEBI/NSE surveillance traps:
+    1. Series Filter: Strictly exclude tickers in 'BE' (Trade-to-Trade) or 'BZ'.
+    2. Surveillance Filter: Reject any stock under Long-Term ASM (Stage 2, 3, or 4) or GSM.
+    3. Circuit Band Filter: Reject any stock whose daily circuit band is < 10% (strictly blocks 2% and 5% circuit stocks).
+    
+    Returns (is_approved: bool, rejection_reason: Optional[str]).
+    """
+    meta = get_nse_microstructure_metadata(symbol, df)
+    series = meta.get("series", "EQ").upper()
+    band_pct = float(meta.get("band_pct", 0.10))
+    asm_stage = int(meta.get("asm_stage", 0))
+    is_gsm = bool(meta.get("is_gsm", False))
+
+    # 1. Series check: exclude BE and BZ
+    if series in ("BE", "BZ", "BT", "IL", "IT"):
+        return False, f"SERIES_RESTRICTED: Ticker trades in restricted {series} series (Trade-to-Trade)"
+
+    # 2. Surveillance check: reject Long-Term ASM Stage 2, 3, 4 and GSM
+    if is_gsm:
+        return False, "SURVEILLANCE_TRAP: Stock is under SEBI/NSE GSM (Graded Surveillance Measure)"
+    if asm_stage >= 2:
+        return False, f"SURVEILLANCE_TRAP: Stock is under Long-Term ASM Stage {asm_stage} (100% margin restriction)"
+
+    # 3. Circuit band check: reject < 10% (strictly block 2% and 5% circuit bands)
+    if band_pct < MIN_CIRCUIT_BAND_PCT:
+        return False, f"CIRCUIT_BAND_RESTRICTED: Daily circuit band ({band_pct*100:.1f}%) is below 10% minimum threshold"
+
+    return True, None
+
+
+def get_delivery_data(symbol: str, df: Optional[pd.DataFrame] = None) -> Dict[str, Any]:
+    """
+    Retrieve or compute NSE Delivery Data for symbol:
+    - delivery_pct (float: 0.0 - 100.0)
+    - delivery_vol (float: Volume * delivery_pct / 100)
+    - avg_delivery_vol_20d (float: average delivery volume over up to 20 days)
+    - data_available (bool: True if authentic NSE delivery data was resolved)
+    
+    Graceful fallback sequence:
+    1. Memory cache
+    2. deals.json / nse_delivery.json
+    3. Live NSE bhavcopy / delivery quote
+    4. Return data_available=False if network blocked or missing (triggers CMF20 + OBV fallback)
+    """
+    clean_sym = symbol.replace(".NS", "").upper()
+    if clean_sym in _DELIVERY_DATA_CACHE:
+        return _DELIVERY_DATA_CACHE[clean_sym]
+
+    deliv_pct: Optional[float] = None
+    historical_deliv_vols: List[float] = []
+
+    # 1. Check nse_delivery.json if present
+    if os.path.exists(NSE_DELIVERY_FILE):
+        try:
+            with open(NSE_DELIVERY_FILE, "r", encoding="utf-8") as f:
+                deliv_file_data = json.load(f)
+                entry = deliv_file_data.get(clean_sym, deliv_file_data.get(symbol))
+                if isinstance(entry, dict) and "delivery_pct" in entry:
+                    deliv_pct = float(entry["delivery_pct"])
+                elif isinstance(entry, (int, float)):
+                    deliv_pct = float(entry)
+        except Exception:
+            pass
+
+    # 2. Check deals.json for historical and current delivery%
+    if os.path.exists(DEALS_FILE):
+        try:
+            deals = load_deals()
+            sorted_dates = sorted(deals.keys())
+            if sorted_dates:
+                sym_variants = [symbol, clean_sym, f"{clean_sym}.NS"]
+                if deliv_pct is None:
+                    latest_deals = deals.get(sorted_dates[-1], {})
+                    for s in sym_variants:
+                        if s in latest_deals and latest_deals[s].get("delivery_pct") is not None:
+                            deliv_pct = float(latest_deals[s]["delivery_pct"])
+                            break
+
+                for d in sorted_dates[-20:]:
+                    d_deals = deals.get(d, {})
+                    for s in sym_variants:
+                        if s in d_deals and d_deals[s].get("delivery_pct") is not None:
+                            dv = float(d_deals[s].get("delivery_qty", 0.0))
+                            if dv > 0:
+                                historical_deliv_vols.append(dv)
+                            break
+        except Exception:
+            pass
+
+    # 3. Calculate delivery volume & 20-day average delivery volume
+    vol_today = float(df["Volume"].iloc[-1]) if (df is not None and len(df) > 0 and "Volume" in df) else 0.0
+    deliv_vol = (vol_today * (deliv_pct / 100.0)) if (deliv_pct is not None and vol_today > 0) else 0.0
+
+    avg_deliv_20d = float(np.mean(historical_deliv_vols)) if historical_deliv_vols else 0.0
+    if avg_deliv_20d == 0.0 and df is not None and len(df) >= 20 and deliv_pct is not None:
+        vol20_val = float(df["VOL20"].iloc[-1]) if ("VOL20" in df and not pd.isna(df["VOL20"].iloc[-1])) else float(df["Volume"].tail(20).mean())
+        avg_deliv_20d = vol20_val * (deliv_pct / 100.0)
+
+    data_available = bool(deliv_pct is not None)
+    result = {
+        "symbol": clean_sym,
+        "delivery_pct": deliv_pct,
+        "delivery_vol": round(deliv_vol, 2),
+        "avg_delivery_vol_20d": round(avg_deliv_20d, 2),
+        "data_available": data_available,
+    }
+    _DELIVERY_DATA_CACHE[clean_sym] = result
+    return result
+
+
+def check_delivery_volume_gate(symbol: str, df: pd.DataFrame) -> Tuple[bool, Dict[str, Any], Optional[str]]:
+    """
+    Rule 07 Upgrade: Institutional Delivery Volume Gate
+    - When delivery data is available:
+      Require Delivery_Pct >= 35% on the breakout day OR Breakout_Delivery_Vol >= 1.5 * Avg_Delivery_Vol_20d
+      to confirm authentic institutional demat accumulation rather than intraday churning.
+    - Fallback:
+      If delivery data is unavailable (NSE blocked / CI fallback), returns (True, deliv_info, 'FALLBACK_CMF20_OBV')
+      so execution gracefully relies on CMF20 + OBV.
+    """
+    deliv_info = get_delivery_data(symbol, df)
+    if not deliv_info.get("data_available"):
+        return True, deliv_info, "FALLBACK_CMF20_OBV"
+
+    deliv_pct = float(deliv_info.get("delivery_pct") or 0.0)
+    deliv_vol = float(deliv_info.get("delivery_vol") or 0.0)
+    avg_deliv_20d = float(deliv_info.get("avg_delivery_vol_20d") or 0.0)
+
+    pct_ok = deliv_pct >= MIN_DELIVERY_PCT
+    vol_ok = (avg_deliv_20d > 0 and deliv_vol >= (DELIVERY_VOL_SPIKE_MULT * avg_deliv_20d))
+
+    if pct_ok or vol_ok:
+        reason = f"CONFIRMED (Deliv%: {deliv_pct:.1f}% >= 35% or DelivVol: {deliv_vol:.0f} >= 1.5x avg)"
+        return True, deliv_info, reason
+
+    reason = f"DELIVERY_GATE_REJECTED: Deliv% {deliv_pct:.1f}% < 35% and DelivVol {deliv_vol:.0f} < 1.5x 20d avg"
+    return False, deliv_info, reason
 
 
 def load_earnings_dates() -> Dict[str, str]:
@@ -1912,6 +2238,119 @@ def check_open_positions_events(
     return open_positions, warn_lines
 
 
+def generate_position_management_alerts(
+    open_positions: Optional[List[Dict[str, Any]]] = None,
+    current_date: Optional[datetime.date] = None
+) -> List[str]:
+    """
+    Automated Position Management Alerts for Daily Scan & /open handler:
+    Inspects open_positions.json and generates explicit action badges:
+    - 🟢 RATCHET SL TO BREAKEVEN+FEES: Triggered when Close >= Entry + 1.0R (move SL to Entry * 1.0035).
+    - 💰 BOOK 50% AT +2R: Triggered when High >= Target_2R.
+    - ⏳ 5-DAY TIME STOP TRIGGERED: Triggered when days_held >= 5 AND Close <= Entry AND Close < EMA10.
+    - ⚠️ EARNINGS LOCKOUT EXIT: Triggered when days_to_earnings <= 3.
+    - 🚨 EMA20 RUNNER EXIT: Triggered on the remaining 50% runner when Close < EMA20.
+    """
+    if open_positions is None:
+        open_positions = load_open_positions()
+
+    if not open_positions:
+        return []
+
+    if current_date is None:
+        current_date = datetime.date.today()
+
+    alerts: List[str] = []
+
+    for pos in open_positions:
+        sym = pos.get("symbol", "")
+        if not sym:
+            continue
+
+        try:
+            entry = float(pos.get("entry_price", 0.0))
+            if entry <= 0:
+                continue
+
+            stop = float(pos.get("stop", entry * (1.0 - MAX_STOP_LOSS_PCT))) if pos.get("stop") is not None else (entry * (1.0 - MAX_STOP_LOSS_PCT))
+            risk_per_unit = entry - stop if entry > stop else (entry * 0.085)
+            target_2r = float(pos.get("target")) if pos.get("target") is not None else (entry + 2.0 * risk_per_unit)
+
+            # Days held
+            entry_date_str = str(pos.get("entry_date", ""))[:10]
+            try:
+                d_entry = datetime.date.fromisoformat(entry_date_str)
+                days_held = (current_date - d_entry).days
+            except Exception:
+                days_held = 0
+
+            # Earnings proximity
+            next_ev = get_next_event(sym, current_date)
+            days_to_earnings = 999
+            if next_ev and str(next_ev.get("type", "")).upper() == "EARNINGS":
+                days_to_earnings = int(next_ev.get("days_to_event", 999))
+            else:
+                next_earn_str = get_next_earnings(sym)
+                if next_earn_str and next_earn_str != "Unknown":
+                    try:
+                        d_earn = datetime.date.fromisoformat(str(next_earn_str)[:10])
+                        days_to_earnings = (d_earn - current_date).days
+                    except Exception:
+                        pass
+
+            # Fetch recent price action
+            df = get_history(sym)
+            if df is None or len(df) < 10:
+                continue
+
+            df = add_indicators(df)
+            last_row = df.iloc[-1]
+            close_now = float(last_row["Close"])
+            high_now = float(last_row["High"]) if "High" in last_row else close_now
+            ema10_now = float(last_row["EMA10"]) if "EMA10" in last_row else float(df["Close"].ewm(span=10, adjust=False).mean().iloc[-1])
+            ema20_now = float(last_row["EMA20"]) if "EMA20" in last_row else float(df["Close"].ewm(span=20, adjust=False).mean().iloc[-1])
+
+            # 1. 🟢 RATCHET SL TO BREAKEVEN+FEES: Close >= Entry + 1.0R
+            be_sl = round(entry * 1.0035, 2)
+            if close_now >= (entry + (1.0 * risk_per_unit)) and (stop < be_sl):
+                alerts.append(
+                    f"🟢 RATCHET SL TO BREAKEVEN+FEES: {sym} | Close ₹{close_now:.2f} >= +1.0R threshold (₹{entry + risk_per_unit:.2f}) -> Ratchet SL to ₹{be_sl:.2f} (+0.35% statutory fee buffer)."
+                )
+
+            # 2. 💰 BOOK 50% AT +2R: High >= Target_2R
+            if high_now >= target_2r:
+                alerts.append(
+                    f"💰 BOOK 50% AT +2R: {sym} | Intraday High ₹{high_now:.2f} touched/exceeded +2R Target (₹{target_2r:.2f}) -> Sell 50% position, move SL to breakeven, and let remaining 50% trail."
+                )
+
+            # 3. ⏳ 5-DAY TIME STOP TRIGGERED: days_held >= 5 AND Close <= Entry AND Close < EMA10
+            if days_held >= 5 and close_now <= entry and close_now < ema10_now:
+                alerts.append(
+                    f"⏳ 5-DAY TIME STOP TRIGGERED: {sym} | Held {days_held} days with zero price expansion (Close ₹{close_now:.2f} <= Entry ₹{entry:.2f} & < 10-EMA ₹{ema10_now:.2f}) -> Liquidate dead-money position."
+                )
+
+            # 4. ⚠️ EARNINGS LOCKOUT EXIT: days_to_earnings <= 3
+            if 0 <= days_to_earnings <= 3:
+                alerts.append(
+                    f"⚠️ EARNINGS LOCKOUT EXIT: {sym} | Earnings scheduled in {days_to_earnings} days -> Liquidate position before announcement to avoid overnight gap risk."
+                )
+
+            # 5. 🚨 EMA20 RUNNER EXIT: Close < EMA20 on remaining 50% runner
+            is_runner = bool(
+                pos.get("runner") or pos.get("partial_booked") or pos.get("is_runner") or
+                any(t.lower() in ("#runner", "#trail", "#partial_booked") for t in (pos.get("tags") or []))
+            )
+            if is_runner and close_now < ema20_now:
+                alerts.append(
+                    f"🚨 EMA20 RUNNER EXIT: {sym} | Runner closed at ₹{close_now:.2f} below rising 20-EMA (₹{ema20_now:.2f}) -> Exit remaining 50% runner."
+                )
+
+        except Exception:
+            continue
+
+    return alerts
+
+
 def check_buy_limits(sym: str, entry_price: float, qty: int, stop: Optional[float]) -> Optional[str]:
     """
     Enforces risk and drawdown caps for /buy:
@@ -1928,6 +2367,19 @@ def check_buy_limits(sym: str, entry_price: float, qty: int, stop: Optional[floa
         return (
             f"⚠️ BUY REJECTED: Maximum concurrent small-cap positions reached ({MAX_CONCURRENT_SMALLCAP}). "
             f"Close an existing position before opening a new one."
+        )
+
+    # 1b. Sector concentration guard (Rule 08 / Rule 15)
+    sector_cap = MAX_SECTOR_CONCURRENT if MAX_CONCURRENT_SMALLCAP >= 5 else 1
+    sym_sec = SECTOR_MAP.get(sym, INDEX_SYMBOL)
+    same_sector_count = sum(
+        1 for p in open_positions
+        if (p.get("sector") or SECTOR_MAP.get(p.get("symbol"), INDEX_SYMBOL)) == sym_sec
+    )
+    if same_sector_count >= sector_cap:
+        return (
+            f"⚠️ BUY REJECTED: Sector concentration cap reached for sector '{sym_sec}' "
+            f"({same_sector_count}/{sector_cap} positions already open). SECTOR_CAP_REACHED."
         )
 
     # Calculate proposed trade risk
@@ -2463,9 +2915,13 @@ def calculate_position_size(
     adv20_rupees: Optional[float] = None,
     current_heat: float = 0.0,
     stats_override: Optional[Dict[str, Any]] = None,
+    grade: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
-    Computes position size via Half-Kelly fraction hard-capped inside survival envelope.
+    Computes position size via Half-Kelly fraction / Fixed Fractional Sizing hard-capped inside survival envelope.
+    Supports tiered risk by setup grade (Rule 08/15):
+      - 1.5% risk budget for Grade A+ setups (Score >= 80)
+      - 1.0% risk budget for Grade A setups (Score >= 70) / default
     Ordering invariant: "Kelly sets the bet size; survival caps still clamp it."
     """
     risk_per_unit = entry - stop
@@ -2485,16 +2941,27 @@ def calculate_position_size(
         stats_override=stats_override,
     )
 
-    # 1. Bet size from Kelly fraction
-    risk_rupees = capital * chosen_kelly_f
+    # Tiered risk budget by setup grade (Rule 08/15)
+    if grade == "A+":
+        base_risk_pct = 0.015
+        sizing_source = "grade-A+-1.5%"
+    elif grade == "A":
+        base_risk_pct = 0.010
+        if sizing_source != "flat-fallback":
+            sizing_source = "grade-A-1.0%"
+    else:
+        base_risk_pct = chosen_kelly_f
+
+    # 1. Bet size from risk budget
+    risk_rupees = capital * base_risk_pct
     risk_based_qty = math.floor(risk_rupees / risk_per_unit)
 
-    # 2. Kelly sets the bet size; survival caps still clamp it.
+    # 2. Survival caps clamp the size:
     # a) Gap survival cap (20% worst-case gap cannot exceed 2.5% of capital)
     gap_based_qty = math.floor((capital * MAX_GAP_LOSS_PCT) / (entry * WORST_CASE_GAP_PCT))
 
-    # b) 1.5% single-name risk ceiling clamp
-    max_single_risk_qty = math.floor((capital * 0.015) / risk_per_unit)
+    # b) Single-name risk ceiling clamp (1.5% maximum risk ceiling)
+    max_single_risk_qty = math.floor((capital * max(0.015, base_risk_pct)) / risk_per_unit)
 
     shares = min(risk_based_qty, gap_based_qty, max_single_risk_qty)
 
@@ -2515,7 +2982,7 @@ def calculate_position_size(
 
     return {
         "qty": qty,
-        "chosen_kelly_f": chosen_kelly_f,
+        "chosen_kelly_f": base_risk_pct,
         "sizing_source": sizing_source,
         "risk_amount": risk_amount,
         "gap_based_qty": gap_based_qty,
@@ -2534,9 +3001,11 @@ def calculate_position_risk_parameters(
     current_heat: float = 0.0,
     stats_override: Optional[Dict[str, Any]] = None,
     vol_regime_override: Optional[str] = None,
+    grade: Optional[str] = None,
 ) -> Optional[Dict[str, Any]]:
     """
-    Standard position sizing, adaptive ATR stop loss, 9% floor cap, and 2R profit targets.
+    Standard position sizing, adaptive ATR stop loss (tightened to 2.0x ATR),
+    hard 8.5% floor cap (SL_effective = max(SL_raw, Entry * 0.915)), and 2R profit targets.
     Single source of truth used across live scanning and rules-replay backtesting.
     """
     if pd.isna(entry) or pd.isna(atr) or atr <= 0 or entry <= 0:
@@ -2556,10 +3025,10 @@ def calculate_position_risk_parameters(
         pullback_low = float(low_price) if (low_price is not None and not pd.isna(low_price)) else (entry - 0.5 * atr)
         stop = min(pullback_low - 0.05, entry - 0.5 * atr)
     else:
-        # Adaptive ATR stop: wider in storms, tighter in calm
+        # Rule 09: Adaptive ATR stop (SL_raw = Entry - (2.0 * ATR14 * factor))
         stop = entry - (effective_atr_mult * atr)
 
-    # Floor stop loss at MAX_STOP_LOSS_PCT (9% maximum risk from entry)
+    # Floor stop loss at MAX_STOP_LOSS_PCT (8.5% maximum risk ceiling: SL_effective = max(SL_raw, Entry * 0.915))
     stop = max(stop, entry * (1.0 - MAX_STOP_LOSS_PCT))
     if stop >= entry:
         return None
@@ -2568,8 +3037,7 @@ def calculate_position_risk_parameters(
     risk_per_unit = entry - stop
     target = entry + (TARGET_R_MULTIPLE * risk_per_unit)
 
-    # Kelly sets the bet size; survival caps still clamp it.
-    # regime changes the stop shape, never the risk budget.
+    # Fixed fractional / tiered risk sizing strictly clamped by survival caps
     size_res = calculate_position_size(
         entry=entry,
         stop=stop,
@@ -2578,6 +3046,7 @@ def calculate_position_risk_parameters(
         adv20_rupees=adv20_rupees,
         current_heat=current_heat,
         stats_override=stats_override,
+        grade=grade,
     )
     qty = size_res["qty"]
     if qty <= 0:
@@ -2614,6 +3083,10 @@ def scan_symbol(symbol: str) -> Optional[Dict[str, Any]]:
     if df is None or len(df) < 220:
         return None
 
+    # Corporate Action / Split / Bonus Sanitizer (yfinance glitch guard)
+    if check_corp_action_glitch(df):
+        return None
+
     df = add_indicators(df)
 
     # 1) Position-aware liquidity filter
@@ -2626,6 +3099,11 @@ def scan_symbol(symbol: str) -> Optional[Dict[str, Any]]:
     # 2) Circuit proximity check
     circuit_skip, circuit_reason = check_circuit_proximity(symbol, df)
     if circuit_skip:
+        return None
+
+    # 2b) Rule 18: NSE Microstructure Gate (Series, Circuit Band < 10%, & ASM/GSM)
+    micro_ok, micro_reason = check_nse_microstructure_gate(symbol, df)
+    if not micro_ok:
         return None
 
     # 3) Relative strength filter: 50-day stock return must beat index/basket 50-day return
@@ -2642,6 +3120,20 @@ def scan_symbol(symbol: str) -> Optional[Dict[str, Any]]:
     # 4) Sector strength filter: stock's sector index must be in an uptrend
     if not sector_ok(symbol):
         return None
+
+    # 4b) Sector concentration guard (Rule 08 / Rule 15): block if already at sector capacity
+    sym_sec = SECTOR_MAP.get(symbol, INDEX_SYMBOL)
+    sector_cap = MAX_SECTOR_CONCURRENT if MAX_CONCURRENT_SMALLCAP >= 5 else 1
+    try:
+        open_pos = load_open_positions()
+        same_sec_count = sum(
+            1 for p in open_pos
+            if (p.get("sector") or SECTOR_MAP.get(p.get("symbol"), INDEX_SYMBOL)) == sym_sec
+        )
+        if same_sec_count >= sector_cap:
+            return None
+    except Exception:
+        pass
 
     # 5) Earnings & Event blackout check (fail-closed)
     last_row = df.iloc[-1]
@@ -2664,6 +3156,14 @@ def scan_symbol(symbol: str) -> Optional[Dict[str, Any]]:
     if signal_type == "BREAKOUT":
         hurst_val = calculate_hurst_exponent(df)
         if hurst_val is not None and hurst_val < HURST_GATE:
+            return None
+
+    # 6b) Rule 07 Upgrade: Institutional Delivery Volume Gate
+    deliv_info = get_delivery_data(symbol, df)
+    deliv_reason = "N/A"
+    if signal_type == "BREAKOUT":
+        deliv_ok, deliv_info, deliv_reason = check_delivery_volume_gate(symbol, df)
+        if not deliv_ok:
             return None
 
     # 6b) Catalyst gate by grade: B-grade signals additionally require an identifiable catalyst OR an institutional print (else suppressed); A/A+ exempt.
@@ -2694,6 +3194,7 @@ def scan_symbol(symbol: str) -> Optional[Dict[str, Any]]:
         signal_type=signal_type,
         low_price=low_price,
         capital=CAPITAL,
+        grade=grade,
     )
     if not risk_params:
         return None
@@ -2721,6 +3222,7 @@ def scan_symbol(symbol: str) -> Optional[Dict[str, Any]]:
     rs_val = rs_map.get(symbol)
     base_mat = calculate_base_maturity(df)
     days_base = calculate_days_in_base(df)
+    score_val = diag.get("Score", 80) if ('diag' in locals() and diag and isinstance(diag, dict)) else 80
 
     sig_dict = {
         "Signal Date": pd.to_datetime(last_row["Date"]).strftime("%Y-%m-%d"),
@@ -2750,10 +3252,22 @@ def scan_symbol(symbol: str) -> Optional[Dict[str, Any]]:
         "mtf_confluence": calculate_mtf_confluence(df, daily_trend_ok=bool(last_row.get("TREND_OK", True))),
         "hurst": calculate_hurst_exponent(df),
         "ofi20": calculate_ofi20(df),
+        "cmf20": calculate_ofi20(df),
+        "mfi20": calculate_ofi20(df),
+        "delivery_pct": deliv_info.get("delivery_pct"),
+        "delivery_vol": deliv_info.get("delivery_vol"),
+        "deliv_gate_status": deliv_reason,
+        "series": get_nse_microstructure_metadata(symbol, df).get("series", "EQ"),
+        "circuit_band_pct": get_nse_microstructure_metadata(symbol, df).get("band_pct", 0.10),
+        "grade": grade,
+        "Grade": grade,
+        "score": score_val,
+        "Score": score_val,
         "sizing_source": sizing_source,
         "chosen_kelly_f": chosen_kelly_f,
         "effective_ATR_mult": effective_atr_mult,
         "vol_regime": vol_regime,
+        "execution_mode": "[CONFIRMED EOD BREAKOUT — ENTER NEXT OPEN IF GAP <= 1.5%]",
     }
     sig_dict["thesis_card"] = build_thesis_card(sig_dict)
     return sig_dict
@@ -2764,19 +3278,21 @@ def scan_symbol(symbol: str) -> Optional[Dict[str, Any]]:
 # =====================================================================
 DISCIPLINE_CARD = (
     "Small-Cap Survival & Risk Rules:\n"
-    "• Max 3 concurrent positions | 5% max portfolio heat\n"
+    "• Max 5 concurrent positions | 5% max portfolio heat (1.0% risk / trade)\n"
     "• 2% daily loss limit | 6% monthly drawdown stop (Elder circuit-breaker)\n"
     "• Worst-case 2-circuit gap sizing enforced (max 2.5% loss on 20% gap)\n"
     "• Position notional capped at <=1.0% of 20-day ADV (min ₹5 Cr ADV)\n"
     "• Fail-closed earnings blackout (5-day window) & circuit proximity skip\n"
-    "• 2.5x ATR stop with 9% max stop-loss floor"
+    "• 2.0x ATR stop with 8.5% max stop-loss floor"
 )
 
 
 def format_signal(sig: Dict[str, Any]) -> str:
     """Format signal dictionary into a Telegram alert message."""
+    mode_line = [f"Execution: {sig['execution_mode']}"] if sig.get("execution_mode") else []
     lines = [
         f"🟢 SMALL-CAP SWING SIGNAL ({sig['Type']})",
+        *mode_line,
         f"Symbol: {sig['Symbol']}",
         f"Sector: {sig.get('Sector', 'N/A')}",
         f"Signal Date: {sig['Signal Date']}",
@@ -2914,10 +3430,23 @@ def diagnose(symbol: str) -> Optional[Dict[str, Any]]:
     else:
         raw_score = min(raw_score, 50.0)
 
+    # Corporate action sanitizer (Item 7)
+    is_corp_suspect = check_corp_action_glitch(df)
+    if is_corp_suspect:
+        raw_score = min(raw_score, 45.0)
+
+    # Rule 18: NSE Microstructure Gate (Series, Circuit Band < 10%, & ASM/GSM)
+    micro_ok, micro_reason = check_nse_microstructure_gate(symbol, df)
+    if not micro_ok:
+        raw_score = min(raw_score, 40.0)
+
     score = int(round(max(0.0, min(100.0, raw_score))))
 
     # Grade: A+ if score>=80 and sector bullish and market ok; A if score>=70 and sector bullish; B if score>=60; else C.
-    if score >= 80 and sec_ok and mkt_ok:
+    # Exclude suspect corporate action & surveillance/circuit restricted tickers from Grade A/A+ setups.
+    if is_corp_suspect or not micro_ok:
+        grade = "C"
+    elif score >= 80 and sec_ok and mkt_ok:
         grade = "A+"
     elif score >= 70 and sec_ok:
         grade = "A"
@@ -2925,6 +3454,9 @@ def diagnose(symbol: str) -> Optional[Dict[str, Any]]:
         grade = "B"
     else:
         grade = "C"
+
+    deliv_info = get_delivery_data(symbol, df)
+    nse_meta = get_nse_microstructure_metadata(symbol, df)
 
     diag_dict = {
         "Symbol": sym_name,
@@ -2942,6 +3474,13 @@ def diagnose(symbol: str) -> Optional[Dict[str, Any]]:
         "grade": grade,
         "Score": score,
         "Grade": grade,
+        "corp_action_suspect": is_corp_suspect,
+        "CORP_ACTION_SUSPECT": is_corp_suspect,
+        "microstructure_ok": micro_ok,
+        "microstructure_reason": micro_reason,
+        "series": nse_meta.get("series", "EQ"),
+        "circuit_band_pct": nse_meta.get("band_pct", 0.10),
+        "delivery_pct": deliv_info.get("delivery_pct"),
         "rs_rating": calculate_rs_rating([symbol]).get(symbol),
         "base_maturity": calculate_base_maturity(df),
         "days_in_base": calculate_days_in_base(df),
@@ -2954,7 +3493,26 @@ def diagnose(symbol: str) -> Optional[Dict[str, Any]]:
         "mtf_confluence": calculate_mtf_confluence(df, daily_trend_ok=trend_ok),
         "hurst": calculate_hurst_exponent(df),
         "ofi20": calculate_ofi20(df),
+        "cmf20": calculate_ofi20(df),
+        "mfi20": calculate_ofi20(df),
     }
+
+    # Execution Mode Tagging (Rule 07 / Watchlist Invariant)
+    dist_to_pivot = round(((close_val - high20_val) / high20_val) * 100.0, 2)
+    vol_today = float(last_row["Volume"]) if "Volume" in last_row else 0.0
+    vol20_val = float(last_row["VOL20"]) if ("VOL20" in last_row and not pd.isna(last_row["VOL20"])) else (float(df["Volume"].iloc[-20:].mean()) if len(df) >= 20 else 0.0)
+    vol_spike_20 = (vol20_val > 0) and (vol_today >= 2.0 * vol20_val)
+    clv_val = float(last_row.get("CLV", 0.0)) if "CLV" in last_row and not pd.isna(last_row["CLV"]) else 0.0
+    vcp_active = bool(setup_ok or last_row.get("SQUEEZE_ON", False))
+
+    if -1.0 <= dist_to_pivot <= 0.0 and vcp_active:
+        diag_dict["execution_mode"] = "[PRE-BREAKOUT COIL — PLACE GTT @ PIVOT]"
+    elif close_val > high20_val and (vol_spike_20 or bool(last_row.get("BREAKOUT", False))) and clv_val >= 0.60:
+        diag_dict["execution_mode"] = "[CONFIRMED EOD BREAKOUT — ENTER NEXT OPEN IF GAP <= 1.5%]"
+    elif close_val > high20_val:
+        diag_dict["execution_mode"] = "[CONFIRMED EOD BREAKOUT — ENTER NEXT OPEN IF GAP <= 1.5%]"
+    else:
+        diag_dict["execution_mode"] = "[WATCHLIST — MONITORING]"
 
     # Diagnostic rationale when breakout setup is suppressed by entry gates
     if bool(last_row.get("BREAKOUT", False)):
@@ -3008,9 +3566,12 @@ def build_watchlist_text(candidates: Optional[List[Dict[str, Any]]] = None) -> s
         sec_info = f"{item['Sector']} (Bullish: {item['SectorBullish']})"
         score_val = item.get("score", item.get("Score", "-"))
         grade_val = item.get("grade", item.get("Grade", "-"))
+        exec_mode = item.get("execution_mode", "")
+        mode_str = f" | {exec_mode}" if exec_mode and exec_mode != "[WATCHLIST — MONITORING]" else ""
         line = (
             f"{item['Symbol']} [Grade {grade_val} | Score {score_val}] | {sec_info} | "
             f"{item['DistToBreakout%']}% away | Close {item['Close']} | Coiling: {item['Coiling']}"
+            f"{mode_str}"
         )
         lines.append(line)
 
@@ -3027,12 +3588,12 @@ def compute_market_summary(symbols: Optional[List[str]] = None, history_map: Opt
     if symbols is None:
         symbols = get_symbols() or []
 
-    # 1. Index / Benchmark metrics
+    # 1. Index / Benchmark metrics (Primary Smallcap 100 with fallbacks)
     idx_df = get_cached_index_df()
     if idx_df is None or len(idx_df) < 2:
         idx_df = get_history(INDEX_SYMBOL)
 
-    source = INDEX_SYMBOL
+    source = ACTIVE_BENCHMARK_SYMBOL if "ACTIVE_BENCHMARK_SYMBOL" in globals() else INDEX_SYMBOL
     if idx_df is not None and len(idx_df) >= 2:
         last_close = round(float(idx_df["Close"].iloc[-1]), 2)
         prev_close = round(float(idx_df["Close"].iloc[-2]), 2)
@@ -3043,6 +3604,28 @@ def compute_market_summary(symbols: Optional[List[str]] = None, history_map: Opt
         prev_close = 0.0
         chg_pct = 0.0
         last_bar_date = datetime.date.today().strftime("%Y-%m-%d")
+
+    # 1b. Secondary Macro Benchmark Metric (^NSEI)
+    macro_info = {
+        "source": SECONDARY_MACRO_SYMBOL,
+        "last_close": 0.0,
+        "prev_close": 0.0,
+        "chg_pct": 0.0,
+    }
+    try:
+        macro_df = get_history(SECONDARY_MACRO_SYMBOL)
+        if macro_df is not None and len(macro_df) >= 2:
+            m_last = round(float(macro_df["Close"].iloc[-1]), 2)
+            m_prev = round(float(macro_df["Close"].iloc[-2]), 2)
+            m_chg = round(((m_last - m_prev) / m_prev) * 100.0, 2) if m_prev > 0 else 0.0
+            macro_info = {
+                "source": SECONDARY_MACRO_SYMBOL,
+                "last_close": m_last,
+                "prev_close": m_prev,
+                "chg_pct": m_chg,
+            }
+    except Exception:
+        pass
 
     ist_tz = datetime.timezone(datetime.timedelta(hours=5, minutes=30))
     as_of_ist = datetime.datetime.now(ist_tz).isoformat()
@@ -3096,6 +3679,9 @@ def compute_market_summary(symbols: Optional[List[str]] = None, history_map: Opt
         "advancers": advancers,
         "decliners": decliners,
         "unchanged": unchanged,
+        "macro_index": macro_info,
+        "nifty50_close": macro_info["last_close"],
+        "nifty50_chg_pct": macro_info["chg_pct"],
     }
 
 
@@ -3810,14 +4396,24 @@ def handle_command(text: str, chat_id: Any = None) -> Optional[str]:
             planned_stop = matched_pos.get("planned_stop", stop_val)
             target_val = matched_pos.get("target")
 
-            pnl = (exit_price - entry_price) * qty
-            pnl_pct = ((exit_price - entry_price) / entry_price) * 100.0 if entry_price > 0 else 0.0
+            # Indian Statutory Friction & Net PnL Accounting (0.30% Round-Trip Turnover)
+            # Delivery STT (0.1% buy + 0.1% sell) + Stamp duty + Exch fees + SEBI + GST = 0.30%
+            turnover = (entry_price * qty) + (exit_price * qty)
+            statutory_friction = round(turnover * 0.0015, 2)
+            gross_pnl = (exit_price - entry_price) * qty
+            gross_pnl_pct = ((exit_price - entry_price) / entry_price) * 100.0 if entry_price > 0 else 0.0
+
+            net_pnl = round(gross_pnl - statutory_friction, 2)
+            net_return_pct = round((net_pnl / (entry_price * qty)) * 100.0, 2) if (entry_price * qty) > 0 else 0.0
 
             r_mult = None
+            gross_r_mult = None
             if stop_val is not None:
                 risk_per_unit = entry_price - float(stop_val)
-                if abs(risk_per_unit) > 1e-4:
-                    r_mult = (exit_price - entry_price) / risk_per_unit
+                initial_risk = risk_per_unit * qty
+                if abs(initial_risk) > 1e-4:
+                    gross_r_mult = round(gross_pnl / initial_risk, 2)
+                    r_mult = round(net_pnl / initial_risk, 2)
 
             today_str = datetime.date.today().isoformat()
 
@@ -3838,7 +4434,7 @@ def handle_command(text: str, chat_id: Any = None) -> Optional[str]:
 
             # Mistake tracking
             # 1) If exit price is worse than planned_stop: "stop_moved"
-            # 2) If held more than 5 days with return under 3%: "time_stop_ignored"
+            # 2) If held more than 5 days with return <= fee buffer (0.35%): "time_stop_ignored"
             # 3) Otherwise mistake is null
             mistake = None
             planned_stop_num = None
@@ -3850,7 +4446,7 @@ def handle_command(text: str, chat_id: Any = None) -> Optional[str]:
 
             if planned_stop_num is not None and exit_price < planned_stop_num:
                 mistake = "stop_moved"
-            elif holding_days > 5 and pnl_pct < 3.0:
+            elif holding_days > 5 and net_return_pct <= 0.35:
                 mistake = "time_stop_ignored"
 
             closed_trade = {
@@ -3863,9 +4459,19 @@ def handle_command(text: str, chat_id: Any = None) -> Optional[str]:
                 "target": round(float(target_val), 2) if target_val is not None else None,
                 "exit_date": today_str,
                 "exit_price": round(exit_price, 2),
-                "pnl": round(pnl, 2),
-                "pnl_pct": round(pnl_pct, 2),
-                "r_multiple": round(r_mult, 2) if r_mult is not None else None,
+                "gross_pnl": round(gross_pnl, 2),
+                "gross_pnl_pct": round(gross_pnl_pct, 2),
+                "turnover": round(turnover, 2),
+                "statutory_friction": round(statutory_friction, 2),
+                "friction_rupees": round(statutory_friction, 2),
+                "net_pnl": round(net_pnl, 2),
+                "net_pnl_pct": round(net_return_pct, 2),
+                "net_return_pct": round(net_return_pct, 2),
+                "pnl": round(net_pnl, 2),
+                "pnl_pct": round(net_return_pct, 2),
+                "r_multiple": r_mult if r_mult is not None else gross_r_mult,
+                "net_r_multiple": r_mult,
+                "gross_r_multiple": gross_r_mult,
                 "note": note,
                 "tags": combined_tags,
                 "mistake": mistake,
@@ -3875,8 +4481,9 @@ def handle_command(text: str, chat_id: Any = None) -> Optional[str]:
             trades.append(closed_trade)
             save_trades(trades)
 
-            sign = "+" if pnl >= 0 else ""
-            r_str = f"{r_mult:+.2f}R" if r_mult is not None else "N/A"
+            sign_net = "+" if net_pnl >= 0 else ""
+            sign_gross = "+" if gross_pnl >= 0 else ""
+            r_str = f"{r_mult:+.2f}R" if r_mult is not None else (f"{gross_r_mult:+.2f}R" if gross_r_mult is not None else "N/A")
             note_str = f"\nNote: {note}" if note else ""
             tags_str = f"\nTags: {' '.join(combined_tags)}" if combined_tags else ""
             mistake_str = f"\n⚠️ Mistake: {mistake}" if mistake else ""
@@ -3885,9 +4492,11 @@ def handle_command(text: str, chat_id: Any = None) -> Optional[str]:
                 f"🎯 POSITION CLOSED:\n"
                 f"Symbol: {closed_trade['symbol']}\n"
                 f"Entry: ₹{entry_price:,.2f} ({entry_date}) -> Exit: ₹{exit_price:,.2f} ({today_str})\n"
-                f"Qty: {qty}\n"
-                f"PnL: {sign}₹{pnl:,.2f} ({sign}{pnl_pct:.2f}%)\n"
-                f"R-Multiple: {r_str}"
+                f"Qty: {qty} | Turnover: ₹{turnover:,.2f}\n"
+                f"Gross PnL: {sign_gross}₹{gross_pnl:,.2f} ({sign_gross}{gross_pnl_pct:.2f}%)\n"
+                f"Statutory Friction (0.30%): -₹{statutory_friction:,.2f}\n"
+                f"Net PnL: {sign_net}₹{net_pnl:,.2f} ({sign_net}{net_return_pct:.2f}%)\n"
+                f"Net R-Multiple: {r_str}"
                 f"{note_str}"
                 f"{tags_str}"
                 f"{mistake_str}"
@@ -3911,6 +4520,12 @@ def handle_command(text: str, chat_id: Any = None) -> Optional[str]:
                 lines.append(f"   Entry: ₹{e_price:,.2f} on {e_date}")
                 lines.append(f"   Stop: {s_str} | Target: {t_str}")
 
+            active_alerts = generate_position_management_alerts(positions)
+            if active_alerts:
+                lines.append("\n⚠️ ACTIONABLE MANAGEMENT ALERTS:")
+                for alert in active_alerts:
+                    lines.append(f"• {alert}")
+
             return "\n".join(lines)
 
         elif cmd == "/trades":
@@ -3923,13 +4538,17 @@ def handle_command(text: str, chat_id: Any = None) -> Optional[str]:
 
             lines = [f"📜 RECENT CLOSED TRADES (Last {len(recent)}):"]
             for t in recent:
-                pnl = t["pnl"]
+                pnl = t.get("net_pnl", t["pnl"])
                 sign = "+" if pnl >= 0 else ""
-                r_str = f"{t['r_multiple']:+.2f}R" if t.get("r_multiple") is not None else "N/A"
+                r_val = t.get("net_r_multiple", t.get("r_multiple"))
+                r_str = f"{r_val:+.2f}R" if r_val is not None else "N/A"
+                fric = t.get("statutory_friction")
+                fric_str = f" | Fric: -₹{fric:,.2f}" if fric is not None else ""
+                pnl_pct = t.get("net_return_pct", t.get("pnl_pct", 0.0))
                 tag_line = f" | Tags: {' '.join(t.get('tags', []))}" if t.get("tags") else ""
                 mistake_line = f" | ⚠️ {t.get('mistake')}" if t.get("mistake") else ""
                 lines.append(
-                    f"• {t['symbol']}: {sign}₹{pnl:,.2f} ({sign}{t['pnl_pct']:.1f}%) | R: {r_str}{tag_line}{mistake_line}\n"
+                    f"• {t['symbol']}: {sign}₹{pnl:,.2f} ({sign}{pnl_pct:.1f}%){fric_str} | Net R: {r_str}{tag_line}{mistake_line}\n"
                     f"  Entry: ₹{t['entry_price']:,.2f} ({t['entry_date']}) -> Exit: ₹{t['exit_price']:,.2f} ({t['exit_date']})"
                 )
                 if t.get("note"):
@@ -3943,14 +4562,16 @@ def handle_command(text: str, chat_id: Any = None) -> Optional[str]:
                 return "📊 No closed trades available to calculate statistics."
 
             total_trades = len(trades)
-            wins = [t for t in trades if t["pnl"] > 0]
-            losses = [t for t in trades if t["pnl"] <= 0]
+            net_pnls = [float(t.get("net_pnl", t["pnl"])) for t in trades]
+            wins = [p for p in net_pnls if p > 0]
+            losses = [p for p in net_pnls if p <= 0]
+            total_friction = sum(float(t.get("statutory_friction", 0.0)) for t in trades)
 
             win_rate = (len(wins) / total_trades) * 100.0
-            avg_win = (sum(t["pnl"] for t in wins) / len(wins)) if wins else 0.0
-            avg_loss = (sum(t["pnl"] for t in losses) / len(losses)) if losses else 0.0
-            sum_wins = sum(t["pnl"] for t in wins)
-            sum_losses = sum(t["pnl"] for t in losses)
+            avg_win = (sum(wins) / len(wins)) if wins else 0.0
+            avg_loss = (sum(losses) / len(losses)) if losses else 0.0
+            sum_wins = sum(wins)
+            sum_losses = sum(losses)
 
             if sum_losses != 0:
                 profit_factor = sum_wins / abs(sum_losses)
@@ -3963,17 +4584,17 @@ def handle_command(text: str, chat_id: Any = None) -> Optional[str]:
             win_prob = len(wins) / total_trades
             loss_prob = 1.0 - win_prob
             expectancy = (win_prob * avg_win) - (loss_prob * abs(avg_loss))
-            total_pnl = sum(t["pnl"] for t in trades)
+            total_pnl = sum(net_pnls)
 
-            best_trade = max((t["pnl"] for t in trades), default=0.0)
-            worst_trade = min((t["pnl"] for t in trades), default=0.0)
+            best_trade = max(net_pnls, default=0.0)
+            worst_trade = min(net_pnls, default=0.0)
 
-            # Max drawdown on cumulative PnL
+            # Max drawdown on cumulative Net PnL (Equity Curve)
             cum = 0.0
             peak = 0.0
             max_dd = 0.0
-            for t in trades:
-                cum += t["pnl"]
+            for p in net_pnls:
+                cum += p
                 if cum > peak:
                     peak = cum
                 dd = peak - cum
@@ -4467,6 +5088,14 @@ if __name__ == "__main__":
                 _DIGEST_MESSAGES.append(("scan", w_line))
             else:
                 send_telegram(w_line, kind="proactive", msg_type="scan")
+
+        # Automated Position Management Alerts (Rule 11 Breakeven Ratchet, +2R Target, Time Stop, Earnings Lockout, EMA20 Runner)
+        pos_mgmt_alerts = generate_position_management_alerts(open_positions, curr_scan_date)
+        for p_alert in pos_mgmt_alerts:
+            if is_digest:
+                _DIGEST_MESSAGES.append(("scan", p_alert))
+            else:
+                send_telegram(p_alert, kind="proactive", msg_type="scan")
 
         # In digest mode, combine valid parts into 1 message and send once
         if is_digest and _DIGEST_MESSAGES:

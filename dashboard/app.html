@@ -1890,7 +1890,7 @@
                 <div class="glossary-math-box">
                   <div class="math-label">📐 Pure Math Formula (KaTeX):</div>
                   <div class="latex-display">
-                    $$ \text{SMA}_{50}(t) = \frac{1}{50} \sum_{i=0}^{49} P_{\text{close}}(t-i) \quad \land \quad P_t > \text{SMA}_{50}(t) > \text{SMA}_{150}(t) $$
+                    $$ \text{SMA}_{50}(t) = \frac{1}{50} \sum_{i=0}^{49} P_{\text{close}}(t-i) \quad \land \quad P_t &gt; \text{SMA}_{50}(t) &gt; \text{SMA}_{150}(t) $$
                   </div>
                 </div>
 
@@ -1941,7 +1941,7 @@
                 <div class="glossary-math-box">
                   <div class="math-label">📐 Pure Math Formula (KaTeX):</div>
                   <div class="latex-display">
-                    $$ \text{SMA}_{150}(t) = \frac{1}{150} \sum_{i=0}^{149} P_{\text{close}}(t-i) \quad \land \quad \text{SMA}_{150}(t) > \text{SMA}_{200}(t) $$
+                    $$ \text{SMA}_{150}(t) = \frac{1}{150} \sum_{i=0}^{149} P_{\text{close}}(t-i) \quad \land \quad \text{SMA}_{150}(t) &gt; \text{SMA}_{200}(t) $$
                   </div>
                 </div>
 
@@ -1995,7 +1995,7 @@
                 <div class="glossary-math-box">
                   <div class="math-label">📐 Pure Math Formula (KaTeX):</div>
                   <div class="latex-display">
-                    $$ \text{SMA}_{200}(t) = \frac{1}{200} \sum_{i=0}^{199} P_{\text{close}}(t-i) \quad \land \quad \text{SMA}_{200}(t) > \text{SMA}_{200}(t-20) $$
+                    $$ \text{SMA}_{200}(t) = \frac{1}{200} \sum_{i=0}^{199} P_{\text{close}}(t-i) \quad \land \quad \text{SMA}_{200}(t) &gt; \text{SMA}_{200}(t-20) $$
                   </div>
                 </div>
 
@@ -2009,7 +2009,7 @@
 
                 <div class="glossary-rule-box">
                   <span class="rule-tag">⚙️ System Invariant (main.py):</span>
-                  <span class="rule-verdict">Rule 02: Price must be > 200 SMA, and 200 SMA must be sloped upward over the last 20 sessions.</span>
+                  <span class="rule-verdict">Rule 02: Price must be &gt; 200 SMA, and 200 SMA must be sloped upward over the last 20 sessions.</span>
                 </div>
               </div>
 
@@ -2059,7 +2059,7 @@
 
                 <div class="glossary-rule-box">
                   <span class="rule-tag">⚙️ System Invariant (main.py):</span>
-                  <span class="rule-verdict">Rule 13 (Time Stop Gate): 5-day time stop requires price < 10 EMA to trigger an exit; holding above 10 EMA keeps position alive.</span>
+                  <span class="rule-verdict">Rule 13 (Time Stop Gate): 5-day time stop requires price &lt; 10 EMA to trigger an exit; holding above 10 EMA keeps position alive.</span>
                 </div>
               </div>
 
@@ -2150,7 +2150,7 @@
                 <div class="glossary-math-box">
                   <div class="math-label">📐 Pure Math Formula (KaTeX):</div>
                   <div class="latex-display">
-                    $$ \text{MTF}_{\text{valid}} \iff \Big( P_{\text{close, daily}} > \text{SMA}_{50} \Big) \land \Big( P_{\text{close, weekly}} > \text{SMA}_{30,\text{weekly}} \Big) \land \Big( \frac{d}{dt}\text{SMA}_{30,\text{weekly}} > 0 \Big) $$
+                    $$ \text{MTF}_{\text{valid}} \iff \Big( P_{\text{close, daily}} &gt; \text{SMA}_{50} \Big) \land \Big( P_{\text{close, weekly}} &gt; \text{SMA}_{30,\text{weekly}} \Big) \land \Big( \frac{d}{dt}\text{SMA}_{30,\text{weekly}} &gt; 0 \Big) $$
                   </div>
                 </div>
 
@@ -2311,7 +2311,7 @@
                 <div class="glossary-math-box">
                   <div class="math-label">📐 Pure Math Formula (KaTeX):</div>
                   <div class="latex-display">
-                    $$ \text{RangePct}_{5d} = \frac{\max(H_{t-4..t}) - \min(L_{t-4..t})}{\min(L_{t-4..t})} \le 0.08 \quad \land \quad \text{ATR}_{5} < \text{ATR}_{20} $$
+                    $$ \text{RangePct}_{5d} = \frac{\max(H_{t-4..t}) - \min(L_{t-4..t})}{\min(L_{t-4..t})} \le 0.08 \quad \land \quad \text{ATR}_{5} &lt; \text{ATR}_{20} $$
                   </div>
                 </div>
 
@@ -2364,7 +2364,7 @@
                 <div class="glossary-math-box">
                   <div class="math-label">📐 Pure Math Formula (KaTeX):</div>
                   <div class="latex-display">
-                    $$ \Delta P_{T_1} > \Delta P_{T_2} > \Delta P_{T_3}, \quad \text{where } \Delta P_{T_k} = \frac{H_{T_k} - L_{T_k}}{H_{T_k}}, \quad V_{T_3} \ll \bar{V}_{50} $$
+                    $$ \Delta P_{T_1} &gt; \Delta P_{T_2} &gt; \Delta P_{T_3}, \quad \text{where } \Delta P_{T_k} = \frac{H_{T_k} - L_{T_k}}{H_{T_k}}, \quad V_{T_3} \ll \bar{V}_{50} $$
                   </div>
                 </div>
 
@@ -2524,7 +2524,7 @@
                 <div class="glossary-math-box">
                   <div class="math-label">📐 Pure Math Formula (KaTeX):</div>
                   <div class="latex-display">
-                    $$ \sigma_t^2 = \lambda \sigma_{t-1}^2 + (1 - \lambda) r_t^2, \quad \lambda = 0.94, \quad \text{Regime} = \begin{cases} \text{HIGH} & \text{Percentile} \ge 80\% \\ \text{NORMAL} & 20\% < \text{Pct} < 80\% \\ \text{LOW} & \text{Pct} \le 20\% \end{cases} $$
+                    $$ \sigma_t^2 = \lambda \sigma_{t-1}^2 + (1 - \lambda) r_t^2, \quad \lambda = 0.94, \quad \text{Regime} = \begin{cases} \text{HIGH} & \text{Percentile} \ge 80\% \\ \text{NORMAL} & 20\% &lt; \text{Pct} &lt; 80\% \\ \text{LOW} & \text{Pct} \le 20\% \end{cases} $$
                   </div>
                 </div>
 
@@ -2735,7 +2735,7 @@
                 <div class="glossary-math-box">
                   <div class="math-label">📐 Pure Math Formula (KaTeX):</div>
                   <div class="latex-display">
-                    $$ \text{Footprint} = \begin{cases} \text{Accumulation} & \text{Delivery\%} \ge 35\% \land \text{CMF}_{20} > +0.10 \\ \text{Churn} & \text{Delivery\%} < 20\% \land \text{Volume} \ge 2 \times \bar{V}_{20} \end{cases} $$
+                    $$ \text{Footprint} = \begin{cases} \text{Accumulation} & \text{Delivery\%} \ge 35\% \land \text{CMF}_{20} &gt; +0.10 \\ \text{Churn} & \text{Delivery\%} &lt; 20\% \land \text{Volume} \ge 2 \times \bar{V}_{20} \end{cases} $$
                   </div>
                 </div>
 
@@ -2911,7 +2911,7 @@
 
                 <div class="glossary-rule-box">
                   <span class="rule-tag">⚙️ System Invariant (main.py):</span>
-                  <span class="rule-verdict">Rule 06: Breakout setups require RSI14 in the 50–70 bull zone; reject stocks overbought > 75.</span>
+                  <span class="rule-verdict">Rule 06: Breakout setups require RSI14 in the 50–70 bull zone; reject stocks overbought &gt; 75.</span>
                 </div>
               </div>
 
@@ -2949,7 +2949,7 @@
                 <div class="glossary-math-box">
                   <div class="math-label">📐 Pure Math Formula (KaTeX):</div>
                   <div class="latex-display">
-                    $$ \text{RSI}_2 \le 10 \quad \land \quad P_{\text{close}} > \text{SMA}_{200} \implies \text{High-Probability Dip Buy} $$
+                    $$ \text{RSI}_2 \le 10 \quad \land \quad P_{\text{close}} &gt; \text{SMA}_{200} \implies \text{High-Probability Dip Buy} $$
                   </div>
                 </div>
 
@@ -3000,7 +3000,7 @@
                 <div class="glossary-math-box">
                   <div class="math-label">📐 Pure Math Formula (KaTeX):</div>
                   <div class="latex-display">
-                    $$ P_{\text{pivot}} = \max\Big( H_{t-20}, H_{t-19}, \dots, H_{t-1} \Big), \quad P_t > P_{\text{pivot}} \implies \text{Breakout} $$
+                    $$ P_{\text{pivot}} = \max\Big( H_{t-20}, H_{t-19}, \dots, H_{t-1} \Big), \quad P_t &gt; P_{\text{pivot}} \implies \text{Breakout} $$
                   </div>
                 </div>
 
@@ -3065,7 +3065,7 @@
 
                 <div class="glossary-rule-box">
                   <span class="rule-tag">⚙️ System Invariant (main.py):</span>
-                  <span class="rule-verdict">Rule 07 Enhancement: Rejection gate blocks any candidate whose close is > 4% above pivot.</span>
+                  <span class="rule-verdict">Rule 07 Enhancement: Rejection gate blocks any candidate whose close is &gt; 4% above pivot.</span>
                 </div>
               </div>
 
@@ -3154,7 +3154,7 @@
                 <div class="glossary-math-box">
                   <div class="math-label">📐 Pure Math Formula (KaTeX):</div>
                   <div class="latex-display">
-                    $$ \text{RS}_t = \frac{P_t / P_{t-252}}{\text{Index}_t / \text{Index}_{t-252}}, \quad \text{Rank}_{\text{pct}} \ge 70\% \quad \land \quad \text{Slope}_{\text{60d}}(\text{RS}) > 0 $$
+                    $$ \text{RS}_t = \frac{P_t / P_{t-252}}{\text{Index}_t / \text{Index}_{t-252}}, \quad \text{Rank}_{\text{pct}} \ge 70\% \quad \land \quad \text{Slope}_{\text{60d}}(\text{RS}) &gt; 0 $$
                   </div>
                 </div>
 
@@ -3493,7 +3493,7 @@
                   <div class="glossary-title-group">
                     <span class="glossary-category-icon">🔴</span>
                     <div>
-                      <h3 class="glossary-term">5-Day Time Stop (>5d Dead-Money Rule)</h3>
+                      <h3 class="glossary-term">5-Day Time Stop (&gt;5d Dead-Money Rule)</h3>
                       <div class="glossary-subtitle">Liquidating Stagnant Capital to Prevent Opportunity Cost</div>
                     </div>
                   </div>
@@ -3522,7 +3522,7 @@
                 <div class="glossary-math-box">
                   <div class="math-label">📐 Pure Math Formula (KaTeX):</div>
                   <div class="latex-display">
-                    $$ \Big( \Delta t_{\text{held}} \ge 5\text{ days} \Big) \land \Big( P_{\text{close}} \le \text{Entry} \Big) \land \Big( P_{\text{close}} < \text{EMA}_{10} \Big) \implies \text{EXIT AT CLOSE } (100\%) $$
+                    $$ \Big( \Delta t_{\text{held}} \ge 5\text{ days} \Big) \land \Big( P_{\text{close}} \le \text{Entry} \Big) \land \Big( P_{\text{close}} &lt; \text{EMA}_{10} \Big) \implies \text{EXIT AT CLOSE } (100\%) $$
                   </div>
                 </div>
 
@@ -3573,7 +3573,7 @@
                 <div class="glossary-math-box">
                   <div class="math-label">📐 Pure Math Formula (KaTeX):</div>
                   <div class="latex-display">
-                    $$ \text{ExitRunner} \iff P_{\text{close}} < \text{EMA}_{20} \quad (\text{Evaluated exclusively at EOD close}) $$
+                    $$ \text{ExitRunner} \iff P_{\text{close}} &lt; \text{EMA}_{20} \quad (\text{Evaluated exclusively at EOD close}) $$
                   </div>
                 </div>
 
@@ -3628,7 +3628,7 @@
                 <div class="glossary-math-box">
                   <div class="math-label">📐 Pure Math Formula (KaTeX):</div>
                   <div class="latex-display">
-                    $$ \text{Regime} = \begin{cases} \text{Confirmed Uptrend} & P_{\text{CNXSC}} > \text{SMA}_{50} > \text{SMA}_{200} \land \frac{d}{dt}\text{SMA} > 0 \\ \text{Pressure} & P_{\text{CNXSC}} < \text{SMA}_{50} \land P_{\text{CNXSC}} > \text{SMA}_{200} \\ \text{Defensive} & P_{\text{CNXSC}} \le \text{SMA}_{200} \lor \text{DistDays} \ge 5 \end{cases} $$
+                    $$ \text{Regime} = \begin{cases} \text{Confirmed Uptrend} & P_{\text{CNXSC}} &gt; \text{SMA}_{50} &gt; \text{SMA}_{200} \land \frac{d}{dt}\text{SMA} &gt; 0 \\ \text{Pressure} & P_{\text{CNXSC}} &lt; \text{SMA}_{50} \land P_{\text{CNXSC}} &gt; \text{SMA}_{200} \\ \text{Defensive} & P_{\text{CNXSC}} \le \text{SMA}_{200} \lor \text{DistDays} \ge 5 \end{cases} $$
                   </div>
                 </div>
 
@@ -3733,7 +3733,7 @@
                 <div class="glossary-math-box">
                   <div class="math-label">📐 Pure Math Formula (KaTeX):</div>
                   <div class="latex-display">
-                    $$ \text{SectorScore} = 0.50 \cdot (\% > \text{SMA}_{50}) + 0.30 \cdot \text{Ret}_{\text{6m}} + 0.20 \cdot \text{SetupDensity} $$
+                    $$ \text{SectorScore} = 0.50 \cdot (\% &gt; \text{SMA}_{50}) + 0.30 \cdot \text{Ret}_{\text{6m}} + 0.20 \cdot \text{SetupDensity} $$
                   </div>
                 </div>
 
@@ -3883,7 +3883,7 @@
                     <span class="analogy-icon">💡</span>
                     <span class="analogy-title">Everyday Analogy (In Plain English)</span>
                   </div>
-                  <p class="analogy-text">Imagine flipping a coin. Normal coins land heads 50% of the time (H = 0.50, pure random noise). A magic weighted coin that lands heads 75% of the time if the previous toss was heads is persistent (H > 0.60). We only trade smallcaps with high momentum persistence!</p>
+                  <p class="analogy-text">Imagine flipping a coin. Normal coins land heads 50% of the time (H = 0.50, pure random noise). A magic weighted coin that lands heads 75% of the time if the previous toss was heads is persistent (H &gt; 0.60). We only trade smallcaps with high momentum persistence!</p>
                 </div>
 
                 <div class="glossary-diagram-box">
@@ -3903,7 +3903,7 @@
                 <div class="glossary-math-box">
                   <div class="math-label">📐 Pure Math Formula (KaTeX):</div>
                   <div class="latex-display">
-                    $$ \mathbb{E}\left[\frac{R(n)}{S(n)}\right] = C \cdot n^H, \quad H > 0.55 \implies \text{Long-Memory Directional Persistence} $$
+                    $$ \mathbb{E}\left[\frac{R(n)}{S(n)}\right] = C \cdot n^H, \quad H &gt; 0.55 \implies \text{Long-Memory Directional Persistence} $$
                   </div>
                 </div>
 

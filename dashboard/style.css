@@ -5806,3 +5806,547 @@ th .term-lookup {
 }
 
 
+
+
+/* =====================================================================
+   UPGRADED INDICATOR GLOSSARY & VISUAL ATLAS (All 39 Metrics)
+   ===================================================================== */
+.glossary-category-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  white-space: nowrap;
+  padding-bottom: 6px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+
+.glossary-filter-pill {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+  padding: 8px 14px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.glossary-filter-pill:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.18);
+  transform: translateY(-1px);
+}
+
+.glossary-filter-pill.active {
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.35) 0%, rgba(56, 189, 248, 0.25) 100%);
+  border-color: #38bdf8;
+  color: #fff;
+  font-weight: 700;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
+}
+
+.glossary-filter-pill .filter-count {
+  background: rgba(0, 0, 0, 0.35);
+  padding: 2px 6px;
+  border-radius: 9999px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #cbd5e1;
+}
+
+.glossary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(450px, 100%), 1fr));
+  gap: 24px;
+  width: 100%;
+}
+
+.glossary-card {
+  background: rgba(11, 15, 25, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.glossary-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(56, 189, 248, 0.4);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.45);
+}
+
+/* Category Accent Borders */
+.glossary-cat-trend { border-left: 4px solid #10b981 !important; }
+.glossary-cat-volatility { border-left: 4px solid #a855f7 !important; }
+.glossary-cat-volume { border-left: 4px solid #06b6d4 !important; }
+.glossary-cat-momentum { border-left: 4px solid #f59e0b !important; }
+.glossary-cat-risk { border-left: 4px solid #ef4444 !important; }
+.glossary-cat-portfolio { border-left: 4px solid #f97316 !important; }
+
+.glossary-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding-bottom: 12px;
+}
+
+.glossary-title-group {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.glossary-category-icon {
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.glossary-term {
+  font-size: 16px;
+  font-weight: 800;
+  color: #fff;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.glossary-subtitle {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-top: 3px;
+  font-weight: 500;
+}
+
+.glossary-badge {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  white-space: nowrap;
+}
+
+.badge-trend { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+.badge-volatility { background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); }
+.badge-volume { background: rgba(6, 182, 212, 0.15); color: #38bdf8; border: 1px solid rgba(6, 182, 212, 0.3); }
+.badge-momentum { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+.badge-risk { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+.badge-portfolio { background: rgba(249, 115, 22, 0.15); color: #fb923c; border: 1px solid rgba(249, 115, 22, 0.3); }
+
+/* Everyday Analogy Box */
+.glossary-analogy-box {
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+
+.analogy-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.analogy-icon {
+  font-size: 14px;
+}
+
+.analogy-title {
+  font-size: 11.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #38bdf8;
+}
+
+.analogy-text {
+  font-size: 13px;
+  color: #e2e8f0;
+  line-height: 1.55;
+  margin: 0;
+}
+
+/* Vector Diagram Box */
+.glossary-diagram-box {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.glossary-svg-diagram {
+  width: 100%;
+  max-width: 420px;
+  height: auto;
+  display: block;
+}
+
+.diagram-caption {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 6px;
+  text-align: center;
+  font-style: italic;
+}
+
+/* Math Box */
+.glossary-math-box {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.math-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+}
+
+/* Example Box */
+.glossary-example-box {
+  background: rgba(16, 185, 129, 0.05);
+  border: 1px solid rgba(16, 185, 129, 0.18);
+  border-radius: 8px;
+  padding: 10px 14px;
+}
+
+.example-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.example-icon {
+  font-size: 13px;
+}
+
+.example-title {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #34d399;
+}
+
+.example-text {
+  font-size: 12.5px;
+  color: #cbd5e1;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* System Invariant Rule Box */
+.glossary-rule-box {
+  background: rgba(0, 0, 0, 0.3);
+  border-left: 3px solid #f59e0b;
+  padding: 8px 12px;
+  border-radius: 0 6px 6px 0;
+  font-size: 12px;
+  color: #cbd5e1;
+  line-height: 1.45;
+}
+
+.rule-tag {
+  font-weight: 800;
+  color: #fbbf24;
+  margin-right: 6px;
+  font-size: 11.5px;
+}
+
+.rule-verdict {
+  color: #e2e8f0;
+}
+
+
+/* =====================================================================
+   UPGRADED INDICATOR GLOSSARY & VISUAL ATLAS (All 39 Metrics)
+   ===================================================================== */
+.glossary-category-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  white-space: nowrap;
+  padding-bottom: 6px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+
+.glossary-filter-pill {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+  padding: 8px 14px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.glossary-filter-pill:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.18);
+  transform: translateY(-1px);
+}
+
+.glossary-filter-pill.active {
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.35) 0%, rgba(56, 189, 248, 0.25) 100%);
+  border-color: #38bdf8;
+  color: #fff;
+  font-weight: 700;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
+}
+
+.glossary-filter-pill .filter-count {
+  background: rgba(0, 0, 0, 0.35);
+  padding: 2px 6px;
+  border-radius: 9999px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #cbd5e1;
+}
+
+.glossary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(450px, 100%), 1fr));
+  gap: 24px;
+  width: 100%;
+}
+
+.glossary-card {
+  background: rgba(11, 15, 25, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.glossary-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(56, 189, 248, 0.4);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.45);
+}
+
+/* Category Accent Borders */
+.glossary-cat-trend { border-left: 4px solid #10b981 !important; }
+.glossary-cat-volatility { border-left: 4px solid #a855f7 !important; }
+.glossary-cat-volume { border-left: 4px solid #06b6d4 !important; }
+.glossary-cat-momentum { border-left: 4px solid #f59e0b !important; }
+.glossary-cat-risk { border-left: 4px solid #ef4444 !important; }
+.glossary-cat-portfolio { border-left: 4px solid #f97316 !important; }
+
+.glossary-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding-bottom: 12px;
+}
+
+.glossary-title-group {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.glossary-category-icon {
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.glossary-term {
+  font-size: 16px;
+  font-weight: 800;
+  color: #fff;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.glossary-subtitle {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-top: 3px;
+  font-weight: 500;
+}
+
+.glossary-badge {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  white-space: nowrap;
+}
+
+.badge-trend { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+.badge-volatility { background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); }
+.badge-volume { background: rgba(6, 182, 212, 0.15); color: #38bdf8; border: 1px solid rgba(6, 182, 212, 0.3); }
+.badge-momentum { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+.badge-risk { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+.badge-portfolio { background: rgba(249, 115, 22, 0.15); color: #fb923c; border: 1px solid rgba(249, 115, 22, 0.3); }
+
+/* Everyday Analogy Box */
+.glossary-analogy-box {
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+
+.analogy-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.analogy-icon {
+  font-size: 14px;
+}
+
+.analogy-title {
+  font-size: 11.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #38bdf8;
+}
+
+.analogy-text {
+  font-size: 13px;
+  color: #e2e8f0;
+  line-height: 1.55;
+  margin: 0;
+}
+
+/* Vector Diagram Box */
+.glossary-diagram-box {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.glossary-svg-diagram {
+  width: 100%;
+  max-width: 420px;
+  height: auto;
+  display: block;
+}
+
+.diagram-caption {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 6px;
+  text-align: center;
+  font-style: italic;
+}
+
+/* Math Box */
+.glossary-math-box {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.math-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+}
+
+/* Example Box */
+.glossary-example-box {
+  background: rgba(16, 185, 129, 0.05);
+  border: 1px solid rgba(16, 185, 129, 0.18);
+  border-radius: 8px;
+  padding: 10px 14px;
+}
+
+.example-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.example-icon {
+  font-size: 13px;
+}
+
+.example-title {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #34d399;
+}
+
+.example-text {
+  font-size: 12.5px;
+  color: #cbd5e1;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* System Invariant Rule Box */
+.glossary-rule-box {
+  background: rgba(0, 0, 0, 0.3);
+  border-left: 3px solid #f59e0b;
+  padding: 8px 12px;
+  border-radius: 0 6px 6px 0;
+  font-size: 12px;
+  color: #cbd5e1;
+  line-height: 1.45;
+}
+
+.rule-tag {
+  font-weight: 800;
+  color: #fbbf24;
+  margin-right: 6px;
+  font-size: 11.5px;
+}
+
+.rule-verdict {
+  color: #e2e8f0;
+}

@@ -4659,22 +4659,47 @@ function initHelpCenter() {
     });
   }
 
-  // 2. Glossary live search
+  // 2. Glossary live search and interactive category filtering
   const searchInput = document.getElementById("glossarySearchInput");
   const glossaryGrid = document.getElementById("glossaryGrid");
-  if (searchInput && glossaryGrid) {
+  const filterPills = document.querySelectorAll(".glossary-filter-pill");
+
+  if (glossaryGrid) {
     const cards = glossaryGrid.querySelectorAll(".glossary-card");
-    searchInput.addEventListener("input", (e) => {
-      const q = e.target.value.toLowerCase().trim();
+    let currentCategory = "all";
+    let currentQuery = "";
+
+    function filterGlossary() {
       cards.forEach(card => {
+        const cat = card.getAttribute("data-category");
         const text = card.textContent.toLowerCase();
-        if (!q || text.includes(q)) {
+        const matchCat = (currentCategory === "all" || cat === currentCategory);
+        const matchText = (!currentQuery || text.includes(currentQuery));
+        if (matchCat && matchText) {
           card.style.display = "flex";
         } else {
           card.style.display = "none";
         }
       });
-    });
+    }
+
+    if (filterPills.length > 0) {
+      filterPills.forEach(pill => {
+        pill.addEventListener("click", () => {
+          filterPills.forEach(p => p.classList.remove("active"));
+          pill.classList.add("active");
+          currentCategory = pill.getAttribute("data-filter") || "all";
+          filterGlossary();
+        });
+      });
+    }
+
+    if (searchInput) {
+      searchInput.addEventListener("input", (e) => {
+        currentQuery = e.target.value.toLowerCase().trim();
+        filterGlossary();
+      });
+    }
   }
 
   // 3. FAQ Accordion toggle

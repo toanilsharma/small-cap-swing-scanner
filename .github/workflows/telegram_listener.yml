@@ -45,6 +45,22 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
+      - name: Verify Telegram Secrets Configuration
+        run: |
+          if [ -z "$TELEGRAM_BOT_TOKEN" ]; then
+            echo "::error title=Missing Secret::TELEGRAM_BOT_TOKEN secret is NOT configured in GitHub Repository Secrets! Bot cannot listen for or reply to commands."
+          else
+            echo "✓ TELEGRAM_BOT_TOKEN secret is present (length: ${#TELEGRAM_BOT_TOKEN})"
+          fi
+          if [ -z "$TELEGRAM_CHAT_ID" ]; then
+            echo "::error title=Missing Secret::TELEGRAM_CHAT_ID secret is NOT configured in GitHub Repository Secrets! Bot cannot reply to commands."
+          else
+            echo "✓ TELEGRAM_CHAT_ID secret is present."
+          fi
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+
       - name: Process pending Telegram commands (ONESHOT)
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}

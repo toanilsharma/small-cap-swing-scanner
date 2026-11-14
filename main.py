@@ -455,7 +455,8 @@ def _dispatch_telegram_http(message: str) -> bool:
 def send_telegram(
     message: str,
     kind: str = "proactive",
-    msg_type: Optional[str] = None
+    msg_type: Optional[str] = None,
+    ignore_quiet: bool = False
 ) -> bool:
     """
     Send a message to Telegram using bot API with gating rules.
@@ -463,7 +464,7 @@ def send_telegram(
     A proactive send is blocked silently (print "[BLOCKED:<reason>] <first 40 chars>" and return True) if:
       (a) QUIET environment variable is '1'
       (b) mute_until is active (now < mute_until)
-      (c) current IST time is inside quiet_start..quiet_end window
+      (c) current IST time is inside quiet_start..quiet_end window (bypassed if ignore_quiet=True or IGNORE_QUIET=1)
       (d) matching enable flag is false (scan / watchlist / market)
     A 'reply' send is blocked ONLY by (b) mute.
     """
@@ -508,28 +509,31 @@ def send_telegram(
         return True
 
     # Rule (c): Inside quiet window quiet_start..quiet_end (handles past-midnight wrap)
-    q_start = settings.get("quiet_start")
-    q_end = settings.get("quiet_end")
-    if q_start and q_end and q_start != "off" and q_end != "off":
-        try:
-            qs_h, qs_m = map(int, q_start.split(":"))
-            qe_h, qe_m = map(int, q_end.split(":"))
-            now_m = now_ist.hour * 60 + now_ist.minute
-            start_m = qs_h * 60 + qs_m
-            end_m = qe_h * 60 + qe_m
+    # Bypassed when ignore_quiet is True or IGNORE_QUIET environment variable is "1" (e.g. daily scheduled scan runs)
+    bypass_quiet = ignore_quiet or os.getenv("IGNORE_QUIET", "0").strip() == "1"
+    if not bypass_quiet:
+        q_start = settings.get("quiet_start")
+        q_end = settings.get("quiet_end")
+        if q_start and q_end and q_start != "off" and q_end != "off":
+            try:
+                qs_h, qs_m = map(int, q_start.split(":"))
+                qe_h, qe_m = map(int, q_end.split(":"))
+                now_m = now_ist.hour * 60 + now_ist.minute
+                start_m = qs_h * 60 + qs_m
+                end_m = qe_h * 60 + qe_m
 
-            in_quiet = False
-            if start_m < end_m:
-                in_quiet = (start_m <= now_m < end_m)
-            elif start_m > end_m:
-                in_quiet = (now_m >= start_m or now_m < end_m)
+                in_quiet = False
+                if start_m < end_m:
+                    in_quiet = (start_m <= now_m < end_m)
+                elif start_m > end_m:
+                    in_quiet = (now_m >= start_m or now_m < end_m)
 
-            if in_quiet:
-                first_chars = message[:40].replace("\n", " ")
-                print(f"[BLOCKED:quiet_window] {first_chars}")
-                return True
-        except Exception as exc:
-            print(f"Warning checking quiet window ({q_start}-{q_end}): {exc}")
+                if in_quiet:
+                    first_chars = message[:40].replace("\n", " ")
+                    print(f"[BLOCKED:quiet_window] {first_chars}")
+                    return True
+            except Exception as exc:
+                print(f"Warning checking quiet window ({q_start}-{q_end}): {exc}")
 
     # Rule (d): Matching enable flag is false (scan / watchlist / market)
     eff_type = msg_type
@@ -5038,7 +5042,46 @@ def git_commit_listener_updates(commit_message: str = "Auto-update Telegram offs
 # 11) SCRIPT ENTRY POINT
 # =====================================================================
 if __name__ == "__main__":
-    if "--poll" in sys.argv:
+    if "--test-telegram" in sys.argv:
+        print("=== TELEGRAM ALERT CHANNEL DIAGNOSTIC TEST ===")
+        if not TELEGRAM_BOT_TOKEN:
+            print("❌ FAIL: TELEGRAM_BOT_TOKEN is missing or empty in .env / environment.")
+            sys.exit(1)
+        if not TELEGRAM_CHAT_ID:
+            print("❌ FAIL: TELEGRAM_CHAT_ID is missing or empty in .env / environment.")
+            sys.exit(1)
+        masked_token = f"{TELEGRAM_BOT_TOKEN[:4]}...{TELEGRAM_BOT_TOKEN[-4:]}"
+        masked_chat = f"{TELEGRAM_CHAT_ID[:3]}...{TELEGRAM_CHAT_ID[-2:]}" if len(TELEGRAM_CHAT_ID) > 5 else "***"
+        print(f"✓ Credentials found: Token present (len: {len(TELEGRAM_BOT_TOKEN)}, {masked_token}), Chat ID: {masked_chat}")
+        bot_user = "Unknown"
+        try:
+            me_resp = requests.get(f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/getMe", timeout=10).json()
+            if not me_resp.get("ok"):
+                print(f"❌ FAIL: Telegram API getMe returned error: {me_resp}")
+                sys.exit(1)
+            bot_user = me_resp.get("result", {}).get("username", "Unknown")
+            print(f"✓ Bot identity verified: @{bot_user} (ID: {me_resp.get('result', {}).get('id')})")
+        except Exception as exc:
+            print(f"❌ FAIL: Network exception contacting Telegram API: {exc}")
+            sys.exit(1)
+
+        ist_now = get_now_ist().strftime("%Y-%m-%d %H:%M:%S IST")
+        test_msg = (
+            f"🔔 Small-Cap Swing Terminal: Telegram Alert Channel Test\n\n"
+            f"• Status: ONLINE & VERIFIED [PASS]\n"
+            f"• Timestamp: {ist_now}\n"
+            f"• Bot: @{bot_user}\n"
+            f"• Alert Channels: Scan Alerts, Watchlists, Position Management\n\n"
+            f"Your Telegram bot alert connection is working properly."
+        )
+        success = _dispatch_telegram_http(test_msg)
+        if success:
+            print("✓ SUCCESS: Test alert sent and delivered to Telegram chat!")
+            sys.exit(0)
+        else:
+            print("❌ FAIL: Failed to send test alert to Telegram. Check console error above.")
+            sys.exit(1)
+    elif "--poll" in sys.argv:
         poll_loop()  # long-running, for the listener workflow
     else:
         settings = load_alert_settings()

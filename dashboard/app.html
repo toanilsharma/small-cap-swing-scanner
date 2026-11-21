@@ -136,6 +136,50 @@
           </div>
         </div>
 
+        <!-- ⏰ DATE & TIME ACTION SCHEDULE -->
+        <div id="heroActionTimeline" class="action-timeline-card">
+          <div class="action-timeline-header">
+            <span class="timeline-title-icon">⏰</span>
+            <div>
+              <div class="timeline-title">Action Schedule (Date &amp; Time Guide)</div>
+              <div class="timeline-subtitle" id="timelineScanDateSubtitle">Scan Date: Today | GTT Orders valid for 5 trading sessions</div>
+            </div>
+          </div>
+          <div class="action-timeline-grid">
+            <div class="timeline-phase-box phase-tonight">
+              <div class="phase-badge badge-tonight">PHASE 1: TONIGHT (4:30 PM &ndash; 9:00 AM)</div>
+              <div class="phase-title">Place GTT Orders in Broker</div>
+              <div class="phase-desc">Open Zerodha Kite / Groww. Place a GTT buy order for our Top 1 or 2 picks. Valid for 5 trading sessions.</div>
+            </div>
+            <div class="timeline-phase-box phase-market">
+              <div class="phase-badge badge-market">PHASE 2: MARKET HOURS (9:15 AM &ndash; 3:15 PM)</div>
+              <div class="phase-title">Wait for Trigger &amp; Record Buy</div>
+              <div class="phase-desc">If an order executes in your broker, open this website and click <strong>&ldquo;➕ I Bought This&rdquo;</strong> to start automated monitoring.</div>
+            </div>
+            <div class="timeline-phase-box phase-close">
+              <div class="phase-badge badge-close">PHASE 3: DAILY CHECK (3:15 PM &ndash; 3:25 PM)</div>
+              <div class="phase-title">Review Sell Instructions</div>
+              <div class="phase-desc">Spend 2 minutes checking your Monitored Portfolio. Execute any Sell 50% profit or Stop-Loss alerts before 3:30 PM close.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 🏆 TOP 2 PRIORITY PICKS SPOTLIGHT -->
+        <div id="heroSpotlightContainer" class="spotlight-container" style="display: none;">
+          <div class="spotlight-header">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 18px;">🎯</span>
+              <div>
+                <span class="spotlight-title">Today's Priority Recommendations</span>
+                <div style="font-size: 11.5px; color: var(--text-dim); margin-top: 2px;">
+                  Only buy Top 1 or 2 stocks at a time to keep your total portfolio risk safe.
+                </div>
+              </div>
+            </div>
+          </div>
+          <div id="heroSpotlightGrid" class="spotlight-grid"></div>
+        </div>
+
         <!-- Inline Sector Leadership Chips -->
         <div id="heroSectorChipsRow" class="hero-sector-chips-row" style="display: none;">
           <span class="hero-sector-title">Top Sectors:</span>
@@ -574,6 +618,24 @@
         </div>
         <div id="openCorrelationGrid" class="correlation-grid-wrapper"></div>
       </div>
+
+      <!-- MONITORED PORTFOLIO ACTION BAR -->
+      <div class="monitored-portfolio-bar">
+        <div>
+          <h2 style="font-size: 17px; font-weight: 800; color: #fff; margin: 0 0 4px 0; display: flex; align-items: center; gap: 8px;">
+            <span>💼</span><span>My Monitored Wealth Portfolio</span>
+          </h2>
+          <div style="font-size: 12px; color: var(--text-dim);">
+            The system monitors these stocks every market day and tells you date-wise and time-wise when to sell.
+          </div>
+        </div>
+        <button id="addBoughtStockBtn" class="btn btn-sm btn-primary" style="display: flex; align-items: center; gap: 6px;">
+          <span>➕</span><span>Add Bought Stock</span>
+        </button>
+      </div>
+
+      <!-- POINT-WISE ACTION DIRECTIVES FOR HELD STOCKS -->
+      <div id="monitoredPositionsAdviceBox" class="monitored-advice-card" style="display: none;"></div>
 
       <div class="table-scroll" tabindex="0">
         <table id="openPositionsTable">
@@ -4536,6 +4598,113 @@
   <div id="dashboardToast" class="dashboard-toast" style="display: none;">
     <span id="toastIcon" class="toast-icon">✅</span>
     <span id="toastMessage" class="toast-message">Notification message</span>
+  </div>
+
+  <!-- RECORD BUY / ADD TO MONITORED PORTFOLIO MODAL -->
+  <div id="recordBuyModal" class="tv-modal" style="display: none;">
+    <div class="tv-modal-backdrop" id="recordBuyBackdrop"></div>
+    <div class="tv-modal-dialog portfolio-modal-dialog" role="dialog" aria-modal="true" aria-label="Add Bought Stock to Monitored Portfolio">
+      <div class="tv-modal-header">
+        <div class="tv-modal-title-group">
+          <span style="font-size: 18px;">➕</span>
+          <h3 id="recordBuyModalTitle" class="tv-modal-title">Add Bought Stock to Monitored Portfolio</h3>
+        </div>
+        <button id="recordBuyCloseBtn" class="tv-modal-close" title="Close (Esc)">&times;</button>
+      </div>
+      <div class="portfolio-modal-body">
+        <p style="font-size: 12.5px; color: var(--text-dim); margin-bottom: 16px;">
+          Enter the details of the stock you bought. The system will track it daily and tell you exact dates and times to sell 50% for profit or exit safely.
+        </p>
+        <form id="recordBuyForm" onsubmit="return false;">
+          <div class="modal-form-grid">
+            <div class="form-group">
+              <label for="buyStockSymbol">Stock Symbol</label>
+              <input type="text" id="buyStockSymbol" class="form-input" placeholder="e.g. ANANDRATHI" required uppercase style="text-transform: uppercase;">
+            </div>
+            <div class="form-group">
+              <label for="buyStockDate">Date Bought</label>
+              <input type="date" id="buyStockDate" class="form-input" required>
+            </div>
+            <div class="form-group">
+              <label for="buyStockPrice">Buy Price (₹)</label>
+              <input type="number" id="buyStockPrice" class="form-input" step="0.05" min="0.1" placeholder="e.g. 2409.50" required>
+            </div>
+            <div class="form-group">
+              <label for="buyStockQty">Shares Bought (Quantity)</label>
+              <input type="number" id="buyStockQty" class="form-input" step="1" min="1" placeholder="e.g. 10" required>
+            </div>
+            <div class="form-group">
+              <label for="buyStockStop">Emergency Safety Shield (Stop Loss ₹)</label>
+              <input type="number" id="buyStockStop" class="form-input" step="0.05" min="0.1" placeholder="e.g. 2210.00" required>
+              <small style="color: var(--text-dim); font-size: 11px;">Max risk is strictly capped at 1% of your savings.</small>
+            </div>
+            <div class="form-group">
+              <label for="buyStockTarget">Profit Milestone (+2R Target ₹)</label>
+              <input type="number" id="buyStockTarget" class="form-input" step="0.05" min="0.1" placeholder="e.g. 2808.50" required>
+              <small style="color: var(--text-dim); font-size: 11px;">Target to sell 50% and lock guaranteed cash profit.</small>
+            </div>
+          </div>
+          <div class="modal-form-actions" style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px;">
+            <button type="button" id="recordBuyCancelBtn" class="btn btn-secondary btn-sm">Cancel</button>
+            <button type="submit" id="recordBuySubmitBtn" class="btn btn-primary btn-sm">💾 Save &amp; Start Monitoring</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- RECORD SELL / EXIT MODAL -->
+  <div id="recordSellModal" class="tv-modal" style="display: none;">
+    <div class="tv-modal-backdrop" id="recordSellBackdrop"></div>
+    <div class="tv-modal-dialog portfolio-modal-dialog" role="dialog" aria-modal="true" aria-label="Record Sell & Update Portfolio">
+      <div class="tv-modal-header">
+        <div class="tv-modal-title-group">
+          <span style="font-size: 18px;">💰</span>
+          <h3 id="recordSellModalTitle" class="tv-modal-title">Record Sale &amp; Lock Profit: SYMBOL</h3>
+        </div>
+        <button id="recordSellCloseBtn" class="tv-modal-close" title="Close (Esc)">&times;</button>
+      </div>
+      <div class="portfolio-modal-body">
+        <div id="recordSellSummaryBox" style="background: rgba(15, 23, 42, 0.6); padding: 12px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.08); margin-bottom: 16px;">
+          <!-- Dynamically populated holding details -->
+        </div>
+        <form id="recordSellForm" onsubmit="return false;">
+          <input type="hidden" id="sellStockSymbol">
+          <div class="modal-form-grid">
+            <div class="form-group">
+              <label for="sellStockDate">Date Sold</label>
+              <input type="date" id="sellStockDate" class="form-input" required>
+            </div>
+            <div class="form-group">
+              <label for="sellStockPrice">Actual Sell Price (₹)</label>
+              <input type="number" id="sellStockPrice" class="form-input" step="0.05" min="0.1" placeholder="e.g. 2808.50" required>
+            </div>
+            <div class="form-group">
+              <label for="sellStockType">Portion Sold</label>
+              <select id="sellStockType" class="form-input">
+                <option value="50">Sell 50% Shares (Lock +2R Profit &amp; Trail Runner)</option>
+                <option value="100">Sell 100% Shares (Complete Exit)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="sellStockReason">Exit Reason</label>
+              <select id="sellStockReason" class="form-input">
+                <option value="target_2r">🏆 +2R Profit Target Hit (Book 50%)</option>
+                <option value="breakeven_exit">🔒 Breakeven Ratchet Exit (Zero Loss)</option>
+                <option value="time_stop_5d">⏰ 5-Day Inactive Momentum Exit</option>
+                <option value="stop_loss">🛡️ Safety Shield Exit (Stop Loss)</option>
+                <option value="discretionary">👋 Manual / Discretionary Exit</option>
+              </select>
+            </div>
+          </div>
+          <div id="sellEstimatedPnlNotice" style="margin-top: 14px; font-size: 13px; font-weight: 600;"></div>
+          <div class="modal-form-actions" style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px;">
+            <button type="button" id="recordSellCancelBtn" class="btn btn-secondary btn-sm">Cancel</button>
+            <button type="submit" id="recordSellSubmitBtn" class="btn btn-primary btn-sm">✅ Confirm Sale &amp; Update History</button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 
   <script src="app.js"></script>

@@ -1134,6 +1134,90 @@ function renderTodaysPlan(scanData, openPositions) {
     });
   }
 
+  // Sort actionable setups by conviction score descending
+  actionableSetups.sort((a, b) => (b.item.score || b.item.Score || 0) - (a.item.score || a.item.Score || 0));
+
+  // Update Action Timeline Subtitle with real date
+  const scanDateObj = currentScan && currentScan.updated_at ? new Date(currentScan.updated_at) : new Date();
+  const dateStr = scanDateObj.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+  const timeSub = document.getElementById("timelineScanDateSubtitle");
+  if (timeSub) {
+    timeSub.textContent = `Scan Date: ${dateStr} | GTT Orders valid for 5 trading sessions`;
+  }
+
+  // Render Top 2 Priority Spotlight Cards
+  const spotContainer = document.getElementById("heroSpotlightContainer");
+  const spotGrid = document.getElementById("heroSpotlightGrid");
+  if (spotContainer && spotGrid) {
+    if (isMarketOk && actionableSetups.length > 0) {
+      spotContainer.style.display = "block";
+      const topPicks = actionableSetups.slice(0, 2);
+      spotGrid.innerHTML = topPicks.map(({ item, dec }, idx) => {
+        const isAlternate = idx === 1;
+        const rankLabel = isAlternate ? "🥈 #2 ALTERNATE PICK" : "🥇 #1 TOP RECOMMENDATION";
+        const gttStr = `BUY ${item.Symbol} | Trigger ${dec.pivot.toFixed(2)} | Limit ${(dec.pivot * 1.005).toFixed(2)} | SL ${dec.effectiveStop.toFixed(2)} | Target ${dec.targetPrice.toFixed(2)} | Qty=${dec.qty} | GTC`;
+        return `
+          <div class="spotlight-card ${isAlternate ? 'alternate' : ''}">
+            <div class="spotlight-card-top">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="spotlight-rank-badge">${rankLabel}</span>
+                <span class="spotlight-symbol">${item.Symbol}</span>
+              </div>
+              <span class="badge ${dec.badgeClass}">${dec.badgeText}</span>
+            </div>
+
+            <div class="spotlight-metrics-grid">
+              <div class="spotlight-metric-box">
+                <div class="spotlight-metric-label">Buy Trigger</div>
+                <div class="spotlight-metric-val val-cyan">₹${dec.pivot.toFixed(2)}</div>
+              </div>
+              <div class="spotlight-metric-box">
+                <div class="spotlight-metric-label">Safety Stop</div>
+                <div class="spotlight-metric-val val-red">₹${dec.effectiveStop.toFixed(2)}</div>
+              </div>
+              <div class="spotlight-metric-box">
+                <div class="spotlight-metric-label">+2R Target (50%)</div>
+                <div class="spotlight-metric-val val-green">₹${dec.targetPrice.toFixed(2)}</div>
+              </div>
+            </div>
+
+            <div class="spotlight-rationale">
+              <strong>Why this stock?</strong> ${dec.justification}
+            </div>
+
+            <div class="spotlight-action-row">
+              <div style="font-size: 11.5px; color: var(--text-dim);">
+                Sized for 1% risk: <strong>${dec.qty} shares</strong> (₹${dec.totalCapitalRequired.toLocaleString('en-IN')})
+              </div>
+              <div style="display: flex; gap: 6px;">
+                <button class="badge-gtt copy-gtt-btn" data-symbol="${item.Symbol}" data-gtt="${escapeHtml(gttStr)}" title="Copy GTT order instruction">
+                  📋 Copy GTT
+                </button>
+                <button class="btn-bought btn-bought-trigger" data-symbol="${item.Symbol}" data-pivot="${dec.pivot}" data-stop="${dec.effectiveStop}" data-target="${dec.targetPrice}" data-qty="${dec.qty}" title="Click if you bought this stock to start automated daily monitoring">
+                  ➕ I Bought This
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      // Attach click listeners to Spotlight "I Bought This" buttons
+      spotGrid.querySelectorAll(".btn-bought-trigger").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const sym = btn.getAttribute("data-symbol");
+          const pivot = parseFloat(btn.getAttribute("data-pivot")) || 0;
+          const stop = parseFloat(btn.getAttribute("data-stop")) || 0;
+          const target = parseFloat(btn.getAttribute("data-target")) || 0;
+          const qty = parseInt(btn.getAttribute("data-qty"), 10) || 1;
+          openBuyModal({ Symbol: sym, pivot, effectiveStop: stop, targetPrice: target, qty });
+        });
+      });
+    } else {
+      spotContainer.style.display = "none";
+    }
+  }
+
   // 1. Market state bullet
   if (!isMarketOk) {
     bullets.push("🛑 Market Defensive: Small-cap benchmark (^CNXSC) is in correction. All new buy orders blocked. 100% Cash is a disciplined position.");
@@ -1195,10 +1279,10 @@ function renderTodaysPlan(scanData, openPositions) {
       const posSummary = urgentPositionActions.map(u => `${u.pos.symbol} (${u.posDec.action})`).join(", ");
       heroActionText.innerHTML = `<span style="color: #fbbf24; font-weight: 700;">🚨 PORTFOLIO ACTION TODAY:</span> ${posSummary} — review open positions and manage orders immediately.`;
     } else if (actionableSetups.length > 0) {
-      const symList = actionableSetups.map(a => `${a.item.Symbol} (@₹${a.dec.pivot.toFixed(2)})`).join(", ");
-      heroActionText.innerHTML = `<span style="color: #34d399; font-weight: 700;">⚡ TAKE ACTION TODAY (${actionableSetups.length}):</span> Place GTT limit orders for ${symList}. ${waitingSetups.length} stocks waiting in consolidation bases.`;
+      const topNames = actionableSetups.slice(0, 2).map(a => a.item.Symbol).join(" & ");
+      heroActionText.innerHTML = `<span style="color: #34d399; font-weight: 700;">⚡ TAKE ACTION:</span> Focus on Today's Top 2 Priority Picks (<strong>${topNames}</strong>). Place GTT limit orders before 9:00 AM. (${actionableSetups.length > 2 ? `${actionableSetups.length - 2} other candidates in line; ` : ''}${waitingSetups.length} stocks waiting in consolidation bases).`;
     } else {
-      heroActionText.innerHTML = `<span style="color: #38bdf8; font-weight: 700;">⌛ WAIT & WATCH:</span> 0 breakouts triggering today. All ${watchlist.length} watchlist stocks are consolidating inside bases. Let the bases mature.`;
+      heroActionText.innerHTML = `<span style="color: #38bdf8; font-weight: 700;">⌛ WAIT & WATCH:</span> 0 breakouts triggering today. All ${watchlist.length} watchlist stocks are consolidating inside bases. Standing by with 100% Cash until institutional volume ignites.`;
     }
   }
 
@@ -2093,6 +2177,407 @@ function renderSectorLeadership(watchlist, scanData) {
 
 
 // =====================================================================
+// MONITORED PORTFOLIO STORAGE & LIFECYCLE MANAGEMENT
+// =====================================================================
+const MONITORED_STORAGE_KEY = "smallcap_monitored_positions";
+const LOCAL_TRADES_KEY = "smallcap_local_closed_trades";
+
+function getLocalMonitoredPositions() {
+  try {
+    const raw = localStorage.getItem(MONITORED_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveLocalMonitoredPositions(list) {
+  try {
+    localStorage.setItem(MONITORED_STORAGE_KEY, JSON.stringify(list));
+  } catch (e) {
+    console.warn("Failed to save monitored positions:", e);
+  }
+}
+
+function getLocalClosedTrades() {
+  try {
+    const raw = localStorage.getItem(LOCAL_TRADES_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveLocalClosedTrades(list) {
+  try {
+    localStorage.setItem(LOCAL_TRADES_KEY, JSON.stringify(list));
+  } catch (e) {
+    console.warn("Failed to save local trades:", e);
+  }
+}
+
+function getAllMonitoredPositions(serverPositions) {
+  const serverList = Array.isArray(serverPositions) ? serverPositions : (serverPositions?.positions || []);
+  const localList = getLocalMonitoredPositions();
+
+  const map = new Map();
+  serverList.forEach(p => {
+    const sym = p.symbol || p.Symbol;
+    if (sym) map.set(sym, { ...p, symbol: sym });
+  });
+  localList.forEach(p => {
+    const sym = p.symbol || p.Symbol;
+    if (sym) {
+      if (!map.has(sym)) {
+        map.set(sym, { ...p, symbol: sym });
+      } else {
+        map.set(sym, { ...map.get(sym), ...p, symbol: sym });
+      }
+    }
+  });
+  return Array.from(map.values());
+}
+
+function addMonitoredPosition(posData) {
+  const list = getLocalMonitoredPositions();
+  const sym = (posData.symbol || posData.Symbol || "").trim().toUpperCase();
+  if (!sym) return;
+
+  const idx = list.findIndex(p => (p.symbol || p.Symbol) === sym);
+  const newEntry = {
+    symbol: sym,
+    Symbol: sym,
+    entry_price: parseFloat(posData.entry_price || posData.buyPrice || 0),
+    qty: parseInt(posData.qty || posData.quantity || 1, 10),
+    entry_date: posData.entry_date || new Date().toISOString().split("T")[0],
+    stop: parseFloat(posData.stop || 0),
+    target: parseFloat(posData.target || 0),
+    added_at: new Date().toISOString()
+  };
+
+  if (idx >= 0) {
+    list[idx] = { ...list[idx], ...newEntry };
+  } else {
+    list.unshift(newEntry);
+  }
+  saveLocalMonitoredPositions(list);
+  showToast(`✅ ${sym} added to Monitored Portfolio! Monitoring active.`, "💼");
+
+  // Re-render open positions
+  renderOpenPositions(getAllMonitoredPositions(_cachedOpenPositions));
+}
+
+function removeMonitoredPosition(sym, exitPrice, exitDate, exitReason, portionPct = 100) {
+  const cleanSym = String(sym || "").trim().toUpperCase();
+  const list = getLocalMonitoredPositions();
+  const pos = list.find(p => (p.symbol || p.Symbol) === cleanSym) ||
+              (_cachedOpenPositions || []).find(p => (p.symbol || p.Symbol) === cleanSym);
+
+  if (!pos) {
+    showToast(`Position ${cleanSym} not found.`, "⚠️");
+    return;
+  }
+
+  const entry = parseFloat(pos.entry_price || 0);
+  const totalQty = parseInt(pos.qty || 1, 10);
+  const soldQty = portionPct === 50 ? Math.max(1, Math.floor(totalQty / 2)) : totalQty;
+  const remainingQty = totalQty - soldQty;
+
+  const grossPnl = (exitPrice - entry) * soldQty;
+  // 0.30% round-trip statutory fee deduction
+  const turnover = (entry * soldQty) + (exitPrice * soldQty);
+  const feeDeduction = turnover * 0.0015; // 0.15% each side = 0.30% total
+  const netPnl = Number((grossPnl - feeDeduction).toFixed(2));
+  const netReturnPct = Number((((exitPrice - entry) / entry) * 100 - 0.30).toFixed(2));
+
+  // Save to local closed trades
+  const closedTrades = getLocalClosedTrades();
+  closedTrades.unshift({
+    symbol: cleanSym,
+    entry_price: entry,
+    exit_price: exitPrice,
+    qty: soldQty,
+    entry_date: pos.entry_date || pos.added_at || "",
+    exit_date: exitDate || new Date().toISOString().split("T")[0],
+    gross_pnl: grossPnl,
+    net_pnl: netPnl,
+    net_return_pct: netReturnPct,
+    exit_reason: exitReason || "manual_exit",
+    portion: portionPct === 50 ? "50% Partial" : "100% Full"
+  });
+  saveLocalClosedTrades(closedTrades);
+
+  // Update or remove from monitored list
+  if (remainingQty > 0) {
+    const updated = list.map(p => {
+      if ((p.symbol || p.Symbol) === cleanSym) {
+        return { ...p, qty: remainingQty, stop: Number((entry * 1.0035).toFixed(2)) }; // Raised to Breakeven
+      }
+      return p;
+    });
+    saveLocalMonitoredPositions(updated);
+    showToast(`💰 Sold ${soldQty} shares of ${cleanSym}. Remaining ${remainingQty} shares trailing at Breakeven (₹${(entry * 1.0035).toFixed(2)})!`, "🏆", 4000);
+  } else {
+    const filtered = list.filter(p => (p.symbol || p.Symbol) !== cleanSym);
+    saveLocalMonitoredPositions(filtered);
+    showToast(`✅ Closed ${cleanSym}: Net P&L ₹${netPnl >= 0 ? '+' : ''}${netPnl.toLocaleString('en-IN')}`, netPnl >= 0 ? "💰" : "🛡️", 4000);
+  }
+
+  // Refresh views
+  renderOpenPositions(getAllMonitoredPositions(_cachedOpenPositions));
+}
+
+// =====================================================================
+// MONITORED PORTFOLIO BUY & SELL MODALS
+// =====================================================================
+function openBuyModal(prefill = {}) {
+  const modal = document.getElementById("recordBuyModal");
+  if (!modal) return;
+
+  const symInput = document.getElementById("buyStockSymbol");
+  const dateInput = document.getElementById("buyStockDate");
+  const priceInput = document.getElementById("buyStockPrice");
+  const qtyInput = document.getElementById("buyStockQty");
+  const stopInput = document.getElementById("buyStockStop");
+  const targetInput = document.getElementById("buyStockTarget");
+
+  if (symInput) symInput.value = (prefill.Symbol || prefill.symbol || "").toUpperCase();
+  if (dateInput) dateInput.value = prefill.entry_date || new Date().toISOString().split("T")[0];
+  if (priceInput) priceInput.value = prefill.pivot || prefill.price || prefill.Close || prefill.entry_price || "";
+  if (qtyInput) qtyInput.value = prefill.qty || 10;
+  if (stopInput) stopInput.value = prefill.effectiveStop || prefill.stop || "";
+  if (targetInput) targetInput.value = prefill.targetPrice || prefill.target || "";
+
+  modal.style.display = "flex";
+  if (symInput && !symInput.value) {
+    symInput.focus();
+  } else if (priceInput) {
+    priceInput.focus();
+  }
+}
+
+function closeBuyModal() {
+  const modal = document.getElementById("recordBuyModal");
+  if (modal) modal.style.display = "none";
+}
+
+let _currentSellPos = null;
+
+function openSellModal(prefill = {}) {
+  const modal = document.getElementById("recordSellModal");
+  if (!modal) return;
+
+  const sym = (prefill.symbol || prefill.Symbol || "").toUpperCase();
+  _currentSellPos = prefill;
+
+  const titleEl = document.getElementById("recordSellModalTitle");
+  if (titleEl) titleEl.textContent = `Record Sale & Lock Profit: ${sym}`;
+
+  const symHidden = document.getElementById("sellStockSymbol");
+  if (symHidden) symHidden.value = sym;
+
+  const dateInput = document.getElementById("sellStockDate");
+  if (dateInput) dateInput.value = new Date().toISOString().split("T")[0];
+
+  const priceInput = document.getElementById("sellStockPrice");
+  const close = parseFloat(prefill.close || prefill.entry || 0);
+  if (priceInput) priceInput.value = close > 0 ? close.toFixed(2) : "";
+
+  const typeSelect = document.getElementById("sellStockType");
+  if (typeSelect) typeSelect.value = prefill.portion === 50 ? "50" : "100";
+
+  const reasonSelect = document.getElementById("sellStockReason");
+  if (reasonSelect && prefill.reason) reasonSelect.value = prefill.reason;
+
+  const summaryBox = document.getElementById("recordSellSummaryBox");
+  const entry = parseFloat(prefill.entry || prefill.entry_price || 0);
+  const qty = parseInt(prefill.qty, 10) || 1;
+
+  if (summaryBox) {
+    summaryBox.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+        <span style="font-size: 14px; font-weight: 700; color: #fff;">${escapeHtml(sym)}</span>
+        <span style="font-size: 12px; color: var(--text-dim);">Currently Monitored: <strong>${qty} shares</strong></span>
+      </div>
+      <div style="display: flex; gap: 16px; font-size: 12.5px; color: var(--text-dim); flex-wrap: wrap;">
+        <div>Bought Price: <strong style="color: #fff;">${formatINR(entry)}</strong></div>
+        <div>Position Value: <strong style="color: #fff;">${formatINR(entry * qty)}</strong></div>
+      </div>
+    `;
+  }
+
+  function updateSellEstimate() {
+    const pnlNotice = document.getElementById("sellEstimatedPnlNotice");
+    if (!pnlNotice) return;
+
+    const sellPrice = parseFloat(priceInput?.value) || 0;
+    const portion = parseInt(typeSelect?.value, 10) || 100;
+    const soldQty = portion === 50 ? Math.max(1, Math.floor(qty / 2)) : qty;
+
+    if (sellPrice <= 0 || entry <= 0) {
+      pnlNotice.innerHTML = "";
+      return;
+    }
+
+    const turnover = (entry * soldQty) + (sellPrice * soldQty);
+    const statutoryFees = turnover * 0.0015; // 0.30% round-trip
+    const grossPnl = (sellPrice - entry) * soldQty;
+    const netPnl = grossPnl - statutoryFees;
+    const netReturnPct = (entry * soldQty) > 0 ? (netPnl / (entry * soldQty)) * 100 : 0;
+    const isWin = netPnl >= 0;
+
+    pnlNotice.innerHTML = `
+      <div style="background: rgba(30, 41, 59, 0.7); border: 1px solid ${isWin ? '#10b981' : '#ef4444'}; border-radius: 6px; padding: 10px 14px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span>Shares to Sell: <strong>${soldQty} of ${qty}</strong> (${portion}%)</span>
+          <span style="color: ${isWin ? '#10b981' : '#ef4444'}; font-size: 14px; font-weight: 800;">
+            Estimated Net PnL: ${isWin ? '+' : ''}${formatINR(netPnl)} (${isWin ? '+' : ''}${netReturnPct.toFixed(2)}%)
+          </span>
+        </div>
+        <div style="font-size: 11px; color: var(--text-dim); margin-top: 4px;">
+          Includes statutory friction deduction of ~${formatINR(statutoryFees)} (0.30% round-trip: STT, Stamp Duty, GST, Exchange).
+        </div>
+      </div>
+    `;
+  }
+
+  if (priceInput) priceInput.oninput = updateSellEstimate;
+  if (typeSelect) typeSelect.onchange = updateSellEstimate;
+  updateSellEstimate();
+
+  modal.style.display = "flex";
+  if (priceInput) priceInput.focus();
+}
+
+function closeSellModal() {
+  const modal = document.getElementById("recordSellModal");
+  if (modal) modal.style.display = "none";
+  _currentSellPos = null;
+}
+
+function initPortfolioModalListeners() {
+  // Add Bought Stock button on Monitored Portfolio tab
+  const addBtn = document.getElementById("addBoughtStockBtn");
+  if (addBtn) {
+    addBtn.addEventListener("click", () => openBuyModal());
+  }
+
+  // Buy Modal Close/Cancel
+  const buyCloseBtn = document.getElementById("recordBuyCloseBtn");
+  if (buyCloseBtn) buyCloseBtn.addEventListener("click", closeBuyModal);
+  const buyCancelBtn = document.getElementById("recordBuyCancelBtn");
+  if (buyCancelBtn) buyCancelBtn.addEventListener("click", closeBuyModal);
+  const buyBackdrop = document.getElementById("recordBuyBackdrop");
+  if (buyBackdrop) buyBackdrop.addEventListener("click", closeBuyModal);
+
+  // Buy Form Submit
+  const buyForm = document.getElementById("recordBuyForm");
+  if (buyForm) {
+    buyForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const sym = document.getElementById("buyStockSymbol")?.value.trim().toUpperCase();
+      const date = document.getElementById("buyStockDate")?.value || new Date().toISOString().split("T")[0];
+      const price = parseFloat(document.getElementById("buyStockPrice")?.value);
+      const qty = parseInt(document.getElementById("buyStockQty")?.value, 10);
+      const stop = parseFloat(document.getElementById("buyStockStop")?.value) || 0;
+      const target = parseFloat(document.getElementById("buyStockTarget")?.value) || 0;
+
+      if (!sym || isNaN(price) || price <= 0 || isNaN(qty) || qty <= 0) {
+        showToast("Please enter a valid stock symbol, buy price, and quantity.", "⚠️");
+        return;
+      }
+
+      addMonitoredPosition({
+        symbol: sym,
+        entry_price: price,
+        qty: qty,
+        entry_date: date,
+        stop: stop,
+        target: target
+      });
+
+      closeBuyModal();
+    });
+  }
+
+  // Sell Modal Close/Cancel
+  const sellCloseBtn = document.getElementById("recordSellCloseBtn");
+  if (sellCloseBtn) sellCloseBtn.addEventListener("click", closeSellModal);
+  const sellCancelBtn = document.getElementById("recordSellCancelBtn");
+  if (sellCancelBtn) sellCancelBtn.addEventListener("click", closeSellModal);
+  const sellBackdrop = document.getElementById("recordSellBackdrop");
+  if (sellBackdrop) sellBackdrop.addEventListener("click", closeSellModal);
+
+  // Sell Form Submit
+  const sellForm = document.getElementById("recordSellForm");
+  if (sellForm) {
+    sellForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const sym = document.getElementById("sellStockSymbol")?.value.trim().toUpperCase();
+      const date = document.getElementById("sellStockDate")?.value || new Date().toISOString().split("T")[0];
+      const exitPrice = parseFloat(document.getElementById("sellStockPrice")?.value);
+      const portion = parseInt(document.getElementById("sellStockType")?.value, 10) || 100;
+      const reason = document.getElementById("sellStockReason")?.value || "manual_exit";
+
+      if (!sym || isNaN(exitPrice) || exitPrice <= 0) {
+        showToast("Please enter a valid sell price.", "⚠️");
+        return;
+      }
+
+      removeMonitoredPosition(sym, exitPrice, date, reason, portion);
+      closeSellModal();
+    });
+  }
+
+  // Global delegated click listener for .btn-bought-trigger and .btn-sold-trigger
+  document.addEventListener("click", (e) => {
+    const buyTrigger = e.target.closest(".btn-bought-trigger");
+    if (buyTrigger) {
+      e.preventDefault();
+      e.stopPropagation();
+      const sym = buyTrigger.getAttribute("data-symbol") || "";
+      const price = parseFloat(buyTrigger.getAttribute("data-price")) || 0;
+      const stop = parseFloat(buyTrigger.getAttribute("data-stop")) || 0;
+      const target = parseFloat(buyTrigger.getAttribute("data-target")) || 0;
+      const qty = parseInt(buyTrigger.getAttribute("data-qty"), 10) || 10;
+      openBuyModal({
+        Symbol: sym,
+        pivot: price,
+        effectiveStop: stop,
+        targetPrice: target,
+        qty: qty
+      });
+      return;
+    }
+
+    const soldTrigger = e.target.closest(".btn-sold-trigger");
+    if (soldTrigger) {
+      e.preventDefault();
+      e.stopPropagation();
+      const sym = soldTrigger.getAttribute("data-symbol") || "";
+      const qty = parseInt(soldTrigger.getAttribute("data-qty"), 10) || 1;
+      const entry = parseFloat(soldTrigger.getAttribute("data-entry")) || 0;
+      const close = parseFloat(soldTrigger.getAttribute("data-close")) || entry;
+      openSellModal({
+        symbol: sym,
+        qty: qty,
+        entry: entry,
+        close: close
+      });
+      return;
+    }
+  });
+
+  // ESC key to close open modals
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      closeBuyModal();
+      closeSellModal();
+    }
+  });
+}
+
+// =====================================================================
 // ACTION-ORIENTED DECISION & PROBABLE OUTCOMES ENGINE
 // =====================================================================
 function computeStockDecision(item, scanData) {
@@ -2125,6 +2610,8 @@ function computeStockDecision(item, scanData) {
   const daysToEvent = item.next_event?.days_to_event;
   const hasEventLockout = (daysToEvent != null && daysToEvent <= 3);
 
+  const isConfirmedBreakout = Boolean(scanData && Array.isArray(scanData.signals) && scanData.signals.some(s => (s.Symbol || s.symbol) === item.Symbol));
+
   let verdict = "";
   let actionCategory = "WAIT"; // "ACTION" | "WAIT"
   let badgeText = "";
@@ -2149,22 +2636,30 @@ function computeStockDecision(item, scanData) {
     bannerClass = "cockpit-banner-warning";
     justification = `${item.Symbol} has a high-impact corporate announcement (${item.next_event?.type || 'earnings'}) in ${daysToEvent} trading session${daysToEvent === 1 ? '' : 's'}. Entering before binary news exposes your capital to sudden overnight gaps that bypass normal stop-loss orders.`;
     actionInstructions = `Wait for the corporate event numbers to be released and absorbed by the market. If the stock forms a post-earnings high-volume breakout, enter then with clean momentum.`;
+  } else if (isConfirmedBreakout) {
+    verdict = `🚀 TAKE ACTION TODAY: ENTER CONFIRMED BREAKOUT (IF GAP ≤ 1.5%)`;
+    actionCategory = "ACTION";
+    badgeText = `🚀 ACTION: BUY`;
+    badgeClass = "action-pill-success";
+    bannerClass = "cockpit-banner-success";
+    justification = `${item.Symbol} has closed above its 20-day resistance pivot (₹${pivot.toFixed(2)}) with institutional breakout volume (≥2.0× normal) confirming authentic institutional accumulation.`;
+    actionInstructions = `Enter at open tomorrow if the opening gap is within 1.5% of the pivot. Set safety stop loss at ₹${effectiveStop.toFixed(2)} and initial +2R target at ₹${targetPrice.toFixed(2)}. Buy ${qty} shares (total investment: ₹${totalCapitalRequired.toLocaleString('en-IN')}).`;
   } else if (isTopGrade && dist >= -1.0 && dist <= 0.2 && isCoiling) {
     verdict = `🎯 TAKE ACTION TODAY: PLACE GTT LIMIT ORDER @ PIVOT`;
     actionCategory = "ACTION";
     badgeText = `⚡ ACTION: GTT`;
     badgeClass = "action-pill-success";
     bannerClass = "cockpit-banner-success";
-    justification = `${item.Symbol} is a Grade ${grade} high-conviction leader hovering within ${Math.abs(dist).toFixed(2)}% of its 20-day breakout pivot (₹${pivot.toFixed(2)}). Selling volume has dried up, price volatility is tightly compressed, and institutional accumulation is active. The stock is coiled like a compressed spring ready to fire.`;
-    actionInstructions = `Place an automated GTT order in your broker (Zerodha Kite / Groww) right now. Trigger Price: ₹${pivot.toFixed(2)} | Limit Price: ₹${(pivot * 1.005).toFixed(2)} (+0.5% buffer) | Stop Loss: ₹${effectiveStop.toFixed(2)} | +2R Target: ₹${targetPrice.toFixed(2)} | Quantity: ${qty} shares (total investment: ₹${totalCapitalRequired.toLocaleString('en-IN')}).`;
-  } else if (dist > 0.2 && dist <= 4.0) {
-    verdict = `🚀 TAKE ACTION: ENTER CONFIRMED BREAKOUT (IF GAP ≤ 1.5%)`;
-    actionCategory = "ACTION";
-    badgeText = `🚀 ACTION: BUY`;
-    badgeClass = "action-pill-success";
-    bannerClass = "cockpit-banner-success";
-    justification = `${item.Symbol} has closed above its 20-day resistance pivot (₹${pivot.toFixed(2)}) with strong volume confirmation. The breakout is young (+${dist.toFixed(1)}% above pivot) and within safe entry range.`;
-    actionInstructions = `Enter at open or market if current price is within 1.5% of the pivot. Set initial stop loss at ₹${effectiveStop.toFixed(2)} and initial +2R target at ₹${targetPrice.toFixed(2)}. Buy exactly ${qty} shares to cap risk at 1% of capital.`;
+    justification = `${item.Symbol} is a Grade ${grade} leader hovering within ${Math.abs(dist).toFixed(2)}% of its 20-day breakout pivot (₹${pivot.toFixed(2)}). Volatility is tightly compressed like a spring ready to release, and volume has dried up.`;
+    actionInstructions = `Place an automated GTT order in your broker (Zerodha Kite / Groww) tonight. Trigger Price: ₹${pivot.toFixed(2)} | Limit Price: ₹${(pivot * 1.005).toFixed(2)} (+0.5% buffer) | Stop Loss: ₹${effectiveStop.toFixed(2)} | +2R Target: ₹${targetPrice.toFixed(2)} | Quantity: ${qty} shares (total investment: ₹${totalCapitalRequired.toLocaleString('en-IN')}).`;
+  } else if (dist > 0.2) {
+    verdict = `⏳ WAIT & WATCH — EXTENDED (+${dist.toFixed(1)}%) — DO NOT CHASE`;
+    actionCategory = "WAIT";
+    badgeText = `⏳ WAIT: EXTENDED`;
+    badgeClass = "action-pill-warning";
+    bannerClass = "cockpit-banner-warning";
+    justification = `${item.Symbol} is trading ${dist.toFixed(1)}% above its 20-day resistance pivot without a fresh high-volume institutional confirmation today. Never chase extended stocks after the move has begun.`;
+    actionInstructions = `Do not buy market shares right now. Wait for price to pull back toward the ₹${pivot.toFixed(2)} pivot level or consolidate with dry volume before considering entry.`;
   } else if (dist < -1.0 && dist >= -2.5) {
     verdict = `⏳ WAIT & WATCH — LATE-STAGE COILING (${Math.abs(dist).toFixed(1)}% to Pivot)`;
     actionCategory = "WAIT";
@@ -2494,6 +2989,16 @@ function applyWatchlistFiltering(watchlist, scanData) {
           <div style="display: flex; align-items: center; gap: 4px; flex-wrap: nowrap;">
             <button class="badge-gtt copy-gtt-btn" data-symbol="${item.Symbol}" data-gtt="${escapeHtml(gttOrderStr)}" title="Copy GTT order instruction to clipboard">
               📋 Copy GTT
+            </button>
+            <button class="btn btn-xs btn-bought-trigger"
+              data-symbol="${item.Symbol}"
+              data-price="${item.Close || dec.pivot}"
+              data-stop="${dec.effectiveStop.toFixed(2)}"
+              data-target="${dec.targetPrice.toFixed(2)}"
+              data-qty="${dec.qty}"
+              style="background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #6ee7b7; font-weight: 600; padding: 3px 7px; border-radius: 4px;"
+              title="I bought this stock — start automated monitoring">
+              ➕ Bought
             </button>
             <button class="btn btn-xs btn-outline-primary size-trade-btn" data-symbol="${item.Symbol}" title="Size this trade with Position Sizer">
               Size
@@ -3151,6 +3656,16 @@ async function toggleWatchlistDetail(row, item, scanData) {
                 title="Copy GTT Breakout & Stop order parameters for Zerodha Kite / Groww">
                 📋 GTT (${dec.qty} shs)
               </button>
+              <button class="btn btn-sm btn-bought-trigger"
+                data-symbol="${symbol}"
+                data-price="${item.Close || breakoutLevel}"
+                data-stop="${stopPrice}"
+                data-target="${targetPrice}"
+                data-qty="${dec.qty}"
+                style="background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #6ee7b7; font-weight: 600;"
+                title="I bought this stock — start automated monitoring">
+                ➕ I Bought This
+              </button>
               <span class="detail-hint">(Click row to collapse)</span>
             </div>
             <div id="earnings-warn-${symbol}"></div>
@@ -3178,6 +3693,17 @@ async function toggleWatchlistDetail(row, item, scanData) {
                 </div>
                 <div class="cockpit-text">
                   ${dec.actionInstructions}
+                </div>
+                <div style="margin-top: 10px;">
+                  <button class="btn btn-sm btn-bought-trigger"
+                    data-symbol="${symbol}"
+                    data-price="${item.Close || breakoutLevel}"
+                    data-stop="${stopPrice}"
+                    data-target="${targetPrice}"
+                    data-qty="${dec.qty}"
+                    style="background: #10b981; color: #022c22; font-weight: 700; border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                    <span>➕</span><span>I Bought ${symbol} — Start Monitoring</span>
+                  </button>
                 </div>
               </div>
             </div>
@@ -3927,7 +4453,7 @@ async function renderOpenPositions(positions) {
   const posList = Array.isArray(positions)
     ? positions
     : (positions && Array.isArray(positions.positions) ? positions.positions : []);
-  positions = posList;
+  positions = getAllMonitoredPositions(posList);
 
   const countBadge = document.getElementById("openCountBadge");
   const countCard = document.getElementById("openPositionsCount");
@@ -3937,6 +4463,7 @@ async function renderOpenPositions(positions) {
   const heatSub = document.getElementById("openPortfolioHeatSub");
   const sectorAlert = document.getElementById("openPositionsSectorAlert");
   const tableBody = document.getElementById("openPositionsBody");
+  const adviceBox = document.getElementById("monitoredPositionsAdviceBox");
 
   const heatValEl = document.getElementById("portfolioHeatVal");
   const heatBarEl = document.getElementById("portfolioHeatBar");
@@ -3973,10 +4500,21 @@ async function renderOpenPositions(positions) {
       heatListEl.innerHTML = '<div style="font-size: 12px; color: var(--text-dim); padding: 8px;">No active open positions. Heat gauge is at 0.0% capacity.</div>';
     }
     if (concAlert) concAlert.style.display = "none";
+    if (adviceBox) adviceBox.style.display = "none";
     if (tableBody) {
       tableBody.innerHTML = `
-        <tr><td colspan="9" class="empty-state">💼 No active open positions recorded. Use /buy in Telegram to log trades.</td></tr>
+        <tr><td colspan="9" class="empty-state" style="padding: 32px 16px; text-align: center;">
+          <div style="font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 6px;">💼 No active open positions being monitored right now.</div>
+          <div style="font-size: 12.5px; color: var(--text-dim); margin-bottom: 16px; max-width: 480px; margin-inline: auto;">
+            When you buy shares on any recommendation, click <strong>&ldquo;➕ I Bought This&rdquo;</strong> to start automated daily monitoring! The system will calculate live profit and tell you exactly when to sell.
+          </div>
+          <button class="btn btn-sm btn-primary add-bought-manual-btn" style="margin: 0 auto; display: inline-flex; align-items: center; gap: 6px;">
+            <span>➕</span><span>Add Bought Stock Manually</span>
+          </button>
+        </td></tr>
       `;
+      const btn = tableBody.querySelector(".add-bought-manual-btn");
+      if (btn) btn.onclick = () => openBuyModal();
     }
     return;
   }
@@ -3989,8 +4527,10 @@ async function renderOpenPositions(positions) {
   let totalRiskAmount = 0;
   const rows = [];
   const perNameHeatItems = [];
+  const adviceItems = [];
 
-  for (const pos of positions) {
+  for (let idx = 0; idx < positions.length; idx++) {
+    const pos = positions[idx];
     const entry = parseFloat(pos.entry_price) || 0;
     const qty = parseInt(pos.qty, 10) || 0;
     const stop = pos.stop ? parseFloat(pos.stop) : null;
@@ -4034,6 +4574,38 @@ async function renderOpenPositions(positions) {
 
     // Position Decision Engine (Action Directive, Justification, Steps & Outcomes)
     const posDec = computePositionDecision(pos, close, currentR, uPnlPct, daysHeld);
+
+    // Build plain-English daily advice item for monitored stock
+    adviceItems.push(`
+      <div class="monitored-advice-card" style="border-left: 4px solid ${posDec.action === 'EXIT' ? '#ef4444' : (posDec.action === 'BOOK_HALF' ? '#10b981' : (posDec.action === 'RATCHET' ? '#38bdf8' : '#64748b'))}; background: rgba(15, 23, 42, 0.65); padding: 12px 14px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.08);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 6px;">
+          <div style="font-size: 14px; font-weight: 700; color: #fff;">
+            ${escapeHtml(pos.symbol)}
+            <span style="font-size: 11.5px; font-weight: 600; color: var(--text-dim); margin-left: 6px;">(Bought @ ${formatINR(entry)} &times; ${qty} shs)</span>
+          </div>
+          <span class="action-pill ${posDec.badgeClass}" style="font-size: 11px; padding: 2px 8px;">${posDec.directive}</span>
+        </div>
+        <div style="font-size: 12.5px; color: #f8fafc; line-height: 1.5; margin-bottom: 6px;">
+          <strong style="color: var(--accent);">Action Today:</strong> ${posDec.instruction}
+        </div>
+        <div style="font-size: 12px; color: var(--text-dim); line-height: 1.4; margin-bottom: 8px;">
+          <strong>Why:</strong> ${posDec.justification}
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; padding-top: 6px; border-top: 1px dashed rgba(255,255,255,0.08);">
+          <span style="font-size: 12px; color: var(--text-dim);">
+            Live PnL: <strong style="color: ${unrealized >= 0 ? '#10b981' : '#ef4444'}">${pnlSign}${formatINR(unrealized)} (${pnlSign}${uPnlPct.toFixed(1)}%)</strong> | R-Mult: <strong>${currentR >= 0 ? '+' : ''}${currentR.toFixed(2)}R</strong>
+          </span>
+          <button class="btn btn-xs btn-sold btn-sold-trigger"
+            data-symbol="${escapeHtml(pos.symbol)}"
+            data-qty="${qty}"
+            data-entry="${entry}"
+            data-close="${close.toFixed(2)}"
+            style="background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #fca5a5; font-weight: 700; padding: 3px 10px; border-radius: 4px;">
+            💰 I Sold This Stock
+          </button>
+        </div>
+      </div>
+    `);
 
     // Stop/Target/Trail State and Active Exit Rule text aligned with Rules 09, 11, 13
     let trailState = "Initial Stop";
@@ -4123,6 +4695,15 @@ async function renderOpenPositions(positions) {
         <td data-label="Days Held"><span class="badge badge-neutral">${daysHeld}d</span></td>
         <td data-label="Actions">
           <div style="display: flex; gap: 6px; align-items: center; flex-wrap: nowrap;" onclick="event.stopPropagation();">
+            <button class="btn btn-xs btn-sold btn-sold-trigger"
+              data-symbol="${escapeHtml(pos.symbol)}"
+              data-qty="${qty}"
+              data-entry="${entry}"
+              data-close="${close.toFixed(2)}"
+              style="background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #fca5a5; font-weight: 600;"
+              title="Record that you sold this stock (partial or full exit)">
+              💰 I Sold This
+            </button>
             <button class="btn btn-xs btn-outline-primary copy-sl-target-btn"
               data-symbol="${escapeHtml(pos.symbol)}"
               data-stop="${stop ? stop.toFixed(2) : ''}"
@@ -4221,9 +4802,39 @@ async function renderOpenPositions(positions) {
             </div>
             <div style="font-size: 13px; color: #e2e8f0; line-height: 1.5;">${escapeHtml(activeExitRule)}</div>
           </div>
+
+          <!-- Quick Exit Button in Drawer -->
+          <div style="margin-top: 14px; padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.08); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+            <button class="btn btn-sm btn-sold btn-sold-trigger"
+              data-symbol="${escapeHtml(pos.symbol)}"
+              data-qty="${qty}"
+              data-entry="${entry}"
+              data-close="${close.toFixed(2)}"
+              style="background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #fca5a5; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 6px;">
+              <span>💰</span><span>I Sold This Stock — Record Exit &amp; Lock PnL</span>
+            </button>
+            <span style="font-size: 11.5px; color: var(--text-dim);">Deducts 0.30% round-trip statutory STT/fees &amp; updates equity history automatically.</span>
+          </div>
         </td>
       </tr>
     `);
+  }
+
+  // Render plain-English advice box for all monitored open positions
+  if (adviceBox) {
+    if (adviceItems.length > 0) {
+      adviceBox.style.display = "block";
+      adviceBox.innerHTML = `
+        <div style="font-size: 12.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--accent); margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+          <span>🎯</span><span>Daily Exit &amp; Holding Instructions for Your Monitored Stocks</span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px;">
+          ${adviceItems.join("")}
+        </div>
+      `;
+    } else {
+      adviceBox.style.display = "none";
+    }
   }
 
   // Update Summary Cards
@@ -4397,7 +5008,8 @@ function renderHistory(trades) {
   const tradeList = Array.isArray(trades)
     ? trades
     : (trades && Array.isArray(trades.trades) ? trades.trades : []);
-  trades = tradeList;
+  const localList = getLocalClosedTrades();
+  trades = [...localList, ...tradeList];
   _cachedTradesData = trades;
   const tableBody = document.getElementById("tradesBody");
   const countStatus = document.getElementById("historyCountStatus");
@@ -5418,6 +6030,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // Initialize SC-UX1: Responsive Header Menu & Playbook Cheat Strip
   safeInit(initHeaderMenu, "initHeaderMenu");
   safeInit(initPlaybookCheatStrip, "initPlaybookCheatStrip");
+
+  // Initialize Monitored Portfolio Modals & Event Handlers
+  safeInit(initPortfolioModalListeners, "initPortfolioModalListeners");
 
   // Initialize Watchlist filter chips and search listeners immediately
   safeInit(initWatchlistFilterListeners, "initWatchlistFilterListeners");

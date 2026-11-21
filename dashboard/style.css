@@ -108,7 +108,7 @@ body {
 /* 3. SINGLE UNIFIED PAGE CONTAINER */
 .page-container {
   width: 100%;
-  max-width: 100%;
+  max-width: 1440px;
   margin-inline: auto;
   padding-inline: clamp(16px, 2.5vw, 36px);
   box-sizing: border-box;
@@ -6642,4 +6642,351 @@ th .term-lookup {
   font-size: 12px;
   color: #94a3b8;
   line-height: 1.45;
+}
+
+/* =====================================================================
+   WORLD-CLASS PERSONAL WEALTH GUIDE - ACTION TIMELINE & SPOTLIGHT CARDS
+   ===================================================================== */
+
+/* ⏰ Action Timeline Card */
+.action-timeline-card {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.8) 0%, rgba(30, 41, 59, 0.6) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-top: 14px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+}
+
+.action-timeline-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 10px;
+}
+
+.timeline-title-icon {
+  font-size: 24px;
+}
+
+.timeline-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.01em;
+}
+
+.timeline-subtitle {
+  font-size: 11.5px;
+  color: var(--text-dim);
+}
+
+.action-timeline-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
+  gap: 14px;
+}
+
+.timeline-phase-box {
+  background: rgba(11, 15, 25, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 8px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.phase-tonight { border-left: 3px solid #38bdf8; }
+.phase-market { border-left: 3px solid #10b981; }
+.phase-close { border-left: 3px solid #f59e0b; }
+
+.phase-badge {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 2px 8px;
+  border-radius: 4px;
+  display: inline-block;
+  width: fit-content;
+}
+
+.badge-tonight { background: rgba(56, 189, 248, 0.15); color: #38bdf8; }
+.badge-market { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+.badge-close { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+
+.phase-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.phase-desc {
+  font-size: 12px;
+  color: #94a3b8;
+  line-height: 1.45;
+}
+
+/* 🎯 Today's Priority Spotlight Recommendations */
+.spotlight-container {
+  margin-top: 16px;
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 18px 20px;
+}
+
+.spotlight-header {
+  margin-bottom: 14px;
+}
+
+.spotlight-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: #fff;
+}
+
+.spotlight-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(380px, 100%), 1fr));
+  gap: 16px;
+}
+
+.spotlight-card {
+  background: linear-gradient(135deg, rgba(20, 29, 47, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%);
+  border: 1.5px solid rgba(16, 185, 129, 0.4);
+  border-radius: 10px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: relative;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.spotlight-card.alternate {
+  border-color: rgba(56, 189, 248, 0.4);
+}
+
+.spotlight-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.spotlight-rank-badge {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, #10b981, #059669);
+  color: #fff;
+}
+
+.spotlight-card.alternate .spotlight-rank-badge {
+  background: linear-gradient(90deg, #38bdf8, #0284c7);
+}
+
+.spotlight-symbol {
+  font-size: 18px;
+  font-weight: 800;
+  color: #fff;
+}
+
+.spotlight-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.spotlight-metric-box {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  padding: 8px 10px;
+  text-align: center;
+}
+
+.spotlight-metric-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #94a3b8;
+  margin-bottom: 2px;
+}
+
+.spotlight-metric-val {
+  font-family: var(--font-mono, monospace);
+  font-size: 14px;
+  font-weight: 800;
+  color: #fff;
+}
+
+.val-green { color: #34d399; }
+.val-red { color: #f87171; }
+.val-cyan { color: #38bdf8; }
+
+.spotlight-rationale {
+  font-size: 12.5px;
+  color: #cbd5e1;
+  line-height: 1.5;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 10px 12px;
+  border-radius: 6px;
+  border-left: 2px solid #10b981;
+}
+
+.spotlight-card.alternate .spotlight-rationale {
+  border-left-color: #38bdf8;
+}
+
+.spotlight-action-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.btn-bought {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #fff;
+  border: none;
+  font-weight: 700;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-bought:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.btn-sold {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: #fff;
+  border: none;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 11.5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-sold:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
+/* 💼 Monitored Portfolio Bar & Directives */
+.monitored-portfolio-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 14px 18px;
+  margin-bottom: 16px;
+}
+
+.monitored-advice-card {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  border-radius: 10px;
+  padding: 14px 18px;
+  margin-bottom: 16px;
+}
+
+.advice-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.advice-item:last-child {
+  border-bottom: none;
+}
+
+.advice-icon {
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+.advice-text {
+  font-size: 13px;
+  color: #e2e8f0;
+  line-height: 1.5;
+}
+
+/* Portfolio Modals */
+.portfolio-modal-dialog {
+  max-width: 540px;
+  background: #0f172a;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+}
+
+.portfolio-modal-body {
+  padding: 20px;
+}
+
+.modal-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.form-group label {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #cbd5e1;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.form-input {
+  background: #1e293b;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  padding: 10px 12px;
+  color: #fff;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.form-input:focus {
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
 }

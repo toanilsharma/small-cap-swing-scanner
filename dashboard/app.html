@@ -1309,7 +1309,7 @@
                     <span class="timeline-step-title">7. Manage Mechanically</span>
                     <span class="timeline-step-time">Next Sessions</span>
                   </div>
-                  <p class="timeline-step-desc">Place your Stop-Loss GTT order on your broker terminal. If unrealized profit reaches <strong>+1.0R</strong>, immediately ratchet stop loss to <strong>Entry &times; 1.0035</strong> (breakeven + statutory fee buffer). If trade makes zero progress in <strong>5 trading days</strong> and closes below the 10-day EMA, cut it via the time stop.</p>
+                  <p class="timeline-step-desc">Place your Stop-Loss GTT order on your broker terminal. If unrealized profit reaches <strong>+1.5R</strong> at daily close, ratchet stop loss to <strong>Entry &times; 1.0035</strong> (breakeven + 0.35% statutory fee buffer) effective next trading session. If trade makes zero progress in <strong>8 trading days</strong> (<code>Close &le; Entry</code> and <code>Close &lt; EMA10</code>), cut it mechanically via the dead-money time stop to preserve capital velocity.</p>
                 </div>
               </div>
 
@@ -1435,12 +1435,11 @@
                   </div>
                   <div class="phase-math-box">
                     <div class="latex-display">
-                      $$ \text{Size}_{\text{final}} = \min \left( \left\lfloor \frac{\text{Capital} \times \text{RiskPct}}{P_{\text{entry}} - \text{SL}} \right\rfloor, \; \left\lfloor \frac{\text{Capital} \times \text{MaxGapLossPct}}{P_{\text{entry}} \times \text{WorstCaseGapPct}} \right\rfloor, \; \left\lfloor \frac{0.01 \times \text{ADV}_{20}}{P_{\text{entry}}} \right\rfloor \right) $$
+                      $$ \text{Size}_{\text{final}} = \min \left( \left\lfloor \frac{\mathcal{C}_{\text{eff}} \times f_{\text{Kelly}}}{P_{\text{entry}} - \text{SL}} \right\rfloor, \; \left\lfloor \frac{\mathcal{C}_{\text{eff}} \times 0.030}{P_{\text{entry}} \times 0.20} \right\rfloor, \; \left\lfloor \frac{0.01 \times \text{ADV}_{20}}{P_{\text{entry}}} \right\rfloor \right) $$
                       $$ \begin{aligned}
-                      &\text{Parameters}: \quad \text{Capital} = \text{₹}200{,}000, \quad \text{RiskPct} = 0.01 \; (1\%), \quad \mathcal{R}_{\text{budget}} = \text{₹}200{,}000 \times 0.01 = \text{₹}2{,}000.00 \\
-                      &\text{Stop-Loss}: \quad P_{\text{entry}} = \text{₹}100.00, \quad \text{ATR}_{14} = \text{₹}2.00 \implies \text{SL} = P_{\text{entry}} - (2.0 \times \text{ATR}_{14}) = \text{₹}96.00 \\
-                      &\text{Unit Risk}: \quad \Delta \mathcal{R} = P_{\text{entry}} - \text{SL} = \text{₹}100.00 - \text{₹}96.00 = \text{₹}4.00 \quad (4.0\% \le 8.5\%\text{ Max Floor}) \\
-                      &\text{Execution}: \quad \text{Size} = \left\lfloor \frac{\text{₹}2{,}000.00}{\text{₹}4.00} \right\rfloor = \mathbf{500\text{ units}}, \quad \text{Target}_{+2\mathcal{R}} = P_{\text{entry}} + (2 \times \Delta \mathcal{R}) = \mathbf{\text{₹}108.00}
+                      &\text{Compounding}: \quad \mathcal{C}_{\text{eff}} = \max\left(0.50 \cdot \mathcal{C}_{\text{initial}}, \; \mathcal{C}_{\text{initial}} + \sum \text{NetPnL}\right), \quad f_{\text{Kelly}} = 0.010 \text{ (Grade A)} \; / \; 0.0125 \text{ (Grade A}^+) \\
+                      &\text{Gap Defense}: \quad \text{MaxGapLossPct} = 0.030 \; (3.0\%), \; \text{WorstCaseGap} = 0.20 \; (-20\%\text{ lower circuit}) \implies \text{Max Allocation} = 15\% \\
+                      &\text{Adaptive SL}: \quad \text{Breakout}: P_{\text{entry}} - 2.0\text{ATR} \quad | \quad \text{Pullback/Spring}: \min(\text{Low} - 0.25\text{ATR}, P_{\text{entry}} - 1.5\text{ATR}) \quad [\text{Cap } \le 8.5\%]
                       \end{aligned} $$
                     </div>
                   </div>
@@ -1451,11 +1450,11 @@
                   <div class="phase-meta">
                     <span class="phase-badge buy-phase">PHASE 03</span>
                     <div class="phase-title">GTT Limit Order Parameters</div>
-                    <div class="phase-desc">Automated limit execution. Places order trigger at 20-day high pivot with a +0.5% limit buffer to eliminate market slippage.</div>
+                    <div class="phase-desc">Automated limit execution. Places order trigger at resistance pivot with a +1.5% limit buffer to eliminate small-cap slippage without missing opening fills.</div>
                   </div>
                   <div class="phase-math-box">
                     <div class="latex-display">
-                      $$ P_{\text{trigger}} = P_{\text{pivot}}, \quad P_{\text{limit}} = P_{\text{trigger}} \times (1 + \delta_{\text{slippage}}) = P_{\text{trigger}} \times 1.005 $$
+                      $$ P_{\text{trigger}} = P_{\text{pivot}}, \quad P_{\text{limit}} = P_{\text{trigger}} \times (1 + \delta_{\text{slippage}}) = P_{\text{trigger}} \times 1.015 $$
                       $$ \text{Validity} = \text{GTC} \lor \tau \le 7\text{ days}, \quad \text{OrderType} \neq \text{MARKET} $$
                     </div>
                   </div>
@@ -1466,13 +1465,13 @@
                   <div class="phase-meta">
                     <span class="phase-badge buy-phase">PHASE 04</span>
                     <div class="phase-title">Morning Gap Decision Invariant</div>
-                    <div class="phase-desc">Deterministic 9:15 AM opening auction rule. Prevents chasing gap-ups beyond the acceptable statistical threshold.</div>
+                    <div class="phase-desc">Deterministic 9:15 AM opening auction rule. Prevents chasing gap-ups beyond the +1.5% small-cap limit threshold.</div>
                   </div>
                   <div class="phase-math-box">
                     <div class="latex-display">
                       $$ \text{OrderAction}(P_{\text{open}}) = \begin{cases}
-                      \text{CANCEL\_ORDER}, & \text{if } \dfrac{P_{\text{open}} - P_{\text{trigger}}}{P_{\text{trigger}}} \gt 0.02 \\[8pt]
-                      \text{EXECUTE\_FILL}, & \text{if } \left| \dfrac{P_{\text{open}} - P_{\text{trigger}}}{P_{\text{trigger}}} \right| \le 0.005 \\[8pt]
+                      \text{CANCEL\_ORDER}, & \text{if } \dfrac{P_{\text{open}} - P_{\text{trigger}}}{P_{\text{trigger}}} \gt 0.015 \\[8pt]
+                      \text{EXECUTE\_FILL}, & \text{if } 0 \le \dfrac{P_{\text{open}} - P_{\text{trigger}}}{P_{\text{trigger}}} \le 0.015 \\[8pt]
                       \text{REST\_ORDER}, & \text{otherwise}
                       \end{cases} $$
                     </div>
@@ -1510,12 +1509,12 @@
                   <div class="phase-meta">
                     <span class="phase-badge buy-phase">SCENARIO B</span>
                     <div class="phase-title">Asymmetric $+2\mathcal{R}$ Take-Profit &amp; Breakeven Ratchet (+0.35% Fee Buffer)</div>
-                    <div class="phase-desc">Locks in gain by selling 50% shares at +2R target, ratchets stop to Entry &times; 1.0035 (breakeven + statutory fee buffer) when unrealized gain reaches +1.0R, and trails runner on 20 EMA.</div>
+                    <div class="phase-desc">Locks in gain by selling 50% shares at +2R target. When unrealized gain reaches +1.5R at daily close, ratchets stop to Entry &times; 1.0035 (breakeven + statutory fee buffer) effective next trading session. Trails remaining runner on daily 20 EMA.</div>
                   </div>
                   <div class="phase-math-box">
                     <div class="latex-display">
-                      $$ P_t \ge \text{Target}_{+2\mathcal{R}} \implies \text{SELL}\left(\left\lfloor 0.50 \cdot \text{Qty} \right\rfloor\right) \quad \land \quad \text{SL}_t \gets \max(\text{SL}_{t-1}, P_{\text{entry}} \times 1.0035) $$
-                      $$ \text{Unrealized Gain} \ge +1.0R \implies \text{SL} \gets \text{Entry} \times 1.0035 \quad (\text{Fee-Buffered Ratchet}) $$
+                      $$ P_t \ge \text{Target}_{+2\mathcal{R}} \implies \text{SELL}\left(\left\lfloor 0.50 \cdot \text{Qty} \right\rfloor\right) \quad \land \quad \text{SL}_{t+1} \gets \max(\text{SL}_t, P_{\text{entry}} \times 1.0035) $$
+                      $$ \text{Unrealized Gain}_t \ge +1.5\mathcal{R} \implies \text{SL}_{t+1} \gets \max(\text{SL}_t, \text{Entry} \times 1.0035) \quad (\text{Fee-Buffered Non-Retroactive Ratchet}) $$
                     </div>
                   </div>
                 </div>
@@ -1524,12 +1523,12 @@
                 <div class="execution-phase-row">
                   <div class="phase-meta">
                     <span class="phase-badge sell-phase">SCENARIO C</span>
-                    <div class="phase-title">5-Day Dead-Money Time Stop (Refined)</div>
-                    <div class="phase-desc">Opportunity cost protection. Liquidates stalled positions after 5 trading days only if price fails to hold above entry AND closes below the 10-day EMA.</div>
+                    <div class="phase-title">8-Day Dead-Money Time Stop (Actual Trading Days)</div>
+                    <div class="phase-desc">Opportunity cost protection. Evaluates actual NSE trading sessions held (via count_trading_days_held). Liquidates stalled positions after 8 trading days only if price fails to hold above entry AND closes below the 10-day EMA.</div>
                   </div>
                   <div class="phase-math-box">
                     <div class="latex-display">
-                      $$ (\Delta t_{\text{held}} \ge 5\text{ days}) \land (P_{\text{close}} \le \text{Entry}) \land (P_{\text{close}} &lt; \text{EMA}_{10}) \implies \text{EXIT AT CLOSE } (100\%) $$
+                      $$ (\Delta t_{\text{held}} \ge 8\text{ trading days}) \land (P_{\text{close}} \le \text{Entry}) \land (P_{\text{close}} &lt; \text{EMA}_{10}) \implies \text{EXIT AT CLOSE } (100\%) $$
                     </div>
                   </div>
                 </div>
@@ -1555,7 +1554,7 @@
           <article id="help-rules-regulations" class="help-section">
             <div class="help-section-header">
               <h2 class="help-section-title"><span>⚖️</span> SYSTEM RULES &amp; INVARIANTS</h2>
-              <p class="help-section-subtitle">Authoritative mathematical specifications of all 17 system rules, constraints, and execution invariants from <code>main.py</code></p>
+              <p class="help-section-subtitle">Authoritative mathematical specifications of all 18 system rules, constraints, and execution invariants from <code>main.py</code></p>
             </div>
 
             <!-- QUANT PANEL I -->
@@ -1674,13 +1673,14 @@
                 <div class="quant-rule-row">
                   <div class="quant-rule-meta">
                     <span class="quant-rule-tag">RULE 07</span>
-                    <h4 class="quant-rule-name">Breakout Quality, Exhaustion Cap &amp; Institutional Delivery Accumulation Gate</h4>
-                    <p class="quant-rule-note">Requires volume expansion &ge;2.0&times; 20-day average, session close in upper 40% (CLV &ge; 0.60), non-exhaustion range &le;2.2&times; ATR<sub>14</sub>, pivot extension &le;4%, and authentic delivery accumulation (&ge;35% delivery or &ge;1.5&times; 20-day delivery volume).</p>
+                    <h4 class="quant-rule-name">Breakout Quality, Exhaustion Cap, Institutional Pullback Bounce &amp; Priority</h4>
+                    <p class="quant-rule-note">Breakout requires volume expansion &ge;1.5&times; VOL20 or &ge;1.5&times; VOL50 AND &ge;1.3&times; prior bar volume, session close in upper 40% (CLV &ge; 0.60), non-exhaustion range &le;2.2&times; ATR<sub>14</sub>, pivot extension &le;4%, and authentic order flow (CMF20 &ge; 0.05 and OBV &gt; OBV_HIGH20). Institutional Pullback requires rising 20-EMA, 1&ndash;3 bar support test within 1.5% of EMA20, Low &ge; SMA50, reversal confirmation (Close &gt; EMA20, Close &gt; Open, Close &gt; prior High, CLV &ge; 0.60), and bounce volume &ge; 0.9&times; VOL20 after quiet bar (&lt; VOL50). Setup priority: BREAKOUT (0) &gt; SPRING (1) &gt; PULLBACK (2).</p>
                   </div>
                   <div class="quant-rule-formula">
                     <div class="latex-display">
-                      $$ V_{\text{breakout}} \ge 2.0 \times \bar{V}_{20} \quad \land \quad \text{CLV} \ge 60\% \quad \land \quad \text{Range} \le 2.2 \times \text{ATR}_{14} \quad \land \quad P_{\text{close}} \le P_{\text{pivot}} \times 1.04 $$
-                      $$ \text{DeliveryGate} \iff \Big( \text{DelivPct} \ge 35\% \;\lor\; \text{DelivVol} \ge 1.5 \times \overline{\text{DelivVol}}_{20d} \Big) \quad [\text{Fallback: CMF}_{20} \ge -0.05 \land \text{OBV High}] $$
+                      $$ V_{\text{breakout}} \ge \max(1.5 \cdot \bar{V}_{20}, 1.5 \cdot \bar{V}_{50}) \;\land\; V_t \ge 1.3 \cdot V_{t-1} \;\land\; \text{CLV} \ge 60\% \;\land\; \text{Range} \le 2.2 \cdot \text{ATR}_{14} \;\land\; P_{\text{close}} \le P_{\text{pivot}} \times 1.04 $$
+                      $$ \text{OrderFlowGate} \iff \text{CMF}_{20} \ge 0.05 \;\land\; \text{OBV}_t \gt \max_{1 \le i \le 20} \text{OBV}_{t-i} $$
+                      $$ \text{SetupPriority} \implies \text{BREAKOUT} \; (0) \succ \text{SPRING} \; (1) \succ \text{PULLBACK} \; (2) $$
                     </div>
                   </div>
                 </div>
@@ -1701,13 +1701,13 @@
                 <div class="quant-rule-row">
                   <div class="quant-rule-meta">
                     <span class="quant-rule-tag">RULE 08</span>
-                    <h4 class="quant-rule-name">Tiered Fixed-Fractional Sizing &amp; Sector Concentration Guard</h4>
-                    <p class="quant-rule-note">Risk budget tiered by setup grade: 1.5% for Grade A+ (Score &ge; 80), 1.0% for Grade A (Score &ge; 70). Capped at 2.5% portfolio gap loss and 1% of ADV<sub>20</sub>. Sector concentration strictly capped at max 2 positions per industry.</p>
+                    <h4 class="quant-rule-name">Compounding Tiered Sizing, 3% Gap Loss &amp; Industry Group Isolation</h4>
+                    <p class="quant-rule-note">Position size automatically compounds via get_effective_capital(). Risk budget tiered by Kelly fraction / setup grade (1.0% Grade A, 1.25% Grade A+). Individual small-cap allocation capped at 15% (3.0% gap loss against 20% lower circuit) and 1% of ADV<sub>20</sub>. Official NSE smallcap_industries.json mapping enforces max 2 positions per industry group, with unmapped tickers defaulting to unique groups to prevent false sector blocking.</p>
                   </div>
                   <div class="quant-rule-formula">
                     <div class="latex-display">
-                      $$ \mathcal{R}_{\text{budget}} = \begin{cases} 0.015 \times \mathcal{C}_{\text{portfolio}} \quad (₹3{,}000), & \text{if Grade A}^+ \; (\text{Score} \ge 80) \\[4pt] 0.010 \times \mathcal{C}_{\text{portfolio}} \quad (₹2{,}000), & \text{if Grade A} \; (\text{Score} \ge 70) \end{cases} $$
-                      $$ Q^* = \min \left( \left\lfloor \frac{\mathcal{R}_{\text{budget}}}{P_{\text{entry}} - \text{SL}_{\text{eff}}} \right\rfloor, \; \left\lfloor \frac{\mathcal{C}_{\text{portfolio}} \times 0.025}{P_{\text{entry}} \times 0.20} \right\rfloor, \; \left\lfloor \frac{0.01 \times \text{ADV}_{20}}{P_{\text{entry}}} \right\rfloor \right) \quad \land \quad N_{\text{sector}} \le 2 $$
+                      $$ \mathcal{C}_{\text{eff}} = \max\left(0.50 \cdot \mathcal{C}_{\text{initial}}, \; \mathcal{C}_{\text{initial}} + \sum \text{NetPnL}\right), \quad \mathcal{R}_{\text{budget}} = f_{\text{Kelly}} \times \mathcal{C}_{\text{eff}} $$
+                      $$ Q^* = \min \left( \left\lfloor \frac{\mathcal{R}_{\text{budget}}}{P_{\text{entry}} - \text{SL}_{\text{eff}}} \right\rfloor, \; \left\lfloor \frac{\mathcal{C}_{\text{eff}} \times 0.030}{P_{\text{entry}} \times 0.20} \right\rfloor, \; \left\lfloor \frac{0.01 \times \text{ADV}_{20}}{P_{\text{entry}}} \right\rfloor \right) \quad \land \quad N_{\text{industry}} \le 2 $$
                     </div>
                   </div>
                 </div>
@@ -1716,13 +1716,13 @@
                 <div class="quant-rule-row">
                   <div class="quant-rule-meta">
                     <span class="quant-rule-tag">RULE 09</span>
-                    <h4 class="quant-rule-name">Volatility Stop-Loss (2.0&times; ATR) &amp; 8.5% Hard Risk Ceiling</h4>
-                    <p class="quant-rule-note">Initial stop is set at Entry &minus; 2.0 &times; ATR<sub>14</sub>, bounded by an uncompromising hard ceiling of 8.5% maximum risk.</p>
+                    <h4 class="quant-rule-name">Adaptive Volatility Stop-Loss &amp; 8.5% Hard Risk Ceiling</h4>
+                    <p class="quant-rule-note">Breakout stop is set at Entry &minus; 2.0 &times; ATR<sub>14</sub> or swing low. PULLBACK and SPRING stops are set adaptively at min(Low &minus; 0.25&times; ATR, Entry &minus; 1.5&times; ATR) to provide breathing room against noise. All stops are bounded by an uncompromising hard ceiling of 8.5% maximum risk.</p>
                   </div>
                   <div class="quant-rule-formula">
                     <div class="latex-display">
-                      $$ \text{SL}_{\text{raw}} = \text{Entry} - (2.0 \times \text{ATR}_{14}) $$
-                      $$ \text{SL}_{\text{effective}} = \max(\text{SL}_{\text{raw}}, \; \text{Entry} \times 0.915) \quad (\text{Max Risk Ceiling} \le 8.5\%) $$
+                      $$ \text{SL}_{\text{breakout}} = \text{Entry} - (2.0 \times \text{ATR}_{14}), \quad \text{SL}_{\text{pullback/spring}} = \min(\text{Low} - 0.25 \times \text{ATR}_{14}, \; \text{Entry} - 1.5 \times \text{ATR}_{14}) $$
+                      $$ \text{SL}_{\text{effective}} = \max(\text{SL}_{\text{raw}}, \; \text{Entry} \times 0.915) \quad (\text{Hard Risk Ceiling} \le 8.5\%) $$
                     </div>
                   </div>
                 </div>
@@ -1731,13 +1731,13 @@
                 <div class="quant-rule-row">
                   <div class="quant-rule-meta">
                     <span class="quant-rule-tag">RULE 15</span>
-                    <h4 class="quant-rule-name">Portfolio Heat Gauge &amp; Sector Cap</h4>
-                    <p class="quant-rule-note">Total cumulative open risk across concurrent positions cannot exceed 5% of portfolio (₹10,000 on ₹2,00,000 capital). Tiered risk budget: 1.0% for Grade A / 1.5% for Grade A+ (or up to 5 concurrent positions at 1.0% each). Sector exposure is strictly capped at max 1 position per sector (or 2 when max positions = 5).</p>
+                    <h4 class="quant-rule-name">Portfolio Heat Gauge &amp; Concurrent Exposure Ceiling</h4>
+                    <p class="quant-rule-note">Total cumulative open risk across concurrent positions cannot exceed 6% of portfolio (₹12,000 on ₹2,00,000 capital). Maximum 6 concurrent small-cap positions at ~1.0% risk each (up to 90% capital deployment with 10% cash buffer). Industry concentration strictly capped at max 2 positions per industry group.</p>
                   </div>
                   <div class="quant-rule-formula">
                     <div class="latex-display">
-                      $$ \mathcal{H}_{\text{portfolio}}(t) = \sum_{k=1}^{N_{\text{active}}} \left( P_{\text{entry}, k} - \text{SL}_k(t) \right) \times Q_k \le 0.05 \times \mathcal{C}_{\text{portfolio}} \quad (₹10{,}000 \text{ Max Heat}) $$
-                      $$ N_{\text{active}} \le 5 \quad \land \quad \mathcal{R}_{\text{trade}} \in \{0.010, 0.015\} \times \mathcal{C}_{\text{portfolio}} \quad \land \quad \text{Sector Exposure} \le 1\text{ position per sector} $$
+                      $$ \mathcal{H}_{\text{portfolio}}(t) = \sum_{k=1}^{N_{\text{active}}} \left( P_{\text{entry}, k} - \text{SL}_k(t) \right) \times Q_k \le 0.06 \times \mathcal{C}_{\text{portfolio}} \quad (₹12{,}000 \text{ Max Heat}) $$
+                      $$ N_{\text{active}} \le 6 \quad \land \quad \mathcal{R}_{\text{trade}} \le 0.015 \times \mathcal{C}_{\text{portfolio}} \quad \land \quad N_{\text{industry}} \le 2 $$
                     </div>
                   </div>
                 </div>
@@ -1773,11 +1773,11 @@
                   <div class="quant-rule-meta">
                     <span class="quant-rule-tag">RULE 10</span>
                     <h4 class="quant-rule-name">Deterministic GTT Limit Order Protocol</h4>
-                    <p class="quant-rule-note">Orders are placed via GTT Limit with a +0.5% buffer above trigger. Market orders are strictly forbidden to eliminate slippage.</p>
+                    <p class="quant-rule-note">Orders are placed via GTT Limit with a +1.5% buffer above trigger. Market orders are strictly forbidden to eliminate slippage while ensuring breakouts fill on morning momentum.</p>
                   </div>
                   <div class="quant-rule-formula">
                     <div class="latex-display">
-                      $$ P_{\text{trigger}} = P_{\text{pivot}}, \quad P_{\text{limit}} = P_{\text{trigger}} \times 1.005 \quad (\text{OrderType} = \text{LIMIT GTT}, \; \text{Market Orders} \equiv \emptyset) $$
+                      $$ P_{\text{trigger}} = P_{\text{pivot}}, \quad P_{\text{limit}} = P_{\text{trigger}} \times 1.015 \quad (\text{OrderType} = \text{LIMIT GTT}, \; \text{Chase Gate} \le 1.5\%) $$
                     </div>
                   </div>
                 </div>
@@ -1786,13 +1786,13 @@
                 <div class="quant-rule-row">
                   <div class="quant-rule-meta">
                     <span class="quant-rule-tag">RULE 11</span>
-                    <h4 class="quant-rule-name">Asymmetric +2R Exit &amp; Fee-Buffered Breakeven Ratchet</h4>
-                    <p class="quant-rule-note">Sell 50% shares at +2R profit target. Ratchet stop loss to entry + 0.35% statutory fee buffer when unrealized gain reaches +1R or at +2R partial target.</p>
+                    <h4 class="quant-rule-name">Asymmetric +2R Exit &amp; +1.5R Fee-Buffered Breakeven Ratchet</h4>
+                    <p class="quant-rule-note">Sell 50% shares at +2R profit target. Ratchet stop loss to entry + 0.35% statutory fee buffer when unrealized gain reaches +1.5R at daily close (or at +2R partial target), effective for day t+1 onward to eliminate same-bar retroactive stop-outs.</p>
                   </div>
                   <div class="quant-rule-formula">
                     <div class="latex-display">
-                      $$ P_t \ge P_{\text{entry}} + 2\Delta\mathcal{R} \implies \text{SELL}\left(\left\lfloor 0.50 \cdot Q^* \right\rfloor\right) \quad \land \quad \text{SL}_t \gets \max(\text{SL}_{t-1}, P_{\text{entry}} \times 1.0035) $$
-                      $$ \text{Unrealized Gain} \ge +1.0R \implies \text{SL} \gets \text{Entry} \times 1.0035 \quad (\text{Breakeven + Fee Buffer Ratchet}) $$
+                      $$ P_t \ge P_{\text{entry}} + 2\Delta\mathcal{R} \implies \text{SELL}\left(\left\lfloor 0.50 \cdot Q^* \right\rfloor\right) \quad \land \quad \text{SL}_{t+1} \gets \max(\text{SL}_t, P_{\text{entry}} \times 1.0035) $$
+                      $$ \text{Unrealized Gain}_t \ge +1.5\mathcal{R} \implies \text{SL}_{t+1} \gets \max(\text{SL}_t, \text{Entry} \times 1.0035) \quad (\text{Non-Retroactive Fee Buffer Ratchet}) $$
                     </div>
                   </div>
                 </div>
@@ -1815,12 +1815,12 @@
                 <div class="quant-rule-row">
                   <div class="quant-rule-meta">
                     <span class="quant-rule-tag">RULE 13</span>
-                    <h4 class="quant-rule-name">5-Day Dead-Money Momentum Time Stop (Refined)</h4>
-                    <p class="quant-rule-note">Opportunity cost defense: exits at close after 5 trading days only if price fails to hold above entry AND closes below the rising 10-day EMA.</p>
+                    <h4 class="quant-rule-name">8-Day Dead-Money Momentum Time Stop (Trading Days)</h4>
+                    <p class="quant-rule-note">Opportunity cost defense: evaluates actual NSE trading sessions held (via count_trading_days_held). Exits at close after 8 trading days only if price fails to hold above entry AND closes below the rising 10-day EMA.</p>
                   </div>
                   <div class="quant-rule-formula">
                     <div class="latex-display">
-                      $$ (\Delta t_{\text{held}} \ge 5\text{ days}) \land (P_{\text{close}} \le \text{Entry}) \land (P_{\text{close}} &lt; \text{EMA}_{10}) \implies \text{EXIT AT CLOSE } (100\%) $$
+                      $$ (\Delta t_{\text{held}} \ge 8\text{ trading days}) \land (P_{\text{close}} \le \text{Entry}) \land (P_{\text{close}} &lt; \text{EMA}_{10}) \implies \text{EXIT AT CLOSE } (100\%) $$
                     </div>
                   </div>
                 </div>
@@ -1843,13 +1843,13 @@
                 <div class="quant-rule-row">
                   <div class="quant-rule-meta">
                     <span class="quant-rule-tag">RULE 17</span>
-                    <h4 class="quant-rule-name">Relative Strength Percentile (RS &ge; 70) &amp; Slope Benchmark</h4>
-                    <p class="quant-rule-note">Stock must rank in top 30% of relative strength (RS &ge; 70) and exhibit positive 4-week RS line slope against Nifty Smallcap 100 (^CNXSC), with Nifty 50 (^NSEI) as secondary macro regime.</p>
+                    <h4 class="quant-rule-name">Top-25% Momentum Gate, RS Rating (&ge; 75) &amp; Date-Aligned RS Slope</h4>
+                    <p class="quant-rule-note">Stock must rank in the top 25% of volatility-adjusted 6-month momentum (VOL_ADJ_RET &gt; 0) across the entire small-cap universe, possess RS rating &ge; 75 when available, and exhibit a positive 4-week RS line slope against Nifty Smallcap 100 (^CNXSC) aligned strictly by Date via backward as-of merging.</p>
                   </div>
                   <div class="quant-rule-formula">
                     <div class="latex-display">
-                      $$ \text{RS}_{\text{score}} = 0.40 \cdot \text{Ret}_{63d} + 0.20 \cdot \text{Ret}_{126d} + 0.20 \cdot \text{Ret}_{189d} + 0.20 \cdot \text{Ret}_{252d} \implies \text{Percentile} \ge 70 $$
-                      $$ \frac{d}{dt}\left(\frac{P_{\text{stock}}(t)}{P_{\text{\textasciicircum CNXSC}}(t)}\right)_{20d} &gt; 0 \quad (\text{Positive RS Slope vs Nifty Smallcap 100 Benchmark}) $$
+                      $$ \text{VolAdjRet}_t = \frac{P_t / P_{t-126} - 1}{\text{rolling\_std}_{126}(\Delta\% P)} \gt 0 \quad \land \quad \text{MomentumRank} \le \lceil 0.25 \times |\mathcal{U}| \rceil \quad \land \quad \text{RS}_{\text{rating}} \ge 75 $$
+                      $$ \text{RS}_{\text{ratio}}(t) = \frac{P_{\text{stock}}(t)}{P_{\text{\textasciicircum CNXSC}}(t)}, \quad \text{OLS Slope}\Big(\text{RS}(t), \text{RS}(t-5), \text{RS}(t-10), \text{RS}(t-15)\Big) \gt 0 $$
                     </div>
                   </div>
                 </div>
@@ -1858,13 +1858,13 @@
                 <div class="quant-rule-row">
                   <div class="quant-rule-meta">
                     <span class="quant-rule-tag">RULE 18</span>
-                    <h4 class="quant-rule-name">NSE Surveillance &amp; Circuit Filter Gate</h4>
-                    <p class="quant-rule-note">Reject stocks in Trade-to-Trade (BE/BZ series), Long-Term ASM (Stages 2–4), GSM, or restricted daily circuit bands (&lt;10%) to eliminate liquidity traps.</p>
+                    <h4 class="quant-rule-name">NSE Surveillance &amp; SEBI ESM Stage 1/2 Gate</h4>
+                    <p class="quant-rule-note">Strictly reject stocks in SEBI ESM (Enhanced Surveillance Measure Stages 1 &amp; 2), Trade-to-Trade (BE/BZ series), Long-Term ASM (Stages 2–4), GSM, or restricted daily circuit bands (&lt;10%) to eliminate liquidity traps and 100% margin lockups. Live cookie-warmed NSE metadata query emits metadata_verified flag.</p>
                   </div>
                   <div class="quant-rule-formula">
                     <div class="latex-display">
-                      $$ \text{Series} = \text{EQ} \quad \land \quad \text{ASM Stage} \notin \{2, 3, 4\} \quad \land \quad \text{GSM} = \text{False} \quad \land \quad \text{Circuit Band} \ge 10\% $$
-                      $$ \forall t \in [t-10, t], \quad \left| \frac{P_t}{P_{t-1}} - 1 \right| \le 0.21 \quad (\text{Corporate Action / Split Glitch Sanitizer}) $$
+                      $$ \text{Series} = \text{EQ} \;\land\; \text{ESM Stage} \notin \{1, 2\} \;\land\; \text{ASM Stage} \notin \{2, 3, 4\} \;\land\; \text{GSM} = \bot \;\land\; \text{Band} \ge 10\% $$
+                      $$ \forall t \in [t-10, t], \quad \left| \frac{P_t}{P_{t-1}} - 1 \right| \le 0.21 \quad (\text{Corporate Action / Split Discontinuity Guard}) $$
                     </div>
                   </div>
                 </div>
@@ -2183,7 +2183,7 @@
 
                 <div class="glossary-rule-box">
                   <span class="rule-tag">⚙️ System Invariant (main.py):</span>
-                  <span class="rule-verdict">Rule 13 (Time Stop Gate): 5-day time stop requires price &lt; 10 EMA to trigger an exit; holding above 10 EMA keeps position alive.</span>
+                  <span class="rule-verdict">Rule 13 (Time Stop Gate): 8-day time stop requires price &lt; 10 EMA after 8 trading days to trigger an exit; holding above 10 EMA keeps position alive.</span>
                 </div>
               </div>
 
@@ -3555,13 +3555,13 @@
                 </div>
               </div>
 
-              <!-- +1.0R Breakeven Ratchet (+0.35% Fee Buffer) -->
+              <!-- +1.5R Breakeven Ratchet (+0.35% Fee Buffer) -->
               <div class="glossary-card glossary-cat-risk" id="glossary-ratchet-sl" data-category="risk">
                 <div class="glossary-card-header">
                   <div class="glossary-title-group">
                     <span class="glossary-category-icon">🔴</span>
                     <div>
-                      <h3 class="glossary-term">+1.0R Breakeven Ratchet (+0.35% Fee Buffer)</h3>
+                      <h3 class="glossary-term">+1.5R Breakeven Ratchet (+0.35% Fee Buffer)</h3>
                       <div class="glossary-subtitle">Moving into a Zero-Risk 'Free Trade' with Statutory Fees Covered</div>
                     </div>
                   </div>
@@ -3573,7 +3573,7 @@
                     <span class="analogy-icon">💡</span>
                     <span class="analogy-title">Everyday Analogy (In Plain English)</span>
                   </div>
-                  <p class="analogy-text">Think of a mechanical ratchet wrench or climbing harness. As you climb up the cliff, the rope clicks into locking carabiners. Once you reach +1R altitude, the safety lock ratchets up to your starting point plus lunch money (STT & brokerage fees). You can no longer lose money!</p>
+                  <p class="analogy-text">Think of a mechanical ratchet wrench or climbing harness. As you climb up the cliff, the rope clicks into locking carabiners. Once you reach +1.5R altitude at daily close, the safety lock ratchets up to your starting point plus statutory fees (STT, GST & brokerage). You can no longer lose money!</p>
                 </div>
 
                 <div class="glossary-diagram-box">
@@ -3584,16 +3584,16 @@
   <circle cx="180" cy="40" r="6" fill="#38bdf8"/>
   <text x="160" y="25" fill="#38bdf8" font-size="10" font-weight="700">Entry</text>
   <circle cx="280" cy="40" r="6" fill="#10b981"/>
-  <text x="260" y="25" fill="#10b981" font-size="10" font-weight="700">+1.0R Gain</text>
+  <text x="260" y="25" fill="#10b981" font-size="10" font-weight="700">+1.5R Gain</text>
   <path d="M 80 40 Q 140 10, 195 38" fill="none" stroke="#10b981" stroke-width="2" stroke-dasharray="2,2"/>
-  <text x="120" y="68" fill="#10b981" font-size="10" font-weight="700">🔒 SL Ratchets to Entry × 1.0035</text>
+  <text x="120" y="68" fill="#10b981" font-size="10" font-weight="700">🔒 SL Ratchets to Entry × 1.0035 (t+1)</text>
 </svg>
                 </div>
 
                 <div class="glossary-math-box">
                   <div class="math-label">📐 Pure Math Formula (KaTeX):</div>
                   <div class="latex-display">
-                    $$ \text{Unrealized Gain} \ge +1.0\mathcal{R} \implies \text{SL} \gets \max(\text{SL}_{\text{prior}}, \; \text{Entry} \times 1.0035) $$
+                    $$ \text{Unrealized Gain}_t \ge +1.5\mathcal{R} \implies \text{SL}_{t+1} \gets \max(\text{SL}_t, \; \text{Entry} \times 1.0035) $$
                   </div>
                 </div>
 
@@ -3602,22 +3602,22 @@
                     <span class="example-icon">💰</span>
                     <span class="example-title">Realistic Indian Market Example</span>
                   </div>
-                  <p class="example-text">Entry ₹100, Stop ₹94 (1R = ₹6). When price hits ₹106 (+1R), stop is automatically ratcheted to ₹100.35. If price reverses, exit covers all STT & turnover fees.</p>
+                  <p class="example-text">Entry ₹100, Stop ₹94 (1R = ₹6). When price closes at or above ₹109 (+1.5R), stop is automatically ratcheted to ₹100.35 starting next session. Eliminates premature same-bar shakeouts on routine pullbacks.</p>
                 </div>
 
                 <div class="glossary-rule-box">
                   <span class="rule-tag">⚙️ System Invariant (main.py):</span>
-                  <span class="rule-verdict">Rule 11: Replaced static 3% trigger with +1.0R unrealized gain trigger + 0.35% round-trip fee buffer.</span>
+                  <span class="rule-verdict">Rule 11: Ratchet activates when daily close hits +1.5R, taking effect next bar with a 0.35% round-trip statutory fee buffer.</span>
                 </div>
               </div>
 
-              <!-- 5-Day Time Stop (>5d Dead-Money Rule) -->
+              <!-- 8-Day Time Stop (>8d Trading Days Dead-Money Rule) -->
               <div class="glossary-card glossary-cat-risk" id="glossary-time-stop" data-category="risk">
                 <div class="glossary-card-header">
                   <div class="glossary-title-group">
                     <span class="glossary-category-icon">🔴</span>
                     <div>
-                      <h3 class="glossary-term">5-Day Time Stop (&gt;5d Dead-Money Rule)</h3>
+                      <h3 class="glossary-term">8-Day Time Stop (&gt;8d Trading Days Dead-Money Rule)</h3>
                       <div class="glossary-subtitle">Liquidating Stagnant Capital to Prevent Opportunity Cost</div>
                     </div>
                   </div>
@@ -3629,16 +3629,16 @@
                     <span class="analogy-icon">💡</span>
                     <span class="analogy-title">Everyday Analogy (In Plain English)</span>
                   </div>
-                  <p class="analogy-text">Imagine renting a high-speed speedboat. You paid top dollar for horsepower. If after 5 days the boat is just idling at the dock not moving, you return the keys and get your money back! Swing trading requires fast velocity, not dead money.</p>
+                  <p class="analogy-text">Imagine renting a high-speed speedboat. You paid top dollar for horsepower. If after 8 trading days the boat is just idling at the dock not moving, you return the keys and get your money back! Swing trading requires fast velocity, not dead money.</p>
                 </div>
 
                 <div class="glossary-diagram-box">
                   <svg viewBox="0 0 420 80" class="glossary-svg-diagram">
   <rect x="30" y="20" width="150" height="45" fill="rgba(16,185,129,0.1)" stroke="#10b981" rx="4"/>
-  <text x="40" y="38" fill="#34d399" font-size="10" font-weight="700">Days 1 - 5: Holding Above 10 EMA</text>
+  <text x="40" y="38" fill="#34d399" font-size="10" font-weight="700">Days 1 - 8: Holding Above 10 EMA</text>
   <text x="40" y="54" fill="#94a3b8" font-size="10">Healthy Pullback: HOLD</text>
   <rect x="220" y="20" width="165" height="45" fill="rgba(239,68,68,0.15)" stroke="#ef4444" rx="4"/>
-  <text x="230" y="38" fill="#f87171" font-size="10" font-weight="700">Day 5+ &amp; P ≤ Entry &amp; &lt; 10 EMA</text>
+  <text x="230" y="38" fill="#f87171" font-size="10" font-weight="700">Day 8+ &amp; P ≤ Entry &amp; &lt; 10 EMA</text>
   <text x="230" y="54" fill="#f87171" font-size="10" font-weight="700">DEAD MONEY: EXIT AT CLOSE</text>
 </svg>
                 </div>
@@ -3646,7 +3646,7 @@
                 <div class="glossary-math-box">
                   <div class="math-label">📐 Pure Math Formula (KaTeX):</div>
                   <div class="latex-display">
-                    $$ \Big( \Delta t_{\text{held}} \ge 5\text{ days} \Big) \land \Big( P_{\text{close}} \le \text{Entry} \Big) \land \Big( P_{\text{close}} &lt; \text{EMA}_{10} \Big) \implies \text{EXIT AT CLOSE } (100\%) $$
+                    $$ \Big( \Delta t_{\text{held}} \ge 8\text{ trading days} \Big) \land \Big( P_{\text{close}} \le \text{Entry} \Big) \land \Big( P_{\text{close}} &lt; \text{EMA}_{10} \Big) \implies \text{EXIT AT CLOSE } (100\%) $$
                   </div>
                 </div>
 
@@ -3655,12 +3655,12 @@
                     <span class="example-icon">💰</span>
                     <span class="example-title">Realistic Indian Market Example</span>
                   </div>
-                  <p class="example-text">Stock bought at ₹500 consolidates at ₹498 for 6 sessions and slips below its 10 EMA. We exit at close to deploy capital into an active breakout.</p>
+                  <p class="example-text">Stock bought at ₹500 consolidates at ₹498 for 8 sessions and slips below its 10 EMA. We exit at close on session 8 to deploy capital into an active breakout.</p>
                 </div>
 
                 <div class="glossary-rule-box">
                   <span class="rule-tag">⚙️ System Invariant (main.py):</span>
-                  <span class="rule-verdict">Rule 13: Time stop triggers only if price fails to hold entry AND breaks below 10 EMA; healthy pullbacks holding 10 EMA are preserved.</span>
+                  <span class="rule-verdict">Rule 13: Evaluates actual NSE trading days via count_trading_days_held(); triggers only if price fails to hold entry AND breaks below 10 EMA after 8 sessions.</span>
                 </div>
               </div>
 
@@ -3900,7 +3900,7 @@
                   <svg viewBox="0 0 420 80" class="glossary-svg-diagram">
   <rect x="30" y="20" width="110" height="40" fill="rgba(56,189,248,0.15)" stroke="#38bdf8" rx="4"/>
   <text x="42" y="38" fill="#38bdf8" font-size="10" font-weight="700">Trigger: ₹500.00</text>
-  <text x="42" y="52" fill="#94a3b8" font-size="9">Limit: ₹502.50</text>
+  <text x="42" y="52" fill="#94a3b8" font-size="9">Limit: ₹507.50 (+1.5%)</text>
   <rect x="160" y="20" width="110" height="40" fill="rgba(239,68,68,0.15)" stroke="#ef4444" rx="4"/>
   <text x="172" y="38" fill="#f87171" font-size="10" font-weight="700">Stop: ₹476.00</text>
   <text x="172" y="52" fill="#94a3b8" font-size="9">OCO Bracket</text>
@@ -3913,7 +3913,7 @@
                 <div class="glossary-math-box">
                   <div class="math-label">📐 Pure Math Formula (KaTeX):</div>
                   <div class="latex-display">
-                    $$ \text{Order} = \text{GTT}\Big( \text{Trigger} = P_{\text{pivot}}, \; \text{Limit} \le P_{\text{pivot}} \times 1.005, \; \text{Stop} = \text{SL}_{\text{eff}}, \; \text{Target} = P_{+2R} \Big) $$
+                    $$ \text{Order} = \text{GTT}\Big( \text{Trigger} = P_{\text{pivot}}, \; \text{Limit} \le P_{\text{pivot}} \times 1.015, \; \text{Stop} = \text{SL}_{\text{eff}}, \; \text{Target} = P_{+2R} \Big) $$
                   </div>
                 </div>
 
@@ -3922,12 +3922,12 @@
                     <span class="example-icon">💰</span>
                     <span class="example-title">Realistic Indian Market Example</span>
                   </div>
-                  <p class="example-text">GTT set with Zerodha/Groww: Trigger ₹500, Limit ₹502.50, Stop ₹476, Target ₹548. Set and forget.</p>
+                  <p class="example-text">GTT set with Zerodha/Groww: Trigger ₹500, Limit ₹507.50 (+1.5% slippage buffer), Stop ₹476, Target ₹548. Set and forget.</p>
                 </div>
 
                 <div class="glossary-rule-box">
                   <span class="rule-tag">⚙️ System Invariant (main.py):</span>
-                  <span class="rule-verdict">Playbook Phase 03: One-click GTT clipboard copy format eliminates manual calculation and fat-finger errors.</span>
+                  <span class="rule-verdict">Playbook Phase 03 &amp; Rule 10: One-click GTT clipboard copy format with +1.5% limit buffer eliminates manual calculation and missed breakout fills.</span>
                 </div>
               </div>
 
@@ -3937,8 +3937,8 @@
                   <div class="glossary-title-group">
                     <span class="glossary-category-icon">🟠</span>
                     <div>
-                      <h3 class="glossary-term">Portfolio Heat & Half-Kelly Sizing</h3>
-                      <div class="glossary-subtitle">The Total Account Risk Gauge (Max 5% Portfolio Heat)</div>
+                      <h3 class="glossary-term">Portfolio Heat &amp; Half-Kelly Sizing</h3>
+                      <div class="glossary-subtitle">The Total Account Risk Gauge (Max 6% Portfolio Heat, 6 Positions)</div>
                     </div>
                   </div>
                   <span class="glossary-badge badge-portfolio">Portfolio & Execution</span>
@@ -3949,29 +3949,31 @@
                     <span class="analogy-icon">💡</span>
                     <span class="analogy-title">Everyday Analogy (In Plain English)</span>
                   </div>
-                  <p class="analogy-text">Think of the engine temperature gauge on a sports car. Running at 1% heat is cool and safe. Running at 5% is maximum sustained racing performance. If heat reaches 10% or 15%, the engine overheats and blows a head gasket! Never exceed 5% total heat.</p>
+                  <p class="analogy-text">Think of the engine temperature gauge on a sports car. Running at 1% heat is cool and safe. Running at 6% is maximum sustained racing performance. If heat reaches 10% or 15%, the engine overheats and blows a head gasket! Never exceed 6% total heat.</p>
                 </div>
 
                 <div class="glossary-diagram-box">
                   <svg viewBox="0 0 420 80" class="glossary-svg-diagram">
-  <rect x="30" y="25" width="60" height="30" fill="#10b981" rx="4"/>
-  <text x="42" y="44" fill="#fff" font-size="11" font-weight="800">1.0%</text>
-  <rect x="100" y="25" width="60" height="30" fill="#10b981" rx="4"/>
-  <text x="112" y="44" fill="#fff" font-size="11" font-weight="800">1.0%</text>
-  <rect x="170" y="25" width="60" height="30" fill="#10b981" rx="4"/>
-  <text x="182" y="44" fill="#fff" font-size="11" font-weight="800">1.0%</text>
-  <rect x="240" y="25" width="60" height="30" fill="#10b981" rx="4"/>
-  <text x="252" y="44" fill="#fff" font-size="11" font-weight="800">1.0%</text>
-  <rect x="310" y="25" width="60" height="30" fill="#10b981" rx="4"/>
+  <rect x="20" y="25" width="50" height="30" fill="#10b981" rx="4"/>
+  <text x="32" y="44" fill="#fff" font-size="11" font-weight="800">1.0%</text>
+  <rect x="78" y="25" width="50" height="30" fill="#10b981" rx="4"/>
+  <text x="90" y="44" fill="#fff" font-size="11" font-weight="800">1.0%</text>
+  <rect x="136" y="25" width="50" height="30" fill="#10b981" rx="4"/>
+  <text x="148" y="44" fill="#fff" font-size="11" font-weight="800">1.0%</text>
+  <rect x="194" y="25" width="50" height="30" fill="#10b981" rx="4"/>
+  <text x="206" y="44" fill="#fff" font-size="11" font-weight="800">1.0%</text>
+  <rect x="252" y="25" width="50" height="30" fill="#10b981" rx="4"/>
+  <text x="264" y="44" fill="#fff" font-size="11" font-weight="800">1.0%</text>
+  <rect x="310" y="25" width="50" height="30" fill="#10b981" rx="4"/>
   <text x="322" y="44" fill="#fff" font-size="11" font-weight="800">1.0%</text>
-  <text x="30" y="72" fill="#38bdf8" font-size="10" font-weight="700">Max Concurrent Trades = 5 | Max Portfolio Heat = 5.0% (₹10,000 on ₹2L)</text>
+  <text x="20" y="72" fill="#38bdf8" font-size="10" font-weight="700">Max Concurrent Trades = 6 | Max Portfolio Heat = 6.0% (₹12,000 on ₹2L)</text>
 </svg>
                 </div>
 
                 <div class="glossary-math-box">
                   <div class="math-label">📐 Pure Math Formula (KaTeX):</div>
                   <div class="latex-display">
-                    $$ \mathcal{H}_{\text{portfolio}} = \sum_{j=1}^M \frac{(P_{\text{entry},j} - \text{SL}_j) \times \text{Qty}_j}{\text{Capital}} \le 0.05 \quad (5.0\% \text{ Max Heat}) $$
+                    $$ \mathcal{H}_{\text{portfolio}} = \sum_{j=1}^M \frac{(P_{\text{entry},j} - \text{SL}_j) \times \text{Qty}_j}{\text{Capital}} \le 0.06 \quad (6.0\% \text{ Max Heat}) $$
                   </div>
                 </div>
 
@@ -3980,12 +3982,12 @@
                     <span class="example-icon">💰</span>
                     <span class="example-title">Realistic Indian Market Example</span>
                   </div>
-                  <p class="example-text">With 5 open trades risking 1% each, even if a black swan event closes all 5 at stop, total portfolio loss is strictly ₹10,000 (5%), leaving 95% intact.</p>
+                  <p class="example-text">With 6 open trades risking 1% each, even if a black swan event closes all 6 at stop, total portfolio loss is strictly ₹12,000 (6%), leaving 94% intact.</p>
                 </div>
 
                 <div class="glossary-rule-box">
                   <span class="rule-tag">⚙️ System Invariant (main.py):</span>
-                  <span class="rule-verdict">Rule 15: Maximum concurrent positions = 5 at 1.0% risk each, guaranteeing the 5% portfolio heat invariant.</span>
+                  <span class="rule-verdict">Rule 15: Maximum concurrent positions = 6 at ~1.0% risk each (up to 90% capital deployment with 10% cash buffer), strictly guaranteeing the 6% portfolio heat invariant.</span>
                 </div>
               </div>
 
@@ -4027,7 +4029,7 @@
                 <div class="glossary-math-box">
                   <div class="math-label">📐 Pure Math Formula (KaTeX):</div>
                   <div class="latex-display">
-                    $$ \mathbb{E}\left[\frac{R(n)}{S(n)}\right] = C \cdot n^H, \quad H &gt; 0.55 \implies \text{Long-Memory Directional Persistence} $$
+                    $$ \log(R/S)_k = H \cdot \log(n_k) + \alpha, \quad k \in \{10, 20, 33, 50, 100\} \implies H \in [0.0, 1.0] $$
                   </div>
                 </div>
 
@@ -4036,12 +4038,12 @@
                     <span class="example-icon">💰</span>
                     <span class="example-title">Realistic Indian Market Example</span>
                   </div>
-                  <p class="example-text">A breakout candidate showing Hurst H = 0.68 confirms that upward moves exhibit high autocorrelation and are not choppy random noise.</p>
+                  <p class="example-text">A breakout candidate showing Hurst H = 0.64 confirms that multi-scale upward moves exhibit high autocorrelation and are not choppy random noise.</p>
                 </div>
 
                 <div class="glossary-rule-box">
                   <span class="rule-tag">⚙️ System Invariant (main.py):</span>
-                  <span class="rule-verdict">Statistical Lens: Displayed on watchlist cards to help prioritize persistent trending runners over choppy setups.</span>
+                  <span class="rule-verdict">Statistical Lens: Multi-scale R/S regression across scales [10, 20, 33, 50, 100] with finite-sample corrections separates persistent trending from random walks.</span>
                 </div>
               </div>
 
@@ -4151,38 +4153,39 @@
                 </div>
                 <div class="schematic-rules-box">
                   <ul>
-                    <li><strong>Decisive Close:</strong> Daily price finishes cleanly above the 20-day high resistance level.</li>
-                    <li><strong>Volume Confirmation:</strong> Session volume is at least 1.5x higher than the 50-day average.</li>
-                    <li><strong>Mathematical Asymmetry:</strong> Target is set at 2R reward against a 1R dynamic ATR stop.</li>
+                    <li><strong>Decisive Close:</strong> Daily price finishes cleanly above the 20-day high resistance level with strong close (CLV &ge; 60%).</li>
+                    <li><strong>Volume Confirmation:</strong> Volume &ge; 1.5&times; VOL20 or 1.5&times; VOL50 AND &ge; 1.3&times; prior bar volume with CMF20 &ge; 0.05.</li>
+                    <li><strong>Mathematical Asymmetry:</strong> Target is set at 2R reward against an adaptive ATR stop (max 8.5% ceiling).</li>
                   </ul>
                 </div>
               </div>
 
-              <!-- Schematic 4: Pullback (2-RSI) -->
+              <!-- Schematic 4: Institutional Pullback Bounce -->
               <div class="schematic-card">
                 <div class="schematic-header">
-                  <h3 class="schematic-title">4. Pullback Setup (2-Period RSI)</h3>
+                  <h3 class="schematic-title">4. Institutional Pullback Support Bounce</h3>
                 </div>
                 <div class="schematic-canvas-box">
                   <svg viewBox="0 0 360 160" width="100%" height="150">
                     <rect width="360" height="150" fill="#070a10" rx="6" />
-                    <!-- Ascending Trendline -->
-                    <path d="M 20 120 L 140 40 L 200 90 L 320 20" stroke="#64748b" stroke-width="1.5" stroke-dasharray="3,3" fill="none" />
-                    <!-- Pullback dip -->
-                    <path d="M 140 40 L 170 65 L 200 90" stroke="#ef4444" stroke-width="2.5" fill="none" />
-                    <text x="175" y="55" fill="#f87171" font-size="8" font-weight="700">2-3 Day Dip</text>
-                    <text x="175" y="105" fill="#fcd34d" font-size="8">RSI2 &lt; 10 (Oversold)</text>
-                    <!-- Reversal Candle -->
-                    <line x1="220" y1="75" x2="220" y2="95" stroke="#10b981" stroke-width="1.5" />
-                    <rect x="215" y="78" width="10" height="14" fill="#10b981" />
-                    <text x="240" y="85" fill="#34d399" font-size="9" font-weight="700">Reversal Entry</text>
+                    <!-- Ascending Trendline & 20 EMA -->
+                    <path d="M 20 120 C 100 100, 200 70, 340 30" stroke="#a855f7" stroke-width="2" stroke-dasharray="3,3" fill="none" />
+                    <text x="300" y="24" fill="#c084fc" font-size="8" font-weight="700">Rising 20 EMA</text>
+                    <!-- Pullback dip touching 20 EMA -->
+                    <path d="M 120 50 L 160 75 L 190 92" stroke="#ef4444" stroke-width="2" fill="none" />
+                    <text x="145" y="65" fill="#f87171" font-size="8" font-weight="700">1-3 Day Pullback</text>
+                    <text x="160" y="108" fill="#38bdf8" font-size="8">Low &le; EMA20 &times; 1.015</text>
+                    <!-- Reversal Candle Breaking Prior High -->
+                    <line x1="215" y1="70" x2="215" y2="98" stroke="#10b981" stroke-width="1.5" />
+                    <rect x="210" y="74" width="10" height="18" fill="#10b981" />
+                    <text x="235" y="84" fill="#34d399" font-size="9" font-weight="700">Reversal Close &gt; High[1]</text>
                   </svg>
                 </div>
                 <div class="schematic-rules-box">
                   <ul>
-                    <li><strong>Stage 2 Context:</strong> Stock must already be established in an overarching uptrend.</li>
-                    <li><strong>Extreme Oversold:</strong> 2-period RSI drops below 10, signaling short-term panic selling.</li>
-                    <li><strong>Confirmation Candle:</strong> Buy only after the first green day where Close &gt; previous Close.</li>
+                    <li><strong>Rising 20-EMA Structure:</strong> EMA20 must be rising over past 5 bars and stock holds above SMA50.</li>
+                    <li><strong>Support Touch:</strong> Low of past 1&ndash;3 bars touches within 1.5% of rising EMA20.</li>
+                    <li><strong>Reversal Confirmation:</strong> Session closes green above EMA20 and prior day's High with CLV &ge; 60% and volume &ge; 0.9&times; VOL20.</li>
                   </ul>
                 </div>
               </div>
@@ -4190,7 +4193,7 @@
               <!-- Schematic 5: Market Filter -->
               <div class="schematic-card">
                 <div class="schematic-header">
-                  <h3 class="schematic-title">5. Market Filter (NIFTY 50 Regime)</h3>
+                  <h3 class="schematic-title">5. Market Filter (Nifty Smallcap 100 ^CNXSC)</h3>
                 </div>
                 <div class="schematic-canvas-box">
                   <svg viewBox="0 0 360 160" width="100%" height="150">
@@ -4211,9 +4214,9 @@
                 </div>
                 <div class="schematic-rules-box">
                   <ul>
-                    <li><strong>Market Direction:</strong> NIFTY 50 Index must satisfy Close &gt; SMA50 &gt; SMA200.</li>
-                    <li><strong>Defensive Protection:</strong> If index dips below moving averages, regime flips to Defensive.</li>
-                    <li><strong>Capital Safeguard:</strong> All setup scores are capped at 50, blocking aggressive entries.</li>
+                    <li><strong>Market Direction:</strong> Nifty Smallcap 100 Index (^CNXSC) must satisfy Close &gt; SMA50 &gt; SMA200 with positive 200 SMA slope.</li>
+                    <li><strong>Secondary Macro Guard:</strong> Nifty 50 (^NSEI) checked in parallel as secondary macro benchmark.</li>
+                    <li><strong>Defensive Protection:</strong> If index dips below 200 SMA or accumulates &ge;5 distribution days, regime flips to Defensive and blocks entries.</li>
                   </ul>
                 </div>
               </div>
@@ -4244,9 +4247,9 @@
                 </div>
                 <div class="schematic-rules-box">
                   <ul>
-                    <li><strong>Initial Risk:</strong> Fixed stop loss at 1.5x ATR (maximum 7% from entry price).</li>
-                    <li><strong>Breakeven Ratchet:</strong> When profit reaches +8%, immediately move stop to entry.</li>
-                    <li><strong>Trailing Exit:</strong> Trail along 10 EMA close or take profit at predefined 2R target.</li>
+                    <li><strong>Initial Risk:</strong> Adaptive stop at min(Low &minus; 0.25&times; ATR, Entry &minus; 1.5&times; ATR) or 2.0&times; ATR (hard ceiling &le; 8.5%).</li>
+                    <li><strong>Breakeven Ratchet:</strong> When daily close reaches +1.5R, move stop to entry &times; 1.0035 (statutory fee buffer) for next session.</li>
+                    <li><strong>Trailing &amp; Time Stops:</strong> Trail runner on daily 20 EMA close, or exit dead-money positions after 8 trading days below entry and 10 EMA.</li>
                   </ul>
                 </div>
               </div>
@@ -4397,14 +4400,14 @@
                   <tr>
                     <td>
                       <span class="gov-num-pill">CMD 06</span><br>
-                      <strong style="color: #fff; font-size: 13.5px;">5-Day Momentum Time Stop (Refined)</strong>
+                      <strong style="color: #fff; font-size: 13.5px;">8-Day Momentum Time Stop (Refined)</strong>
                     </td>
                     <td>
                       <div class="latex-display">
-                        $$ (\Delta t_{\text{held}} \ge 5\text{ days}) \land (P_{\text{close}} \le \text{Entry}) \land (P_{\text{close}} &lt; \text{EMA}_{10}) \implies \text{EXIT AT CLOSE } (100\%) $$
+                        $$ (\Delta t_{\text{held}} \ge 8\text{ trading days}) \land (P_{\text{close}} \le \text{Entry}) \land (P_{\text{close}} &lt; \text{EMA}_{10}) \implies \text{EXIT AT CLOSE } (100\%) $$
                       </div>
                     </td>
-                    <td>High-velocity smallcap breakouts follow through within 3&ndash;5 sessions. Unprofitable dead money failing to hold above entry and closing below the 10-day EMA is liquidated at close on session 5 to recycle purchasing power.</td>
+                    <td>High-velocity smallcap breakouts follow through within 3&ndash;8 sessions. Unprofitable dead money failing to hold above entry and closing below the 10-day EMA after 8 trading days is liquidated at close to recycle purchasing power.</td>
                   </tr>
 
                   <tr>
@@ -4477,7 +4480,7 @@
                   <span class="faq-icon">▼</span>
                 </div>
                 <div class="faq-answer">
-                  Our scanner applies 7 simultaneous filters (Stage 2 trend, 10-day coiling, 20-day high breakout, 1.5x volume spike, strong close in top 40%, sector trend confirmation, and NIFTY benchmark trend). Most days, no stock meets all 7 criteria. Having zero signals is normal and expected — it protects your capital from choppy, sub-par market environments.
+                  Our scanner applies strict simultaneous filters: Minervini Stage 2 trend, 10-day coiling, 20-day high breakout or institutional pullback bounce, 1.5&times; volume expansion &amp; 1.3&times; prior bar volume, CMF20 &ge; 0.05 &amp; OBV confirmation, top 25% momentum gate (VOL_ADJ_RET &gt; 0), RS rating &ge; 75 with positive slope, industry group limits, SEBI ESM/surveillance checks, and Nifty Smallcap 100 (^CNXSC) benchmark trend. Most days, no stock meets all criteria. Having zero signals is normal and expected — it protects your capital from choppy, sub-par small-cap market environments.
                 </div>
               </div>
 
@@ -4487,7 +4490,7 @@
                   <span class="faq-icon">▼</span>
                 </div>
                 <div class="faq-answer">
-                  The O'Neil M-rule detected that the benchmark NIFTY 50 index (^NSEI) is trading below its 50-day or 200-day moving average, or the 50 SMA is below the 200 SMA. Statistical studies show that 75% of individual stocks follow the broader market direction. In a defensive market, all setup scores are capped at 50, and new buy signals are blocked to keep you safely in cash.
+                  The O'Neil M-rule detected that the primary benchmark Nifty Smallcap 100 index (^CNXSC) is trading below its 50-day or 200-day moving average, or accumulated &ge; 5 distribution days (with Nifty 50 checked as secondary macro filter). In a defensive market, all setup scores are capped at 50, and new buy signals are strictly blocked to keep you safely in cash.
                 </div>
               </div>
 
@@ -4527,7 +4530,7 @@
                   <span class="faq-icon">▼</span>
                 </div>
                 <div class="faq-answer">
-                  Do not take new trades under three conditions: (1) When the Market Regime badge is red (Defensive); (2) Within 7 days of an upcoming quarterly earnings report for that company; or (3) If you have already taken 2 trades or hit your 2% loss limit for the day.
+                  Do not take new trades under three conditions: (1) When the Market Regime badge is red (Defensive); (2) Within 5 sessions of an upcoming quarterly earnings report for that company (EARNINGS_BLACKOUT_DAYS = 5); or (3) If you have already taken 2 trades or hit your 2% loss limit for the day.
                 </div>
               </div>
 
@@ -4753,7 +4756,7 @@
               <select id="sellStockReason" class="form-input">
                 <option value="target_2r">🏆 +2R Profit Target Hit (Book 50%)</option>
                 <option value="breakeven_exit">🔒 Breakeven Ratchet Exit (Zero Loss)</option>
-                <option value="time_stop_5d">⏰ 5-Day Inactive Momentum Exit</option>
+                <option value="time_stop_8d">⏰ 8-Day Inactive Momentum Exit</option>
                 <option value="stop_loss">🛡️ Safety Shield Exit (Stop Loss)</option>
                 <option value="discretionary">👋 Manual / Discretionary Exit</option>
               </select>

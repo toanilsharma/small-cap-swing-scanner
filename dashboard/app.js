@@ -474,8 +474,8 @@ const TERMS = {
     where_used: "Trade History Table, Stats Tab (Mistakes Tracker), Help Guide"
   },
   "Time stop ignored": {
-    short: "Discipline mistake where a sluggish trade is held >5 days with return <3%.",
-    long: "Occurs when a trade fails to follow through within 5 days and is not exited, locking up valuable trading capital. Automatic flag: mistake = 'time_stop_ignored'.",
+    short: "Discipline mistake where a sluggish trade is held >8 trading days with return <= 0%.",
+    long: "Occurs when a trade fails to follow through within 8 trading days and is not exited, locking up valuable trading capital. Automatic flag: mistake = 'time_stop_ignored'.",
     where_used: "Trade History Table, Stats Tab (Mistakes Tracker), Help Guide"
   },
   "Plan discipline": {
@@ -2788,8 +2788,8 @@ function computeStockDecision(item, scanData) {
     },
     stagnant: {
       prob: "10%",
-      title: "Dead-Money Drift (5-Day Time Stop)",
-      desc: `If the stock floats sideways for 5 trading sessions without clearing the 10 EMA, the 5-day time stop executes at market close. Capital is immediately liberated to redeploy into faster-moving smallcap leaders.`
+      title: "Dead-Money Drift (8-Day Time Stop)",
+      desc: `If the stock floats sideways for 8 trading sessions without clearing the 10 EMA, the 8-day time stop executes at market close. Capital is immediately liberated to redeploy into faster-moving smallcap leaders.`
     }
   };
 
@@ -2846,18 +2846,18 @@ function computePositionDecision(pos, close, currentR, uPnlPct, daysHeld) {
     justification = `Price (₹${close.toFixed(2)}) has reached your +2R target (current return: +${currentR.toFixed(2)}R)! The asymmetrical profit-taking rule guarantees that your winners pay for 2 future losing trades.`;
     instruction = `Sell exactly 50% of your position size (e.g. ${Math.floor(pos.qty / 2)} shares) right now in your broker to lock in guaranteed cash profit. Move the stop on your remaining runner shares to breakeven + fee buffer (₹${bePrice.toFixed(2)}).`;
     outcome = `You lock in a risk-free trade on house money while letting the remaining 50% runner trail along the rising 20-day EMA for multi-month upside.`;
-  } else if (currentR >= 1.0 && currentR < 2.0) {
+  } else if (currentR >= 1.5 && currentR < 2.0) {
     action = "RATCHET";
     directive = `🔒 ACTION TODAY: RATCHET STOP TO BREAKEVEN + FEES`;
     badgeClass = "cockpit-banner-info";
-    justification = `Price has achieved +${currentR.toFixed(2)}R unrealized gain (+1.0R threshold passed). Our capital defense rule locks in breakeven so this trade can NEVER turn into a loss, while including a 0.35% buffer to cover all round-trip NSE STT, stamp duty, and broker fees.`;
+    justification = `Price has achieved +${currentR.toFixed(2)}R unrealized gain (+1.5R threshold passed). Our capital defense rule locks in breakeven so this trade can NEVER turn into a loss, while including a 0.35% buffer to cover all round-trip NSE STT, stamp duty, and broker fees.`;
     instruction = `Modify your stop-loss in your broker terminal right now: raise SL to ₹${bePrice.toFixed(2)} (Entry ₹${entry.toFixed(2)} × 1.0035). Do not lower it under any circumstance.`;
     outcome = `This position is now a completely 'Free Trade'. Worst-case scenario if it reverses is a clean exit with zero out-of-pocket loss.`;
-  } else if (daysHeld >= 5 && close <= entry) {
+  } else if (daysHeld >= 8 && close <= entry) {
     action = "EXIT";
-    directive = `⏳ ACTION TODAY: 5-DAY TIME STOP TRIGGERED — EXIT AT CLOSE`;
+    directive = `⏳ ACTION TODAY: 8-DAY TIME STOP TRIGGERED — EXIT AT CLOSE`;
     badgeClass = "cockpit-banner-warning";
-    justification = `You have held this position for ${daysHeld} trading sessions, and price (₹${close.toFixed(2)}) is still struggling at or below your entry price (₹${entry.toFixed(2)}). High-conviction smallcap breakouts ignite within 2 to 4 days. Stagnant dead money ties up valuable capital that could be compounding in fresh momentum leaders.`;
+    justification = `You have held this position for ${daysHeld} trading sessions, and price (₹${close.toFixed(2)}) is still struggling at or below your entry price (₹${entry.toFixed(2)}). High-conviction smallcap breakouts ignite within 2 to 5 days. Stagnant dead money ties up valuable capital that could be compounding in fresh momentum leaders.`;
     instruction = `Liquidate 100% of the position at today's 3:30 PM market close. Free up the cash.`;
     outcome = `Freeing your capital eliminates dead-money opportunity cost and protects you from late-stage base breakdowns.`;
   } else {
@@ -2866,7 +2866,7 @@ function computePositionDecision(pos, close, currentR, uPnlPct, daysHeld) {
     badgeClass = "cockpit-banner-success";
     justification = `Trade is behaving normally in its trend cycle (${daysHeld} days held, unrealized P&L: ${uPnlPct >= 0 ? '+' : ''}${uPnlPct.toFixed(1)}%). Price is respecting the rising moving averages. Do not let minor intraday noise shake you out of a winning position.`;
     instruction = `Hold steady. Keep your initial stop loss active at ₹${stop ? stop.toFixed(2) : 'n/a'} and let the trade develop toward the +2R target (₹${target ? target.toFixed(2) : 'n/a'}).`;
-    outcome = `Projected to reach +1.0R breakeven ratchet and +2R profit target as institutional trend continuation unfolds.`;
+    outcome = `Projected to reach +1.5R breakeven ratchet and +2R profit target as institutional trend continuation unfolds.`;
   }
 
   return {
@@ -3966,13 +3966,13 @@ async function toggleWatchlistDetail(row, item, scanData) {
                 <span class="bp-sub success">+${targetPct}% gain (+2R multiple)</span>
               </div>
               <div class="blueprint-item be-box">
-                <span class="bp-label">Breakeven Ratchet (+1.0R Gain)</span>
+                <span class="bp-label">Breakeven Ratchet (+1.5R Gain)</span>
                 <span class="bp-val accent">₹${bePrice.toFixed(2)}</span>
                 <span class="bp-sub accent">Move stop to Entry × 1.0035 (+fee buffer)</span>
               </div>
               <div class="blueprint-item time-box">
                 <span class="bp-label">Time Stop Rule</span>
-                <span class="bp-val warning">Day 5 Session</span>
+                <span class="bp-val warning">Day 8 Session</span>
                 <span class="bp-sub">Exit if Close &le; Entry &amp; Close &lt; EMA10</span>
               </div>
               <div class="blueprint-item vol-box">
@@ -4726,12 +4726,12 @@ async function renderOpenPositions(positions) {
     if (currentR >= 2.0) {
       trailState = "Trailing 20 EMA (+2R Hit)";
       activeExitRule = "Initial +2R target reached. 50% profits locked. Stop raised to breakeven + fee buffer (Entry × 1.0035), trailing remaining 50% along daily 20 EMA close.";
-    } else if (currentR >= 1.0) {
-      trailState = "Breakeven Ratchet (+1.0R Hit)";
-      activeExitRule = "+1.0R gain achieved. Mechanical ratchet rule active: move protective stop loss to Entry × 1.0035 (+0.35% round-trip statutory fee buffer).";
-    } else if (daysHeld >= 5 && close <= entry) {
-      trailState = "Time Stop Triggered (5d)";
-      activeExitRule = "5-day time stop triggered: Price failed to exceed entry within 5 trading sessions. Liquidate at market close to liberate cash.";
+    } else if (currentR >= 1.5) {
+      trailState = "Breakeven Ratchet (+1.5R Hit)";
+      activeExitRule = "+1.5R gain achieved. Mechanical ratchet rule active: move protective stop loss to Entry × 1.0035 (+0.35% round-trip statutory fee buffer).";
+    } else if (daysHeld >= 8 && close <= entry) {
+      trailState = "Time Stop Triggered (8d)";
+      activeExitRule = "8-day time stop triggered: Price failed to exceed entry within 8 trading sessions. Liquidate at market close to liberate cash.";
     } else {
       trailState = `Active Stop (₹${stop ? stop.toFixed(2) : 'n/a'})`;
       activeExitRule = `Initial stop active at ₹${stop ? stop.toFixed(2) : 'n/a'} (-1.0R planned risk). Primary profit target set at ₹${target ? target.toFixed(2) : 'n/a'} (+2.0R target).`;
@@ -4861,8 +4861,8 @@ async function renderOpenPositions(positions) {
                 <div style="font-size: 10.5px; color: #bae6fd; margin-top: 2px;">${pos.entry_date ? formatDate(pos.entry_date) : 'Original Entry'}</div>
               </div>
               <div class="milestone-box" style="background: rgba(234, 179, 8, 0.12); border: 1px solid rgba(234, 179, 8, 0.35);">
-                <div style="font-size: 10px; color: #facc15; font-weight: 800;">3. BREAKEVEN (+1.0R)</div>
-                <div style="font-size: 13.5px; font-weight: 800; color: #fff; margin-top: 2px;">${formatINR(entry + plannedRiskPerUnit)}</div>
+                <div style="font-size: 10px; color: #facc15; font-weight: 800;">3. BREAKEVEN (+1.5R)</div>
+                <div style="font-size: 13.5px; font-weight: 800; color: #fff; margin-top: 2px;">${formatINR(entry + 1.5 * plannedRiskPerUnit)}</div>
                 <div style="font-size: 10.5px; color: #fef08a; margin-top: 2px;">Ratchet stop to ${formatINR(entry * 1.0035)}</div>
               </div>
               <div class="milestone-box" style="background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.35);">

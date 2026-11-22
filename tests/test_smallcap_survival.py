@@ -79,8 +79,8 @@ def test_gap_sizing_min(monkeypatch: pytest.MonkeyPatch):
     # Stop = 95.0 (above floor). Risk per unit = 5.0
     # Capital = 200,000, Risk = 1% -> Risk budget = 2,000.
     # risk_based_qty = floor(2000 / 5) = 400.
-    # gap_based_qty = floor( (200,000 * 0.025) / (100 * 0.20) ) = floor(5000 / 20) = 250.
-    # Since 250 < 400, gap_based_qty binds!
+    # gap_based_qty = floor( (200,000 * 0.03) / (100 * 0.20) ) = floor(6000 / 20) = 300.
+    # Since 300 < 400, gap_based_qty binds!
 
     df = _create_synthetic_symbol_df(entry=entry, atr=atr, turnover_rupees=200_000_000.0)
 
@@ -92,7 +92,7 @@ def test_gap_sizing_min(monkeypatch: pytest.MonkeyPatch):
 
     sig = main.scan_symbol("GAPNAME.NS")
     assert sig is not None, "Signal should be generated"
-    assert sig["Qty"] == 250, f"Expected gap_based_qty 250 to bind, got {sig['Qty']}"
+    assert sig["Qty"] == 300, f"Expected gap_based_qty 300 to bind, got {sig['Qty']}"
     assert sig["gap_qty_applied"] is True, "gap_qty_applied must be True when gap sizing binds"
 
 
@@ -200,16 +200,16 @@ def test_heat_cap_blocks_buy(tmp_cwd: Any):
     assert "BUY REJECTED" in reply_concurrent, "Excess concurrent position must be rejected"
     assert "Maximum concurrent" in reply_concurrent
 
-    # Case B: Exceeding 5% total heat limit (Capital = 200,000 -> 5% = 10,000)
+    # Case B: Exceeding 6% total heat limit (Capital = 200,000 -> 6% = 12,000)
     # 1 open position with 9,000 risk (4.5% heat)
     single_open = [
         {"symbol": "HIGH_HEAT.NS", "entry_date": today_str, "entry_price": 100.0, "qty": 1000, "stop": 91.0}  # risk = 9 * 1000 = 9,000
     ]
     main.save_open_positions(single_open)
 
-    # Proposed trade adds risk: qty=200, entry=100, stop=91 -> risk = 9 * 200 = 1,800 -> total = 10,800 > 10,000
-    reply_heat = main.handle_telegram_command("/buy SECOND 100 200 91")
-    assert "BUY REJECTED" in reply_heat, "Trade pushing total heat > 5% must be rejected"
+    # Proposed trade adds risk: qty=400, entry=100, stop=91 -> risk = 9 * 400 = 3,600 -> total = 12,600 > 12,000
+    reply_heat = main.handle_telegram_command("/buy SECOND 100 400 91")
+    assert "BUY REJECTED" in reply_heat, "Trade pushing total heat > 6% must be rejected"
     assert "Total open risk" in reply_heat
 
 

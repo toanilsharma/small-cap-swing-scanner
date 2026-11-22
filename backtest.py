@@ -234,6 +234,16 @@ def run_backtest(
     """
     if archive_dfs is None:
         archive_dfs = load_archive_data(ARCHIVE_DIR, start_date=start_date, end_date=end_date)
+        # If archive is missing or shallow (< 55 bars per symbol), fall back to 2-year universe history via get_history
+        max_bars = max((len(df) for df in archive_dfs.values()), default=0) if archive_dfs else 0
+        if max_bars < 55:
+            print(f"Archive data shallow (max {max_bars} bars < 55 required). Falling back to 2-year universe history...")
+            symbols = main.get_symbols()
+            archive_dfs = {}
+            for sym in symbols:
+                df_h = main.get_history(sym)
+                if df_h is not None and len(df_h) >= 55:
+                    archive_dfs[sym] = df_h
 
     if not archive_dfs:
         res = compute_metrics([], [], start_date or DEFAULT_START, end_date or datetime.date.today().isoformat())
@@ -262,9 +272,19 @@ def run_backtest(
     # Filter dates
     active_dates = [d for d in sorted_dates if (not start_date or d >= start_date) and (not end_date or d <= end_date)]
 
+    # Precompute indicators once per symbol for point-in-time lookup
+    precomputed_dfs: Dict[str, pd.DataFrame] = {}
+    for sym, df in archive_dfs.items():
+        if len(df) >= 55:
+            try:
+                precomputed_dfs[sym] = main.add_indicators(df)
+            except Exception:
+                pass
+
     open_positions: List[Dict[str, Any]] = []
     closed_trades: List[Dict[str, Any]] = []
     equity_curve: List[Dict[str, Any]] = []
+    pending_orders: List[Dict[str, Any]] = []
 
     capital = initial_capital
     peak_equity = capital
@@ -289,19 +309,33 @@ def run_backtest(
                 continue
 
             bar = day_bar.iloc[0]
+            open_price = float(bar["Open"])
             close_price = float(bar["Close"])
             low_price = float(bar["Low"])
+            high_price = float(bar["High"])
             pos["holding_days"] += 1
 
-            # Compute current 20-EMA over trailing window for symbol
-            hist_up_to_today = sym_df[sym_df["Date"] <= current_dt]
-            if len(hist_up_to_today) >= 20:
-                ema20_series = hist_up_to_today["Close"].ewm(span=20, adjust=False).mean()
-                ema20_val = float(ema20_series.iloc[-1])
+            # Lookup indicators for day t
+            ind_df = precomputed_dfs.get(sym)
+            if ind_df is not None:
+                ind_day = ind_df[ind_df["Date"] == current_dt]
+                if not ind_day.empty:
+                    ind_r = ind_day.iloc[0]
+                    ema20_val = float(ind_r["EMA20"]) if "EMA20" in ind_r else close_price
+                    ema10_val = float(ind_r["EMA10"]) if "EMA10" in ind_r else close_price
+                    vol_5d_val = float(ind_r["VOL5"]) if "VOL5" in ind_r else None
+                else:
+                    ema20_val = close_price
+                    ema10_val = close_price
+                    vol_5d_val = None
             else:
-                ema20_val = float(hist_up_to_today["Close"].mean())
+                ema20_val = close_price
+                ema10_val = close_price
+                vol_5d_val = None
 
-            # Call LIVE tail-capture exit function
+            active_stop = pos["current_stop"]
+
+            # Call LIVE tail-capture exit function (strictly non-retroactive stop evaluation)
             exit_info = main.calculate_tail_capture_exit(
                 entry_price=pos["entry_price"],
                 current_close=close_price,
@@ -311,6 +345,12 @@ def run_backtest(
                 ema20=ema20_val,
                 partial_taken=pos["partial_taken"],
                 time_stop_days=main.TIME_STOP_DAYS,
+                ema10=ema10_val,
+                vol_5d_avg=vol_5d_val,
+                breakout_vol=pos.get("breakout_vol"),
+                current_stop=active_stop,
+                current_high=high_price,
+                current_open=open_price,
             )
 
             exit_type = exit_info.get("exit_type")
@@ -318,92 +358,136 @@ def run_backtest(
             if exit_type == "PARTIAL_2R" and not pos["partial_taken"]:
                 # Take 50% partial at +2R target
                 part_qty = pos["qty"] // 2
-                pos["remaining_qty"] -= part_qty
-                pos["partial_taken"] = True
-                pos["current_stop"] = pos["entry_price"]  # Breakeven ratchet
-                target_pnl = part_qty * (pos["target"] - pos["entry_price"])
-                pos["partial_pnl"] = target_pnl
-                capital += (part_qty * pos["target"])
+                if part_qty > 0:
+                    pos["remaining_qty"] -= part_qty
+                    pos["partial_taken"] = True
+                    # Fill partial at max(Open, target_2r)
+                    partial_exit_price = max(open_price, pos["target"])
+                    pos["partial_exit_price"] = partial_exit_price
+                    pos["partial_pnl"] = part_qty * (partial_exit_price - pos["entry_price"])
+                    pos["partial_turnover"] = part_qty * (pos["entry_price"] + partial_exit_price)
+                    capital += (part_qty * partial_exit_price)
+
+                # Ratchet remaining 50%'s stop to fee-buffered breakeven for day t+1 onward
+                fee_buffered_be = round(pos["entry_price"] * (1.0 + getattr(main, "FEE_BUFFER_PCT", 0.0035)), 2)
+                pos["current_stop"] = max(active_stop, fee_buffered_be)
                 surviving_positions.append(pos)
 
             elif exit_type in ("STOP_LOSS", "BREAKEVEN_STOP", "EMA20_TRAIL", "TIME_STOP"):
-                # Complete position exit
+                # Complete position exit with realistic GTT fill pricing
                 if exit_type in ("STOP_LOSS", "BREAKEVEN_STOP"):
-                    exit_price = min(pos["current_stop"], close_price)
+                    # Fill at min(Open, active_stop) with 0.10% slippage (captures gap-downs)
+                    exit_price = min(open_price, active_stop) * (1.0 - 0.001)
                 else:
-                    exit_price = close_price
+                    # 3:15 PM EOD close exit with 0.10% slippage
+                    exit_price = close_price * (1.0 - 0.001)
 
                 rem_qty = pos["remaining_qty"]
-                rem_pnl = rem_qty * (exit_price - pos["entry_price"])
-                total_pnl = pos["partial_pnl"] + rem_pnl
+                rem_gross_pnl = rem_qty * (exit_price - pos["entry_price"])
+                gross_pnl = pos["partial_pnl"] + rem_gross_pnl
                 capital += (rem_qty * exit_price)
 
-                r_unit = pos["r_unit"]
-                r_mult = round(total_pnl / (pos["qty"] * r_unit), 2) if (pos["qty"] * r_unit) > 0 else 0.0
+                # Indian statutory friction (0.30% round-trip)
+                rem_turnover = rem_qty * (pos["entry_price"] + exit_price)
+                total_turnover = pos["partial_turnover"] + rem_turnover
+                statutory_friction = total_turnover * 0.0015  # 0.15% per leg = 0.30% round-trip
+                net_pnl = gross_pnl - statutory_friction
+
+                initial_risk = pos["qty"] * pos["r_unit"]
+                net_r_mult = round(net_pnl / initial_risk, 2) if initial_risk > 0 else 0.0
 
                 closed_trades.append({
                     "symbol": sym,
                     "entry_date": pos["entry_date"],
-                    "entry_price": pos["entry_price"],
+                    "entry_price": round(pos["entry_price"], 2),
                     "qty": pos["qty"],
-                    "initial_stop": pos["initial_stop"],
-                    "target": pos["target"],
+                    "initial_stop": round(pos["initial_stop"], 2),
+                    "target": round(pos["target"], 2),
                     "signal_type": pos["signal_type"],
                     "grade": pos["grade"],
                     "exit_date": current_date_str,
                     "exit_price": round(exit_price, 2),
                     "exit_reason": exit_type,
-                    "pnl": round(total_pnl, 2),
-                    "r_multiple": r_mult,
+                    "gross_pnl": round(gross_pnl, 2),
+                    "net_pnl": round(net_pnl, 2),
+                    "pnl": round(net_pnl, 2),
+                    "turnover": round(total_turnover, 2),
+                    "fees": round(statutory_friction, 2),
+                    "r_multiple": net_r_mult,
                     "holding_days": pos["holding_days"],
                     "risk_amount": pos["risk_amount"],
                 })
             else:
+                # Position held: ratchet stop for day t+1 onward
+                pos["current_stop"] = exit_info["new_stop"]
                 surviving_positions.append(pos)
 
         open_positions = surviving_positions
 
         # -------------------------------------------------------------
-        # 2. Check for New Entries on day t
+        # 2. Execute Pending GTT Orders queued from day t-1 on day t Open
         # -------------------------------------------------------------
-        if len(open_positions) < main.MAX_CONCURRENT_SMALLCAP:
-            for sym, sym_df in archive_dfs.items():
+        if pending_orders:
+            # Sort candidate orders:
+            # 1) Setup Priority: BREAKOUT (0) > SPRING (1) > PULLBACK (2)
+            # 2) 6-Month Vol-Adjusted Return descending
+            # 3) Symbol string ascending
+            type_prio = {"BREAKOUT": 0, "SPRING": 1, "PULLBACK": 2}
+            pending_orders.sort(
+                key=lambda x: (
+                    type_prio.get(x["signal_type"], 9),
+                    -x.get("vol_adj_ret", 0.0),
+                    x["symbol"]
+                )
+            )
+
+            for cand in pending_orders:
                 if len(open_positions) >= main.MAX_CONCURRENT_SMALLCAP:
                     break
+                sym = cand["symbol"]
                 if any(p["symbol"] == sym for p in open_positions):
                     continue
 
-                hist = sym_df[sym_df["Date"] <= current_dt]
-                if len(hist) < 55:
+                # Sector cap check (MAX_SECTOR_CONCURRENT = 2)
+                cand_sector = main.SECTOR_MAP.get(sym, main.INDEX_SYMBOL)
+                sec_count = sum(1 for p in open_positions if main.SECTOR_MAP.get(p["symbol"], main.INDEX_SYMBOL) == cand_sector)
+                if sec_count >= getattr(main, "MAX_SECTOR_CONCURRENT", 2):
                     continue
 
-                # Run REAL live add_indicators over trailing slice
-                ind_df = main.add_indicators(hist)
-                last_row = ind_df.iloc[-1]
-
-                # Check setup signals
-                is_signal = bool(last_row.get("SIGNAL", False))
-                is_spring = bool(last_row.get("SIGNAL_SPRING", False))
-                is_pullback = bool(main.ENABLE_PULLBACK and last_row.get("SIGNAL_PULLBACK", False))
-
-                if not (is_signal or is_spring or is_pullback):
+                sym_df = archive_dfs.get(sym)
+                if sym_df is None:
+                    continue
+                day_bar = sym_df[sym_df["Date"] == current_dt]
+                if day_bar.empty:
                     continue
 
-                sig_type = "BREAKOUT" if is_signal else ("SPRING" if is_spring else "PULLBACK")
+                bar = day_bar.iloc[0]
+                open_p = float(bar["Open"])
+                high_p = float(bar["High"])
+                signal_close = cand["signal_close"]
 
-                # Sizing & stop via REAL calculate_position_risk_parameters
-                entry_val = float(last_row["Close"])
-                atr_val = float(last_row["ATR14"])
-                low_val = float(last_row["Low"]) if "Low" in last_row else entry_val
+                # Enforce <= 1.5% opening gap-up gate
+                if open_p > signal_close * 1.015:
+                    continue
 
+                # Fill entry price at next-day open / trigger
+                if cand["signal_type"] == "BREAKOUT":
+                    entry_price = max(open_p, signal_close)
+                else:
+                    entry_price = open_p
+
+                if high_p < entry_price:
+                    continue
+
+                # Recompute position sizing & risk parameters cleanly at actual fill price
                 risk_params = main.calculate_position_risk_parameters(
-                    entry=entry_val,
-                    atr=atr_val,
-                    signal_type=sig_type,
-                    low_price=low_val,
+                    entry=entry_price,
+                    atr=cand["atr"],
+                    signal_type=cand["signal_type"],
+                    low_price=cand["low"],
                     capital=capital,
                 )
-                if not risk_params:
+                if not risk_params or risk_params.get("Qty", 0) <= 0:
                     continue
 
                 qty = risk_params["Qty"]
@@ -412,49 +496,84 @@ def run_backtest(
                 risk_amt = risk_params["Risk Amount"]
                 r_unit = risk_params["Risk Per Unit"]
 
-                # Total heat check
+                # Heat check
                 current_heat = sum(p["risk_amount"] for p in open_positions)
                 if (current_heat + risk_amt) > (main.CAPITAL * main.MAX_TOTAL_HEAT_PCT):
                     continue
 
-                # Check liquidity cap: notional <= 1.5% of ADV20
-                if len(hist) >= 20:
-                    adv20 = float((hist["Volume"] * hist["Close"]).iloc[-20:].mean())
-                    if adv20 < main.ADV20_MIN_RUPEES or (qty * entry_val) > (main.MAX_POSITION_ADV_PCT * adv20):
+                # ADV20 liquidity check
+                sub_hist = sym_df[sym_df["Date"] <= current_dt]
+                if len(sub_hist) >= 20:
+                    adv20 = float((sub_hist["Volume"] * sub_hist["Close"]).iloc[-20:].mean())
+                    if adv20 < main.ADV20_MIN_RUPEES or (qty * entry_price) > (main.MAX_POSITION_ADV_PCT * adv20):
                         continue
 
-                # Diagnose grade if possible
-                grade = "A"
-                try:
-                    diag = main.diagnose(sym)
-                    if diag and "grade" in diag:
-                        grade = diag["grade"]
-                except Exception:
-                    grade = "A"
-
-                # Deduct cash for open position
-                capital -= (qty * entry_val)
-
+                # Deduct cash and open position
+                capital -= (qty * entry_price)
                 open_positions.append({
                     "symbol": sym,
                     "entry_date": current_date_str,
-                    "entry_price": entry_val,
+                    "entry_price": entry_price,
                     "qty": qty,
                     "remaining_qty": qty,
                     "initial_stop": stop_val,
                     "current_stop": stop_val,
                     "target": target_val,
-                    "signal_type": sig_type,
-                    "grade": grade,
+                    "signal_type": cand["signal_type"],
+                    "grade": cand["grade"],
                     "holding_days": 0,
                     "partial_taken": False,
                     "partial_pnl": 0.0,
+                    "partial_turnover": 0.0,
                     "risk_amount": risk_amt,
                     "r_unit": r_unit,
+                    "breakout_vol": cand["breakout_vol"],
                 })
 
         # -------------------------------------------------------------
-        # 3. Mark-to-Market Portfolio Equity for Equity Curve
+        # 3. Scan EOD on day t to queue Pending GTT Orders for day t+1
+        # -------------------------------------------------------------
+        pending_orders = []
+        for sym, sym_df in archive_dfs.items():
+            hist = sym_df[sym_df["Date"] <= current_dt]
+            if len(hist) < 55:
+                continue
+            if len(archive_dfs) <= 5:
+                ind_df = main.add_indicators(hist)
+                last_row = ind_df.iloc[-1]
+            else:
+                p_df = precomputed_dfs.get(sym)
+                if p_df is None:
+                    continue
+                d_row = p_df[p_df["Date"] == current_dt]
+                if d_row.empty:
+                    continue
+                last_row = d_row.iloc[-1]
+
+            is_signal = bool(last_row.get("SIGNAL", False))
+            is_spring = bool(last_row.get("SIGNAL_SPRING", False))
+            is_pullback = bool(main.ENABLE_PULLBACK and last_row.get("SIGNAL_PULLBACK", False))
+
+            if not (is_signal or is_spring or is_pullback):
+                continue
+
+            sig_type = "BREAKOUT" if is_signal else ("SPRING" if is_spring else "PULLBACK")
+            vol_ret = float(last_row.get("VOL_ADJ_RET", 0.0)) if "VOL_ADJ_RET" in last_row else 0.0
+
+            pending_orders.append({
+                "symbol": sym,
+                "signal_type": sig_type,
+                "signal_date": current_date_str,
+                "signal_close": float(last_row["Close"]),
+                "atr": float(last_row["ATR14"]),
+                "vol_adj_ret": vol_ret,
+                "low": float(last_row["Low"]) if "Low" in last_row else float(last_row["Close"]),
+                "grade": "A",
+                "breakout_vol": float(last_row["Volume"]),
+            })
+
+        # -------------------------------------------------------------
+        # 4. Mark-to-Market Portfolio Equity for Equity Curve
         # -------------------------------------------------------------
         portfolio_equity = capital
         for pos in open_positions:

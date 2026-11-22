@@ -76,7 +76,7 @@ MAX_POSITION_ADV_PCT = 0.01  # 1.0% size-aware cap of ADV20
 
 # Gap / circuit survival sizing
 WORST_CASE_GAP_PCT = 0.20
-MAX_GAP_LOSS_PCT = 0.025
+MAX_GAP_LOSS_PCT = 0.03
 DEFAULT_CIRCUIT_BAND = 0.10
 CIRCUIT_PROXIMITY_PCT = 0.02
 
@@ -85,9 +85,9 @@ EARNINGS_BLACKOUT_DAYS = 5
 EARNINGS_FAIL_CLOSED = os.getenv("EARNINGS_FAIL_CLOSED", "false").lower() in ("true", "1", "yes")
 
 # Portfolio heat & drawdown limits (Elder circuit-breaker)
-MAX_CONCURRENT_SMALLCAP = 5
+MAX_CONCURRENT_SMALLCAP = 6
 MAX_SECTOR_CONCURRENT = 2
-MAX_TOTAL_HEAT_PCT = 0.05
+MAX_TOTAL_HEAT_PCT = 0.06
 DAILY_STOP_PCT = 0.02
 MONTHLY_STOP_PCT = 0.06
 
@@ -943,12 +943,17 @@ def calculate_tail_capture_exit(
     ema10: Optional[float] = None,
     vol_5d_avg: Optional[float] = None,
     breakout_vol: Optional[float] = None,
+    current_stop: Optional[float] = None,
+    current_high: Optional[float] = None,
+    current_open: Optional[float] = None,
 ) -> Dict[str, Any]:
     """
     Tail-capture exit asymmetry & R-multiple breakeven ratchet:
+    - Stop evaluation entering day t is governed strictly by active_stop (current_stop from t-1 or initial_stop).
     - Rule 11: Ratchet stop-loss to Entry * 1.0035 (breakeven + 0.35% round-trip NSE statutory fee buffer)
       when Unrealized_Gain >= 1.0 * Risk_Per_Share (+1R) OR at +2R partial profit booking.
-    - At +2R: take 50% partial profit and lock stop to fee-buffered breakeven.
+      This ratchet takes effect AT THE END of bar t for day t+1 onward—never retroactively on day t.
+    - At +2R: take 50% partial profit and lock stop to fee-buffered breakeven for subsequent bars.
     - Trail remaining 50%: exit on 20-EMA close (Close < EMA20).
     - Rule 13: 5-Day dead-money time stop triggers after 5 trading days (holding_days >= 5)
       ONLY IF Close <= Entry AND (Close < EMA10 OR Volume_5d_Avg > Breakout_Volume).
@@ -959,29 +964,28 @@ def calculate_tail_capture_exit(
     target_2r = entry_price + (2.0 * r_unit)
     fee_buffered_be = round(entry_price * (1.0 + FEE_BUFFER_PCT), 2)
 
-    # Ratchet stop to fee-buffered breakeven if +1R reached or partial already taken
-    if partial_taken or (current_close >= target_1r):
-        effective_stop = max(initial_stop, fee_buffered_be)
-    else:
-        effective_stop = initial_stop
+    # Active stop entering day t
+    active_stop = current_stop if current_stop is not None else initial_stop
 
-    # 1. Stop loss breach check
-    if current_low <= effective_stop or current_close < effective_stop:
-        is_be = (effective_stop >= entry_price)
+    # 1. Stop loss breach check on day t against active_stop
+    check_low = min(current_low, current_open) if current_open is not None else current_low
+    if check_low <= active_stop or current_close < active_stop:
+        is_be = (active_stop >= entry_price)
         return {
             "exit_type": "BREAKEVEN_STOP" if is_be else "STOP_LOSS",
             "exit_qty_pct": 1.0,
-            "new_stop": effective_stop,
+            "new_stop": active_stop,
             "partial_taken": partial_taken,
-            "reason": f"Hit {'fee-buffered breakeven (+0.35%)' if is_be else 'initial'} stop (₹{effective_stop:.2f})",
+            "reason": f"Hit {'fee-buffered breakeven (+0.35%)' if is_be else 'initial'} stop (₹{active_stop:.2f})",
         }
 
     # 2. +2R Partial profit booking
-    if not partial_taken and current_close >= target_2r:
+    high_check = current_high if current_high is not None else current_close
+    if not partial_taken and high_check >= target_2r:
         return {
             "exit_type": "PARTIAL_2R",
             "exit_qty_pct": 0.50,
-            "new_stop": max(effective_stop, fee_buffered_be),
+            "new_stop": max(active_stop, fee_buffered_be),
             "partial_taken": True,
             "reason": f"Hit +2R target (₹{target_2r:.2f}): take 50% partial, stop ratcheted to breakeven + 0.35% fee buffer (₹{fee_buffered_be:.2f})",
         }
@@ -991,7 +995,7 @@ def calculate_tail_capture_exit(
         return {
             "exit_type": "EMA20_TRAIL",
             "exit_qty_pct": 1.0,
-            "new_stop": effective_stop,
+            "new_stop": active_stop,
             "partial_taken": True,
             "reason": f"Close (₹{current_close:.2f}) dropped below 20-EMA (₹{ema20:.2f}): trail exit triggered",
         }
@@ -1009,15 +1013,21 @@ def calculate_tail_capture_exit(
                 return {
                     "exit_type": "TIME_STOP",
                     "exit_qty_pct": 1.0,
-                    "new_stop": effective_stop,
+                    "new_stop": active_stop,
                     "partial_taken": partial_taken,
                     "reason": f"5-day dead-money time stop ({holding_days} days): Close <= Entry and no momentum follow-through",
                 }
 
+    # 5. Position held: ratchet stop for day t+1 onward if +1R reached or partial already taken
+    if partial_taken or (current_close >= target_1r):
+        new_stop = max(active_stop, fee_buffered_be)
+    else:
+        new_stop = active_stop
+
     return {
         "exit_type": None,
         "exit_qty_pct": 0.0,
-        "new_stop": effective_stop,
+        "new_stop": new_stop,
         "partial_taken": partial_taken,
         "reason": "Hold position",
     }
@@ -3023,9 +3033,12 @@ def kelly_fraction(
         return 0.01
 
 
+BACKTEST_RESULTS_PATH = os.getenv("BACKTEST_RESULTS_PATH", "backtest_results.json")
+
+
 def resolve_kelly_fraction(
     signal_type: str = "BREAKOUT",
-    backtest_path: str = "backtest_results.json",
+    backtest_path: Optional[str] = None,
     stats_override: Optional[Dict[str, Any]] = None,
 ) -> Tuple[float, str]:
     """
@@ -3035,6 +3048,8 @@ def resolve_kelly_fraction(
     else falls back to flat RISK_PCT (0.01) with 'flat-fallback'.
     Read-only; never writes to backtest archive.
     """
+    if backtest_path is None:
+        backtest_path = BACKTEST_RESULTS_PATH
     if stats_override is not None:
         wr = stats_override.get("win_rate", 0.0)
         win_r = stats_override.get("avg_win_R", 0.0)
@@ -3117,16 +3132,26 @@ def calculate_position_size(
         stats_override=stats_override,
     )
 
-    # Tiered risk budget by setup grade (Rule 08/15)
-    if grade == "A+":
-        base_risk_pct = 0.015
-        sizing_source = "grade-A+-1.5%"
-    elif grade == "A":
-        base_risk_pct = 0.010
-        if sizing_source != "flat-fallback":
-            sizing_source = "grade-A-1.0%"
+    # Risk fraction resolution: use chosen_kelly_f as base risk fraction
+    if sizing_source == "flat-fallback":
+        if grade == "A+":
+            base_risk_pct = 0.0125
+            sizing_source = "grade-A+-1.25%"
+        elif grade == "A":
+            base_risk_pct = 0.010
+            # Retain flat-fallback naming for standard A grade in fallback mode
+        else:
+            base_risk_pct = 0.010
     else:
-        base_risk_pct = chosen_kelly_f
+        # Data-driven Kelly mode (>= 30 trades exist)
+        if grade == "A+":
+            base_risk_pct = min(0.015, chosen_kelly_f * 1.25)
+            sizing_source = f"{sizing_source}-A+"
+        elif grade == "A":
+            base_risk_pct = chosen_kelly_f
+            sizing_source = f"{sizing_source}-A"
+        else:
+            base_risk_pct = chosen_kelly_f
 
     # 1. Bet size from risk budget
     risk_rupees = capital * base_risk_pct
@@ -3364,18 +3389,31 @@ def scan_symbol(symbol: str) -> Optional[Dict[str, Any]]:
     atr = float(last_row["ATR14"])
     low_price = float(last_row["Low"]) if "Low" in last_row and not pd.isna(last_row["Low"]) else None
 
+    # Use compounding effective capital and current portfolio heat
+    eff_capital = get_effective_capital()
+    try:
+        open_pos = load_open_positions()
+        curr_heat = sum(float(p.get("risk_amount", 0.0)) for p in open_pos)
+    except Exception:
+        curr_heat = 0.0
+
     risk_params = calculate_position_risk_parameters(
         entry=entry,
         atr=atr,
         signal_type=signal_type,
         low_price=low_price,
-        capital=CAPITAL,
+        capital=eff_capital,
+        adv20_rupees=adv20_rupees,
+        current_heat=curr_heat,
         grade=grade,
     )
     if not risk_params:
         return None
 
     qty = risk_params["Qty"]
+    if qty <= 0:
+        return None
+
     stop = risk_params["Stop"]
     target = risk_params["Target"]
     risk_per_unit = risk_params["Risk Per Unit"]
@@ -3386,12 +3424,6 @@ def scan_symbol(symbol: str) -> Optional[Dict[str, Any]]:
     effective_atr_mult = risk_params.get("effective_ATR_mult", ATR_STOP_MULTIPLIER)
     vol_regime = risk_params.get("vol_regime", "NORMAL")
 
-    # Size-aware cap: max_position_value = 0.015 * ADV20_rupees (notional <= 1.5% of avg daily turnover)
-    max_position_value = MAX_POSITION_ADV_PCT * adv20_rupees
-    if (qty * entry) > max_position_value:
-        return None
-
-    risk_amount = qty * risk_per_unit
     sector_sym = SECTOR_MAP.get(symbol, INDEX_SYMBOL)
 
     rs_map = calculate_rs_rating([symbol])
@@ -3500,13 +3532,14 @@ def format_signal(sig: Dict[str, Any]) -> str:
         f"1. Open your Zerodha Kite / Groww / Upstox app tonight (before 9:00 AM tomorrow).",
         f"2. Search for '{clean_sym}' and choose 'Create GTT Order'.",
         f"3. Set Trigger Price = ₹{entry:.2f}",
-        f"4. Set Limit Price = ₹{entry:.2f} (Do NOT pay more than ₹{max_buy_price:.2f})",
+        f"4. Set Limit Price = ₹{max_buy_price:.2f} (Permits up to +1.5% slippage buffer to guarantee fill on morning breakout)",
         f"5. Set Quantity = {qty} shares (Total capital: ₹{total_capital:,.2f})",
         f"6. Set Stop-Loss = ₹{stop:.2f} (Max downside risk: ₹{risk_amt:,.2f})",
         f"7. Set Target = ₹{target:.2f} (Expected profit: ₹{est_profit:,.2f})",
         f"",
         f"🕒 WHAT HAPPENS NEXT & WHEN TO MONITOR:",
-        f"• Tomorrow (9:15 AM - 3:30 PM): Order executes automatically if price crosses ₹{entry:.2f}.",
+        f"• Tomorrow (9:15 AM - 3:30 PM): Order executes automatically if price crosses ₹{entry:.2f} (fills up to ₹{max_buy_price:.2f}).",
+        f"• ⚠️ CHASE WARNING: If stock gaps open > +1.5% above trigger (Open > ₹{max_buy_price:.2f}), DO NOT CHASE. Cancel order immediately.",
         f"• If executed: Log into your dashboard and click '➕ I Bought This' in Monitored Portfolio.",
         f"• Daily Review: Check your portfolio once at 3:15 PM IST only. No screen watching needed.",
         f"• Order Validity: Active for 5 trading sessions. Cancel if untriggered after 5 days.",
@@ -4211,6 +4244,27 @@ def save_json_file(file_path: str, data: List[Dict[str, Any]]) -> None:
 def load_trades() -> List[Dict[str, Any]]:
     """Load all closed trades from trades.json."""
     return load_json_file(TRADES_FILE)
+
+
+def get_effective_capital() -> float:
+    """
+    Returns effective compounding capital:
+      max(CAPITAL * 0.50, CAPITAL + sum(net_pnl from trades.json))
+    Compounds automatically as small-cap profits grow and scales down during drawdowns (floored at 50% capital).
+    """
+    try:
+        trades = load_trades()
+        realized_net_pnl = 0.0
+        for t in trades:
+            p = t.get("net_pnl")
+            if p is None:
+                p = t.get("pnl", 0.0)
+            if p is not None and not pd.isna(p):
+                realized_net_pnl += float(p)
+        eff = CAPITAL + realized_net_pnl
+        return float(max(CAPITAL * 0.50, eff))
+    except Exception:
+        return float(CAPITAL)
 
 
 def save_trades(data: List[Dict[str, Any]]) -> None:

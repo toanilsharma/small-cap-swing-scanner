@@ -49,3 +49,23 @@
   - Implemented `refresh_earnings_dates(symbols)` to automatically fetch and cache upcoming corporate earnings from `yf.Ticker(sym).calendar` into `earnings_dates.json`.
   - Strict blackout remains enforced whenever a confirmed earnings date falls within `EARNINGS_BLACKOUT_DAYS = 5` sessions to eliminate -20% lower circuit earnings gap risk.
   - Added configuration toggle `EARNINGS_FAIL_CLOSED = False` (configurable via environment variable): when earnings dates are genuinely unavailable after lookup, trade signals are permitted with a prominent warning flag `"earnings_status": "UNVERIFIED — CHECK NSE BEFORE ORDER"` in the Telegram alert and dashboard, ensuring no high-probability setups are silently killed while maintaining full risk transparency.
+
+### 4. Position Sizing, Compounding & Execution Alignment (Audit 2026-11)
+- **Automatic Capital Compounding**: Implemented `get_effective_capital()` returning `max(CAPITAL * 0.50, CAPITAL + sum(net_pnl from trades.json))`, ensuring position sizes automatically compound as small-cap profits accumulate and gracefully step down during drawdowns (with a protective 50% capital floor).
+- **Safe Small-Cap Capital Deployment**:
+  - Retained `WORST_CASE_GAP_PCT = 0.20` to protect against -20% lower circuit lockouts.
+  - Raised `MAX_GAP_LOSS_PCT` from `0.025` to `0.030`, capping individual small-cap allocation at 15% of account.
+  - Increased `MAX_CONCURRENT_SMALLCAP` from 5 to 6 and `MAX_TOTAL_HEAT_PCT` from 0.05 to 0.06 (6 positions $\times$ 15% = up to 90% capital deployment with a 10% cash reserve).
+  - Configured `scan_symbol()` to pass `adv20_rupees`, `current_heat`, and `capital=get_effective_capital()` into `calculate_position_risk_parameters()`, clamping position quantity to fit available liquidity and remaining portfolio heat instead of discarding valid setups.
+- **Non-Bypassed Kelly Fraction Resolution**:
+  - Standardized `calculate_position_size()` to utilize `chosen_kelly_f` from `resolve_kelly_fraction()` as the base risk fraction across all grades.
+  - In flat-fallback mode (<30 trades): defaults to 1.0% for Grade A and 1.25% for Grade A+.
+  - In data-driven Kelly mode ($\ge 30$ trades): uses `chosen_kelly_f` for Grade A and `min(0.015, chosen_kelly_f * 1.25)` for Grade A+.
+- **GTT Adverse Selection Elimination in `format_signal()`**:
+  - Sets Trigger Price to `₹{entry:.2f}` and Limit Price to `₹{max_buy_price:.2f}` (`round(entry * 1.015, 2)`).
+  - Allows up to +1.5% slippage buffer on opening morning breakouts so strong setups fill on Zerodha/Groww rather than missing fills and only executing fading breakouts.
+  - Maintains strict instruction not to chase if the opening price gaps $> 1.5\%$ above the trigger.
+- **Non-Retroactive Stop Ratchet & Realistic Fill Pricing**:
+  - Refactored `calculate_tail_capture_exit()` to evaluate stop-loss breaches strictly against `active_stop` entering day $t$ (carried over from $t-1$). Stop ratchets to fee-buffered breakeven (`entry * 1.0035`) take effect at the close of bar $t$ for day $t+1$ onward, eliminating retroactive same-bar breakeven stop-outs.
+  - Stop fills model gap-downs via `min(Open, active_stop) * (1.0 - 0.001)` and partial fills take `max(Open, target_2r)`.
+  - Deducts 0.30% round-trip statutory friction (`turnover * 0.0015`) on every trade.

@@ -105,6 +105,7 @@ def hermetic_scan_environment(monkeypatch: pytest.MonkeyPatch, request: pytest.F
     monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "123456789:ABCDEF-mock-token")
     monkeypatch.setenv("TELEGRAM_CHAT_ID", "987654321")
     monkeypatch.setenv("SKIP_GIT_PUSH", "1")
+    monkeypatch.setattr(main, "BACKTEST_RESULTS_PATH", "tests/fixtures/nonexistent_backtest.json")
 
     # Fixed 2-symbol universe
     monkeypatch.setattr(main, "get_symbols", lambda: ["AAA.NS", "BBB.NS"])

@@ -97,9 +97,9 @@ def test_risk_math_atr_stop_above_floor(monkeypatch: pytest.MonkeyPatch):
     Risk per unit = 100 - 94.0 = 6.0.
     Target = 100 + 2 * 6.0 = 112.0.
     Risk-based Qty = floor(2000 / 6.0) = 333.
-    Gap-based Qty = floor(5000 / 20) = 250 (gap survival sizing binds!).
-    Qty = min(333, 250) = 250.
-    Risk amount = 250 * 6.0 = 1500.0.
+    Gap-based Qty = floor(6000 / 20) = 300 (gap survival sizing binds!).
+    Qty = min(333, 300) = 300.
+    Risk amount = 300 * 6.0 = 1800.0.
     """
     sig = _invoke_scan_symbol_with_risk_inputs(entry=100.0, atr=3.0, monkeypatch=monkeypatch)
     assert sig is not None
@@ -107,8 +107,8 @@ def test_risk_math_atr_stop_above_floor(monkeypatch: pytest.MonkeyPatch):
     assert sig["Stop"] == 94.0
     assert sig["Risk Per Unit"] == 6.0
     assert sig["Target"] == 112.0
-    assert sig["Qty"] == 250
-    assert sig["Risk Amount"] == 1500.0
+    assert sig["Qty"] == 300
+    assert sig["Risk Amount"] == 1800.0
     assert sig["effective_ATR_mult"] == 2.0
     assert sig["vol_regime"] == "NORMAL"
 
@@ -119,7 +119,7 @@ def test_risk_math_high_regime_textbook_trade(monkeypatch: pytest.MonkeyPatch):
     entry=100, atr=2.6
     Raw stop = 100 - (2.60 * 2.6) = 93.24.
     Risk per unit = 6.76.
-    Qty = min(floor(2000 / 6.76), 250) = 250.
+    Qty = min(floor(2000 / 6.76), 300) = 295.
     """
     sig = _invoke_scan_symbol_with_risk_inputs(entry=100.0, atr=2.6, monkeypatch=monkeypatch, vol_regime="HIGH")
     assert sig is not None
@@ -127,7 +127,7 @@ def test_risk_math_high_regime_textbook_trade(monkeypatch: pytest.MonkeyPatch):
     assert sig["vol_regime"] == "HIGH"
     assert sig["Stop"] == 93.24
     assert sig["Risk Per Unit"] == 6.76
-    assert sig["Qty"] == 250
+    assert sig["Qty"] == 295
     assert sig["chosen_kelly_f"] == 0.01
 
 
@@ -137,14 +137,14 @@ def test_risk_math_low_regime_textbook_trade(monkeypatch: pytest.MonkeyPatch):
     entry=100, atr=2.6
     Raw stop = 100 - (1.70 * 2.6) = 95.58.
     Risk per unit = 4.42.
-    Qty = min(361, 250) = 250.
+    Qty = min(452, 300) = 300 (gap survival sizing binds!).
     """
     sig = _invoke_scan_symbol_with_risk_inputs(entry=100.0, atr=2.6, monkeypatch=monkeypatch, vol_regime="LOW")
     assert sig is not None
     assert sig["effective_ATR_mult"] == 1.70
     assert sig["vol_regime"] == "LOW"
     assert sig["Stop"] == 95.58
-    assert sig["Qty"] == 250
+    assert sig["Qty"] == 300
     assert sig["chosen_kelly_f"] == 0.01
 
 
@@ -204,7 +204,7 @@ def test_backtest_matches_live_risk(monkeypatch: pytest.MonkeyPatch, tmp_cwd: An
     atr_val = 5.0
     vol = 10000000.0
 
-    # 59 bars of tight base around 95-99, bar 60 breakouts at 100.0, takes 2R partial, then trail exits
+    # 59 bars of tight base around 95-99, bar 59 breakouts at 100.0, fills entry next open at 100.0, takes 2R partial, then trail exits
     close = np.linspace(95.0, 99.0, n)
     close[59] = entry_val     # breakout day (entry=100.0)
     close[60:62] = 125.0      # hits 2R target, takes 50% partial
@@ -213,6 +213,8 @@ def test_backtest_matches_live_risk(monkeypatch: pytest.MonkeyPatch, tmp_cwd: An
     high = close + 1.0
     low = close - 1.0
     open_ = close.copy()
+    open_[60] = entry_val     # next-day open entry at 100.0
+    high[60:62] = 126.0
 
     df = pd.DataFrame({
         "Date": dates,
@@ -288,7 +290,7 @@ def test_kelly_high_and_low_edge_sizing():
     assert flat_res["chosen_kelly_f"] == 0.01
     assert flat_res["qty"] == 111
 
-    # High edge sizing: 1.5% ceiling = 3000 Rs / 18 = 166 shares. Clamped by gap cap (125 shares).
+    # High edge sizing: 1.5% ceiling = 3000 Rs / 18 = 166 shares. Clamped by gap cap (150 shares at 3% max gap loss).
     high_res = main.calculate_position_size(
         entry=entry,
         stop=stop,
@@ -297,7 +299,7 @@ def test_kelly_high_and_low_edge_sizing():
     )
     assert high_res["chosen_kelly_f"] == 0.015
     assert high_res["sizing_source"] == "Kelly-BREAKOUT"
-    assert high_res["qty"] == 125  # Gap cap bound at 125, which is > 111!
+    assert high_res["qty"] == 150  # Gap cap bound at 150, which is > 111!
     assert high_res["qty"] > flat_res["qty"]
 
     # Low edge sizing: 0.65% risk budget = 1300 Rs / 18 = 72 shares.
@@ -345,9 +347,9 @@ def test_kelly_never_breaches_survival_caps():
     )
     assert res["chosen_kelly_f"] == 0.015, "Extreme edge must clamp to 1.5% ceiling"
     # Raw risk qty: floor(3000 / 9) = 333
-    # Gap cap: floor(5000 / 20) = 250
-    # Final shares must be <= gap cap (250)
-    assert res["qty"] == 250, "Shares must be clamped by gap survival cap"
+    # Gap cap: floor(6000 / 20) = 300
+    # Final shares must be <= gap cap (300)
+    assert res["qty"] == 300, "Shares must be clamped by gap survival cap"
     assert res["risk_amount"] <= capital * 0.015, "Risk amount must not exceed 1.5% ceiling"
 
     # 2. Check ADV ownership cap: 1.0% of ADV20
@@ -362,18 +364,18 @@ def test_kelly_never_breaches_survival_caps():
     assert tight_adv_res["qty"] == 150, "ADV cap strictly binds when tighter than gap/risk"
     assert tight_adv_res["qty"] * entry <= 0.01 * 1_500_000.0
 
-    # 3. Check concurrent heat ceiling (5% max portfolio heat)
-    # If 9,500 Rs of heat is already used out of 10,000 Rs (5% of 200,000), remaining heat = 500 Rs.
+    # 3. Check concurrent heat ceiling (6% max portfolio heat)
+    # If 11,500 Rs of heat is already used out of 12,000 Rs (6% of 200,000), remaining heat = 500 Rs.
     # Max shares = floor(500 / 9) = 55 shares.
     heat_res = main.calculate_position_size(
         entry=entry,
         stop=stop,
         capital=capital,
-        current_heat=9500.0,
+        current_heat=11500.0,
         stats_override=extreme_stats,
     )
     assert heat_res["qty"] == 55, "Heat cap strictly clamps remaining shares"
-    assert heat_res["qty"] * (entry - stop) <= (capital * 0.05 - 9500.0)
+    assert heat_res["qty"] * (entry - stop) <= (capital * 0.06 - 11500.0)
 
 
 def test_vol_regime_risk_invariant():
@@ -421,12 +423,12 @@ def test_vol_regime_risk_invariant():
     assert high_params["Risk Per Unit"] > norm_params["Risk Per Unit"] > low_params["Risk Per Unit"]
 
     # Position size adapts to stop width:
-    # HIGH stop is wider -> shares (250 shares clamped by gap cap)
-    # NORMAL stop is moderate -> 250 shares (gap cap binds)
-    # LOW stop is tighter -> 250 shares (gap cap binds)
-    assert high_params["Qty"] == 250
-    assert norm_params["Qty"] == 250
-    assert low_params["Qty"] == 250
+    # HIGH stop is wider -> 295 shares (risk-based size under 300 gap cap)
+    # NORMAL stop is moderate -> 300 shares (300 gap cap binds)
+    # LOW stop is tighter -> 300 shares (300 gap cap binds)
+    assert high_params["Qty"] == 295
+    assert norm_params["Qty"] == 300
+    assert low_params["Qty"] == 300
 
     # Per-trade risk budget invariance:
     # Both HIGH and NORMAL share the identical 1% risk fraction (f* = 0.01)
@@ -448,6 +450,42 @@ def test_vol_regime_risk_invariant():
     assert (2.60 * 1.0) * h_small["risk_based_qty"] <= expected_risk_rupees
     assert (2.00 * 1.0) * n_small["risk_based_qty"] <= expected_risk_rupees
     assert (1.70 * 1.0) * l_small["risk_based_qty"] <= expected_risk_rupees
+
+
+def test_get_effective_capital(monkeypatch: pytest.MonkeyPatch):
+    """
+    Test get_effective_capital compounding & drawdown limits:
+    - Baseline with no trades: returns CAPITAL (200,000)
+    - With positive net_pnl: compounds above 200,000
+    - With mild drawdown: scales capital down
+    - With severe drawdown (>50%): floored at CAPITAL * 0.50 (100,000)
+    """
+    # 1. No trades -> 200,000
+    monkeypatch.setattr(main, "load_trades", lambda: [])
+    assert main.get_effective_capital() == 200000.0
+
+    # 2. Profitable trades (+45,000 PnL) -> 245,000
+    trades_win = [
+        {"symbol": "AAA.NS", "net_pnl": 25000.0},
+        {"symbol": "BBB.NS", "net_pnl": 20000.0},
+    ]
+    monkeypatch.setattr(main, "load_trades", lambda: trades_win)
+    assert main.get_effective_capital() == 245000.0
+
+    # 3. Drawdown (-30,000 PnL) -> 170,000
+    trades_loss = [
+        {"symbol": "AAA.NS", "net_pnl": -30000.0},
+    ]
+    monkeypatch.setattr(main, "load_trades", lambda: trades_loss)
+    assert main.get_effective_capital() == 170000.0
+
+    # 4. Catastrophic drawdown (-150,000 PnL) -> floored at 50% capital (100,000)
+    trades_deep_loss = [
+        {"symbol": "AAA.NS", "net_pnl": -150000.0},
+    ]
+    monkeypatch.setattr(main, "load_trades", lambda: trades_deep_loss)
+    assert main.get_effective_capital() == 100000.0
+
 
 
 

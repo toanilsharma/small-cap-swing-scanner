@@ -2668,6 +2668,7 @@ function initPortfolioModalListeners() {
     if (e.key === "Escape") {
       closeBuyModal();
       closeSellModal();
+      closeGttModal();
     }
   });
 }
@@ -6293,6 +6294,50 @@ function showToast(message, icon = "✅", duration = 3000) {
 // =====================================================================
 // PHASE 3: BROKER GTT ORDER COPY ASSISTANT (Item #7)
 // =====================================================================
+let _currentGttParams = null;
+
+function openGttModal(params) {
+  const modal = document.getElementById("gttAssistantModal");
+  if (!modal) return;
+  _currentGttParams = params;
+
+  const sym = params.symbol || params.Symbol || "";
+  const pivot = parseFloat(params.pivot || params.entry || 0);
+  const stop = parseFloat(params.stop || params.effectiveStop || 0);
+  const target = parseFloat(params.target || params.targetPrice || 0);
+  const qty = parseInt(params.qty, 10) || 1;
+  const limitPrice = pivot * 1.005;
+
+  const titleEl = document.getElementById("gttModalTitle");
+  if (titleEl) titleEl.textContent = `GTT Order Assistant: ${sym}`;
+
+  const fieldSym = document.getElementById("gttFieldSymbol");
+  if (fieldSym) fieldSym.textContent = sym;
+
+  const fieldTrigger = document.getElementById("gttFieldTrigger");
+  if (fieldTrigger) fieldTrigger.textContent = `₹${pivot.toFixed(2)}`;
+
+  const fieldLimit = document.getElementById("gttFieldLimit");
+  if (fieldLimit) fieldLimit.textContent = `₹${limitPrice.toFixed(2)}`;
+
+  const fieldQty = document.getElementById("gttFieldQty");
+  if (fieldQty) fieldQty.textContent = `${qty} shares`;
+
+  const fieldStop = document.getElementById("gttFieldStop");
+  if (fieldStop) fieldStop.textContent = `₹${stop.toFixed(2)}`;
+
+  const fieldTarget = document.getElementById("gttFieldTarget");
+  if (fieldTarget) fieldTarget.textContent = `₹${target.toFixed(2)}`;
+
+  modal.style.display = "flex";
+}
+
+function closeGttModal() {
+  const modal = document.getElementById("gttAssistantModal");
+  if (modal) modal.style.display = "none";
+  _currentGttParams = null;
+}
+
 function copyGttParameters(symbol, entry, stop, target, qty) {
   const sym = (symbol || "").replace(/\.NS$/i, "").toUpperCase();
   const ePrice = parseFloat(entry) || 0;
@@ -6300,7 +6345,6 @@ function copyGttParameters(symbol, entry, stop, target, qty) {
   const tPrice = parseFloat(target) || 0;
   const q = parseInt(qty, 10) || 1;
 
-  // Buffer: Stop limit 0.5% below trigger for fast market depth protection
   const stopLimit = (sPrice * 0.995).toFixed(2);
   const targetTrigger = tPrice.toFixed(2);
 
@@ -6313,29 +6357,110 @@ Broker: Zerodha Kite / Groww / Upstox
 • Entry Ref: ₹${ePrice.toFixed(2)}`;
 
   if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(gttText).then(() => {
-      showToast(`Copied GTT Stop for ${sym}: Trigger ₹${sPrice.toFixed(2)}`, "📋");
-    }).catch(() => {
-      prompt("Copy GTT snippet:", gttText);
-    });
-  } else {
-    prompt("Copy GTT snippet:", gttText);
+    navigator.clipboard.writeText(gttText).catch(() => {});
   }
 }
 
 function initGttListeners() {
+  // Listen to any .copy-gtt-btn or .gtt-copy-btn
   document.addEventListener("click", (e) => {
-    const btn = e.target.closest(".gtt-copy-btn");
+    const btn = e.target.closest(".copy-gtt-btn, .gtt-copy-btn");
     if (btn) {
       e.stopPropagation();
       const sym = btn.getAttribute("data-symbol");
-      const entry = btn.getAttribute("data-entry");
-      const stop = btn.getAttribute("data-stop");
-      const target = btn.getAttribute("data-target");
-      const qty = btn.getAttribute("data-qty") || 1;
-      copyGttParameters(sym, entry, stop, target, qty);
+      let pivot = parseFloat(btn.getAttribute("data-entry") || btn.getAttribute("data-pivot"));
+      let stop = parseFloat(btn.getAttribute("data-stop"));
+      let target = parseFloat(btn.getAttribute("data-target"));
+      let qty = parseInt(btn.getAttribute("data-qty"), 10);
+
+      if ((!pivot || isNaN(pivot)) && _cachedScanData) {
+        const item = (_cachedScanData.watchlist || []).find(w => w.Symbol === sym) ||
+                     (_cachedScanData.signals || []).find(s => s.Symbol === sym) ||
+                     (_cachedScanData.on_deck || []).find(o => o.Symbol === sym);
+        if (item) {
+          const dec = computeStockDecision(item, _cachedScanData);
+          pivot = dec.pivot;
+          stop = dec.effectiveStop;
+          target = dec.targetPrice;
+          qty = dec.qty;
+        }
+      }
+
+      copyGttParameters(sym, pivot, stop, target, qty);
+      openGttModal({
+        symbol: sym,
+        pivot: pivot || 0,
+        stop: stop || 0,
+        target: target || 0,
+        qty: qty || 1
+      });
+      return;
+    }
+
+    // Copy individual field button inside GTT modal
+    const copyFieldBtn = e.target.closest(".copy-field-btn");
+    if (copyFieldBtn) {
+      e.stopPropagation();
+      const targetId = copyFieldBtn.getAttribute("data-target");
+      const targetEl = document.getElementById(targetId);
+      if (targetEl) {
+        const cleanVal = targetEl.textContent.replace(/[₹\s,shares]/g, "").trim();
+        navigator.clipboard.writeText(cleanVal).then(() => {
+          showToast(`Copied: ${cleanVal}`, "📋");
+        });
+      }
+      return;
     }
   });
+
+  // Modal close buttons
+  const closeBtn = document.getElementById("gttAssistantCloseBtn");
+  if (closeBtn) closeBtn.addEventListener("click", closeGttModal);
+  const backdrop = document.getElementById("gttAssistantBackdrop");
+  if (backdrop) backdrop.addEventListener("click", closeGttModal);
+
+  // Copy Entire Order Text
+  const copyAllBtn = document.getElementById("copyAllGttTextBtn");
+  if (copyAllBtn) {
+    copyAllBtn.addEventListener("click", () => {
+      if (!_currentGttParams) return;
+      const p = _currentGttParams;
+      const limitPrice = (p.pivot * 1.005).toFixed(2);
+      const text = `BUY ${p.symbol} | Trigger ₹${p.pivot.toFixed(2)} | Limit ₹${limitPrice} | SL ₹${p.stop.toFixed(2)} | Target ₹${p.target.toFixed(2)} | Qty: ${p.qty} | GTC`;
+      navigator.clipboard.writeText(text).then(() => {
+        showToast(`Copied GTT order for ${p.symbol}!`, "📋");
+      });
+    });
+  }
+
+  // Already Bought / Start Monitoring button in GTT modal
+  const boughtBtn = document.getElementById("gttAlreadyBoughtBtn");
+  if (boughtBtn) {
+    boughtBtn.addEventListener("click", () => {
+      if (!_currentGttParams) return;
+      const p = _currentGttParams;
+      closeGttModal();
+      openBuyModal({
+        Symbol: p.symbol,
+        pivot: p.pivot,
+        effectiveStop: p.stop,
+        targetPrice: p.target,
+        qty: p.qty
+      });
+    });
+  }
+
+  // Quick Routine Toggle
+  const routineHeader = document.getElementById("quickRoutineToggleHeader");
+  const routineBody = document.getElementById("quickRoutineBody");
+  const routineChevron = document.getElementById("quickRoutineChevron");
+  if (routineHeader && routineBody) {
+    routineHeader.addEventListener("click", () => {
+      const isHidden = routineBody.style.display === "none";
+      routineBody.style.display = isHidden ? "block" : "none";
+      if (routineChevron) routineChevron.style.transform = isHidden ? "rotate(0deg)" : "rotate(-90deg)";
+    });
+  }
 }
 
 // =====================================================================

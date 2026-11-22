@@ -141,6 +141,42 @@
           </div>
         </div>
 
+        <!-- 🧭 3-MINUTE DAILY WEALTH ROUTINE (Quick-Start Guide) -->
+        <div id="quickRoutineCard" class="quick-routine-card" style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 10px; padding: 14px 18px; margin-bottom: 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;" id="quickRoutineToggleHeader">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 18px;">🧭</span>
+              <span style="font-size: 13.5px; font-weight: 800; color: #fff; letter-spacing: 0.02em;">MY DAILY 3-MINUTE WEALTH ROUTINE (How To Follow This Guide)</span>
+            </div>
+            <span id="quickRoutineChevron" style="font-size: 12px; color: var(--text-dim); transition: transform 0.2s ease;">▼</span>
+          </div>
+          <div id="quickRoutineBody" style="display: block; margin-top: 12px; padding-top: 10px; border-top: 1px dashed rgba(255, 255, 255, 0.08);">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px;">
+              <div style="background: rgba(30, 41, 59, 0.45); padding: 10px 12px; border-radius: 6px; border-left: 3px solid #38bdf8;">
+                <div style="font-size: 11px; font-weight: 800; color: #38bdf8; text-transform: uppercase;">Step 1: Nightly (8:00 PM)</div>
+                <div style="font-size: 12.5px; color: #e2e8f0; font-weight: 600; margin: 2px 0 4px 0;">Check Traffic Light &amp; Place GTT</div>
+                <div style="font-size: 11.5px; color: var(--text-dim); line-height: 1.4;">
+                  If Green, place a GTT buy order in Zerodha/Groww for our <strong>Top #1 Pick</strong>. If Red, do nothing and stay in cash. Takes 1 minute.
+                </div>
+              </div>
+              <div style="background: rgba(30, 41, 59, 0.45); padding: 10px 12px; border-radius: 6px; border-left: 3px solid #10b981;">
+                <div style="font-size: 11px; font-weight: 800; color: #10b981; text-transform: uppercase;">Step 2: Market Hours (9:15 AM &ndash; 3:15 PM)</div>
+                <div style="font-size: 12.5px; color: #e2e8f0; font-weight: 600; margin: 2px 0 4px 0;">Relax &mdash; Zero Screen Staring</div>
+                <div style="font-size: 11.5px; color: var(--text-dim); line-height: 1.4;">
+                  Your broker executes GTT orders automatically. If an order fills, open this site and click <strong>&ldquo;➕ I Bought This&rdquo;</strong> to start tracking.
+                </div>
+              </div>
+              <div style="background: rgba(30, 41, 59, 0.45); padding: 10px 12px; border-radius: 6px; border-left: 3px solid #f59e0b;">
+                <div style="font-size: 11px; font-weight: 800; color: #f59e0b; text-transform: uppercase;">Step 3: Daily Review (3:15 PM)</div>
+                <div style="font-size: 12.5px; color: #e2e8f0; font-weight: 600; margin: 2px 0 4px 0;">Check Your Monitored Portfolio</div>
+                <div style="font-size: 11.5px; color: var(--text-dim); line-height: 1.4;">
+                  Check your bought stocks. If the badge says <strong>💰 BOOK 50%</strong> or <strong>⏳ TIME STOP</strong>, place the exit order in your broker before 3:30 PM.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Prominent "Today's Action Plan" Single Sentence -->
         <div id="heroActionPlanBox" class="hero-action-plan-box">
           <span class="hero-action-label">TODAY'S ACTION PLAN:</span>
@@ -4729,6 +4765,77 @@
             <button type="submit" id="recordSellSubmitBtn" class="btn btn-primary btn-sm">✅ Confirm Sale &amp; Update History</button>
           </div>
         </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- GTT BROKER ORDER ASSISTANT MODAL -->
+  <div id="gttAssistantModal" class="tv-modal" style="display: none;">
+    <div class="tv-modal-backdrop" id="gttAssistantBackdrop"></div>
+    <div class="tv-modal-dialog portfolio-modal-dialog" role="dialog" aria-modal="true" aria-label="GTT Order Assistant for Zerodha &amp; Groww">
+      <div class="tv-modal-header">
+        <div class="tv-modal-title-group">
+          <span style="font-size: 18px;">📋</span>
+          <h3 id="gttModalTitle" class="tv-modal-title">GTT Order Assistant: SYMBOL</h3>
+        </div>
+        <button id="gttAssistantCloseBtn" class="tv-modal-close" title="Close (Esc)">&times;</button>
+      </div>
+      <div class="portfolio-modal-body">
+        <p style="font-size: 12px; color: var(--text-dim); margin-bottom: 14px;">
+          Copy and paste these exact numbers into your broker app (Zerodha Kite, Groww, or Upstox) to place an automated Good-Til-Cancelled breakout trigger.
+        </p>
+
+        <div class="gtt-fields-card" style="background: rgba(15, 23, 42, 0.6); padding: 12px 14px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.08); margin-bottom: 14px;">
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; font-size: 13px;">
+            <div>
+              <span style="font-size: 11px; color: var(--text-dim); font-weight: 700; text-transform: uppercase;">Transaction Type</span>
+              <div style="font-weight: 800; color: #10b981; margin-top: 2px;">BUY (GTT Single)</div>
+            </div>
+            <div>
+              <span style="font-size: 11px; color: var(--text-dim); font-weight: 700; text-transform: uppercase;">Stock Symbol</span>
+              <div id="gttFieldSymbol" style="font-weight: 800; color: #fff; margin-top: 2px;">--</div>
+            </div>
+            <div>
+              <span style="font-size: 11px; color: var(--text-dim); font-weight: 700; text-transform: uppercase;">Trigger Price</span>
+              <div style="display: flex; align-items: center; gap: 6px; margin-top: 2px;">
+                <span id="gttFieldTrigger" style="font-weight: 800; color: #38bdf8; font-size: 15px;">₹0.00</span>
+                <button class="btn btn-xs btn-outline-secondary copy-field-btn" data-target="gttFieldTrigger">Copy</button>
+              </div>
+            </div>
+            <div>
+              <span style="font-size: 11px; color: var(--text-dim); font-weight: 700; text-transform: uppercase;">Limit Price (+0.5% cap)</span>
+              <div style="display: flex; align-items: center; gap: 6px; margin-top: 2px;">
+                <span id="gttFieldLimit" style="font-weight: 800; color: #38bdf8; font-size: 15px;">₹0.00</span>
+                <button class="btn btn-xs btn-outline-secondary copy-field-btn" data-target="gttFieldLimit">Copy</button>
+              </div>
+            </div>
+            <div>
+              <span style="font-size: 11px; color: var(--text-dim); font-weight: 700; text-transform: uppercase;">Recommended Quantity</span>
+              <div style="display: flex; align-items: center; gap: 6px; margin-top: 2px;">
+                <span id="gttFieldQty" style="font-weight: 800; color: #fff; font-size: 15px;">0 shares</span>
+                <button class="btn btn-xs btn-outline-secondary copy-field-btn" data-target="gttFieldQty">Copy</button>
+              </div>
+            </div>
+            <div>
+              <span style="font-size: 11px; color: var(--text-dim); font-weight: 700; text-transform: uppercase;">Order Validity</span>
+              <div style="font-weight: 800; color: #fbbf24; margin-top: 2px;">GTC (Valid 1 Year)</div>
+            </div>
+          </div>
+
+          <div style="margin-top: 12px; padding-top: 10px; border-top: 1px dashed rgba(255, 255, 255, 0.08); display: flex; justify-content: space-between; font-size: 12px; color: var(--text-dim);">
+            <div>Emergency Stop: <strong id="gttFieldStop" style="color: #f87171;">₹0.00</strong></div>
+            <div>Target (+2R): <strong id="gttFieldTarget" style="color: #34d399;">₹0.00</strong></div>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+          <button type="button" id="copyAllGttTextBtn" class="btn btn-primary btn-sm">
+            📋 Copy Entire Order Text
+          </button>
+          <button type="button" id="gttAlreadyBoughtBtn" class="btn btn-success btn-sm" style="background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #6ee7b7; font-weight: 700;">
+            ➕ I Bought This / Start Monitoring
+          </button>
+        </div>
       </div>
     </div>
   </div>

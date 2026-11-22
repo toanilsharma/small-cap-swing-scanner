@@ -94,12 +94,12 @@ MONTHLY_STOP_PCT = 0.06
 # Execution flags
 ENABLE_PULLBACK = True
 ENABLE_SQUEEZE = True
-TIME_STOP_DAYS = 5
+TIME_STOP_DAYS = 8
 MOMENTUM_RANK_TOP = 20
 RS_SLOPE_WEEKS = 4
 BREADTH_THRUST_THRESHOLD = 2.0
 HURST_GATE = 0.50
-OFI_GATE = 0.10
+OFI_GATE = 0.05
 
 # File paths & sources
 SYMBOL_SOURCE_URL = "https://www.niftyindices.com/IndexConstituent/ind_niftysmallcap100list.csv"
@@ -1039,16 +1039,16 @@ def calculate_tail_capture_exit(
     Tail-capture exit asymmetry & R-multiple breakeven ratchet:
     - Stop evaluation entering day t is governed strictly by active_stop (current_stop from t-1 or initial_stop).
     - Rule 11: Ratchet stop-loss to Entry * 1.0035 (breakeven + 0.35% round-trip NSE statutory fee buffer)
-      when Unrealized_Gain >= 1.0 * Risk_Per_Share (+1R) OR at +2R partial profit booking.
+      when Unrealized_Gain >= 1.5 * Risk_Per_Share (+1.5R) OR at +2R partial profit booking.
       This ratchet takes effect AT THE END of bar t for day t+1 onward—never retroactively on day t.
     - At +2R: take 50% partial profit and lock stop to fee-buffered breakeven for subsequent bars.
     - Trail remaining 50%: exit on 20-EMA close (Close < EMA20).
-    - Rule 13: 5-Day dead-money time stop triggers after 5 trading days (holding_days >= 5)
+    - Rule 13: 8-Day dead-money time stop triggers after time_stop_days trading days (holding_days >= time_stop_days)
       ONLY IF Close <= Entry AND (Close < EMA10 OR Volume_5d_Avg > Breakout_Volume).
       Do not auto-exit healthy low-volume pullbacks holding above the rising 10-day EMA.
     """
     r_unit = max(1e-4, entry_price - initial_stop)
-    target_1r = entry_price + (1.0 * r_unit)
+    target_1_5r = entry_price + (1.5 * r_unit)
     target_2r = entry_price + (2.0 * r_unit)
     fee_buffered_be = round(entry_price * (1.0 + FEE_BUFFER_PCT), 2)
 
@@ -1088,7 +1088,7 @@ def calculate_tail_capture_exit(
             "reason": f"Close (₹{current_close:.2f}) dropped below 20-EMA (₹{ema20:.2f}): trail exit triggered",
         }
 
-    # 4. Refined 5-day dead-money time stop (Rule 13)
+    # 4. Refined 8-day dead-money time stop (Rule 13)
     if holding_days >= time_stop_days:
         if current_close <= entry_price:
             should_exit_time = True
@@ -1103,11 +1103,11 @@ def calculate_tail_capture_exit(
                     "exit_qty_pct": 1.0,
                     "new_stop": active_stop,
                     "partial_taken": partial_taken,
-                    "reason": f"5-day dead-money time stop ({holding_days} days): Close <= Entry and no momentum follow-through",
+                    "reason": f"{time_stop_days}-day dead-money time stop ({holding_days} days): Close <= Entry and no momentum follow-through",
                 }
 
-    # 5. Position held: ratchet stop for day t+1 onward if +1R reached or partial already taken
-    if partial_taken or (current_close >= target_1r):
+    # 5. Position held: ratchet stop for day t+1 onward if +1.5R reached or partial already taken
+    if partial_taken or (current_close >= target_1_5r):
         new_stop = max(active_stop, fee_buffered_be)
     else:
         new_stop = active_stop
@@ -1123,12 +1123,12 @@ def calculate_tail_capture_exit(
 
 def calculate_hurst_exponent(df: Optional[pd.DataFrame]) -> Optional[float]:
     """
-    Compute Hurst exponent H via the rescaled-range (R/S) method on log-returns
-    over a rolling 100-bar window.
+    Compute Hurst exponent H via multi-scale rescaled-range (R/S) log-log linear
+    regression over sub-window sizes [10, 20, 33, 50, 100] on rolling 100-bar log returns.
     - If <100 daily bars or invalid data, returns None.
-    - Detrend each sub-window by subtracting its mean before computing R/S.
-    - H = log(R/S) / log(n/2) averaged over non-overlapping sub-windows of size n=50.
-    - Mapped to standard [0.0, 1.0] scale where 0.5 = random walk, >0.5 = trending, <0.5 = mean-reverting.
+    - Detrends each sub-window by subtracting its mean before computing R/S.
+    - Fits OLS slope of log(R/S) vs log(scale) across multi-scale sub-windows [10, 20, 33, 50, 100].
+    - Clamps result to [0.0, 1.0].
     - Deterministic, fixed window=100, zero randomness, zero division/crash risk.
     """
     if df is None or len(df) < 100 or "Close" not in df.columns:
@@ -1144,34 +1144,46 @@ def calculate_hurst_exponent(df: Optional[pd.DataFrame]) -> Optional[float]:
         else:
             rets = np.diff(np.log(closes[-100:]))
 
-        n = 50
-        num_windows = len(rets) // n
-        if num_windows < 1:
-            n = len(rets) // 2
-            num_windows = 2
+        scales = [10, 20, 33, 50, 100]
+        n_ret = len(rets)
+        scale_list = []
+        rs_list = []
 
-        h_vals = []
-        for i in range(num_windows):
-            sub = rets[i * n : (i + 1) * n]
-            if len(sub) < 4:
+        for s in scales:
+            if s > n_ret:
                 continue
-            m = np.mean(sub)
-            y = sub - m
-            z = np.cumsum(y)
-            r = float(np.max(z) - np.min(z))
-            s = float(np.std(sub, ddof=1)) if len(sub) > 1 else 0.0
+            k = n_ret // s
+            if k < 1:
+                continue
+            sub_rs = []
+            for i in range(k):
+                sub = rets[i * s : (i + 1) * s]
+                if len(sub) < 4:
+                    continue
+                m = float(np.mean(sub))
+                y = sub - m
+                z = np.cumsum(y)
+                r = float(np.max(z) - np.min(z))
+                std = float(np.std(sub, ddof=1)) if len(sub) > 1 else 0.0
 
-            denom = np.log(n / 2.0)
-            if s > 1e-12 and r > 1e-12 and denom > 1e-12:
-                h = np.log(r / s) / denom
-                if not np.isnan(h) and not np.isinf(h):
-                    h_vals.append(h)
+                if std > 1e-12 and r > 1e-12:
+                    sub_rs.append(r / std)
 
-        if not h_vals:
+            if sub_rs:
+                rs_list.append(float(np.mean(sub_rs)))
+                scale_list.append(s)
+
+        if len(scale_list) < 2:
             return None
 
-        raw_h = float(np.mean(h_vals))
-        mapped_h = max(0.0, min(1.0, raw_h))
+        x = np.log(scale_list)
+        y = np.log(rs_list)
+        slope, _ = np.polyfit(x, y, 1)
+
+        if np.isnan(slope) or np.isinf(slope):
+            return None
+
+        mapped_h = max(0.0, min(1.0, float(slope)))
         return round(mapped_h, 3)
     except Exception:
         return None
@@ -1403,15 +1415,15 @@ def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
     df["BREAKOUT_EXHAUSTED"] = is_exhausted.fillna(False)
     df["BREAKOUT"] = raw_breakout & (~df["BREAKOUT_EXHAUSTED"])
     
-    # Small-cap volume spike: >= 2.0x 20-day / 50-day average volume AND 3-day rising volume across breakout window
+    # Small-cap volume spike: (Volume >= 1.5 * VOL20) | (Volume >= 1.5 * VOL50) AND Volume >= 1.3 * Volume.shift(1)
+    # (Removed vol_rising_3day which contradicted pre-breakout VCP volume contraction)
     vol_today = df["Volume"]
     vol_yesterday = df["Volume"].shift(1)
-    vol_2days_ago = df["Volume"].shift(2)
     vol50 = df["VOL50"]
     vol20 = df["VOL20"]
-    vol_spike_today = (vol_today >= (VOLUME_SPIKE_MIN * vol50)) | (vol_today >= (VOLUME_SPIKE_MIN * vol20))
-    vol_rising_3day = (vol_today > vol_yesterday) & (vol_yesterday > vol_2days_ago) & (vol_2days_ago >= 0.3 * vol50)
-    df["VOL_SPIKE"] = vol_spike_today & vol_rising_3day
+    vol_elevated = (vol_today >= (1.5 * vol20)) | (vol_today >= (1.5 * vol50))
+    vol_expansion = vol_today >= (1.3 * vol_yesterday)
+    df["VOL_SPIKE"] = vol_elevated & vol_expansion
 
     # Strong close / CLV (>= 60% of candle's range)
     safe_hl = (df["High"] - df["Low"]).replace(0, np.nan)
@@ -1482,12 +1494,16 @@ def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
         & (df["Volume"] >= 1.5 * df["VOL50"])
     )
 
-    # Edge: REFINED PULLBACK (set ENABLE_PULLBACK=True)
-    # Confirmed Stage-2 name, pullback to 20-EMA on declining volume, reclaimed by green candle
-    pullback_touch = df["Low"] <= (df["EMA20"] * 1.01)
-    reclaimed_green = (df["Close"] > df["EMA20"]) & (df["Close"] > df["Open"])
-    vol_declining = df["Volume"] < df["VOL50"]
-    df["PULLBACK"] = df["TREND_OK"] & pullback_touch & reclaimed_green & vol_declining
+    # Edge: REFINED PULLBACK (institutional support bounce)
+    # 1. Rising 20-EMA structure
+    rising_ema20 = df["EMA20"] > df["EMA20"].shift(5)
+    # 2. Prior 1-3 bars pulled back to within 1.5% of EMA20, holding above SMA50
+    pullback_touch = (df["Low"].rolling(3).min() <= (df["EMA20"] * 1.015)) & (df["Low"] >= df["SMA50"])
+    # 3. Reversal confirmation: Close > EMA20, Close > Open, Close > High.shift(1), and STRONG_CLOSE
+    reversal_bar = (df["Close"] > df["EMA20"]) & (df["Close"] > df["Open"]) & (df["Close"] > df["High"].shift(1)) & df["STRONG_CLOSE"]
+    # 4. Volume on bounce bar >= 0.9x VOL20 after quiet pullback bar (Volume.shift(1) < VOL50)
+    vol_bounce = (df["Volume"] >= (0.9 * df["VOL20"])) & (df["Volume"].shift(1) < df["VOL50"])
+    df["PULLBACK"] = df["TREND_OK"] & (~raw_breakout) & rising_ema20 & pullback_touch & reversal_bar & vol_bounce
 
     # Master signals
     df["SIGNAL"] = (
@@ -2552,6 +2568,53 @@ def check_open_positions_events(
     return open_positions, warn_lines
 
 
+def count_trading_days_held(
+    entry_date: Union[str, datetime.date],
+    exit_date: Optional[Union[str, datetime.date]] = None,
+    df: Optional[pd.DataFrame] = None
+) -> int:
+    """
+    Count actual NSE trading days held:
+    1. If df with 'Date' is provided, counts bars where Date > entry_date (and <= exit_date).
+    2. Fallback: calculates business days via np.busday_count.
+    """
+    if exit_date is None:
+        exit_date = datetime.date.today()
+    if isinstance(entry_date, str):
+        try:
+            d_entry = datetime.date.fromisoformat(str(entry_date)[:10])
+        except Exception:
+            return 0
+    else:
+        d_entry = entry_date
+
+    if isinstance(exit_date, str):
+        try:
+            d_exit = datetime.date.fromisoformat(str(exit_date)[:10])
+        except Exception:
+            d_exit = datetime.date.today()
+    else:
+        d_exit = exit_date
+
+    if d_exit <= d_entry:
+        return 0
+
+    if df is not None and "Date" in df.columns and not df.empty:
+        try:
+            df_dates = pd.to_datetime(df["Date"]).dt.date
+            bars = (df_dates > d_entry) & (df_dates <= d_exit)
+            cnt = int(bars.sum())
+            if cnt > 0:
+                return cnt
+        except Exception:
+            pass
+
+    try:
+        return int(np.busday_count(d_entry, d_exit))
+    except Exception:
+        return max(0, (d_exit - d_entry).days)
+
+
 def generate_position_management_alerts(
     open_positions: Optional[List[Dict[str, Any]]] = None,
     current_date: Optional[datetime.date] = None
@@ -2559,9 +2622,9 @@ def generate_position_management_alerts(
     """
     Automated Position Management Alerts for Daily Scan & /open handler:
     Inspects open_positions.json and generates explicit action badges:
-    - 🟢 RATCHET SL TO BREAKEVEN+FEES: Triggered when Close >= Entry + 1.0R (move SL to Entry * 1.0035).
+    - 🟢 RATCHET SL TO BREAKEVEN+FEES: Triggered when Close >= Entry + 1.5R (move SL to Entry * 1.0035).
     - 💰 BOOK 50% AT +2R: Triggered when High >= Target_2R.
-    - ⏳ 5-DAY TIME STOP TRIGGERED: Triggered when days_held >= 5 AND Close <= Entry AND Close < EMA10.
+    - ⏳ 8-DAY TIME STOP TRIGGERED: Triggered when days_held >= 8 trading days AND Close <= Entry AND Close < EMA10.
     - ⚠️ EARNINGS LOCKOUT EXIT: Triggered when days_to_earnings <= 3.
     - 🚨 EMA20 RUNNER EXIT: Triggered on the remaining 50% runner when Close < EMA20.
     """
@@ -2590,13 +2653,14 @@ def generate_position_management_alerts(
             risk_per_unit = entry - stop if entry > stop else (entry * 0.085)
             target_2r = float(pos.get("target")) if pos.get("target") is not None else (entry + 2.0 * risk_per_unit)
 
-            # Days held
+            # Fetch recent price action first so actual NSE trading bars can be counted
+            df = get_history(sym)
+            if df is None or len(df) < 10:
+                continue
+
+            # Actual NSE trading days held
             entry_date_str = str(pos.get("entry_date", ""))[:10]
-            try:
-                d_entry = datetime.date.fromisoformat(entry_date_str)
-                days_held = (current_date - d_entry).days
-            except Exception:
-                days_held = 0
+            days_held = count_trading_days_held(entry_date_str, current_date, df)
 
             # Earnings proximity
             next_ev = get_next_event(sym, current_date)
@@ -2612,11 +2676,6 @@ def generate_position_management_alerts(
                     except Exception:
                         pass
 
-            # Fetch recent price action
-            df = get_history(sym)
-            if df is None or len(df) < 10:
-                continue
-
             df = add_indicators(df)
             last_row = df.iloc[-1]
             close_now = float(last_row["Close"])
@@ -2624,11 +2683,12 @@ def generate_position_management_alerts(
             ema10_now = float(last_row["EMA10"]) if "EMA10" in last_row else float(df["Close"].ewm(span=10, adjust=False).mean().iloc[-1])
             ema20_now = float(last_row["EMA20"]) if "EMA20" in last_row else float(df["Close"].ewm(span=20, adjust=False).mean().iloc[-1])
 
-            # 1. 🟢 RATCHET SL TO BREAKEVEN+FEES: Close >= Entry + 1.0R
+            # 1. 🟢 RATCHET SL TO BREAKEVEN+FEES: Close >= Entry + 1.5R
+            target_1_5r = entry + (1.5 * risk_per_unit)
             be_sl = round(entry * 1.0035, 2)
-            if close_now >= (entry + (1.0 * risk_per_unit)) and (stop < be_sl):
+            if close_now >= target_1_5r and (stop < be_sl):
                 alerts.append(
-                    f"🟢 RATCHET SL TO BREAKEVEN+FEES: {sym} | Close ₹{close_now:.2f} >= +1.0R threshold (₹{entry + risk_per_unit:.2f}) -> Ratchet SL to ₹{be_sl:.2f} (+0.35% statutory fee buffer).\n"
+                    f"🟢 RATCHET SL TO BREAKEVEN+FEES: {sym} | Close ₹{close_now:.2f} >= +1.5R threshold (₹{target_1_5r:.2f}) -> Ratchet SL to ₹{be_sl:.2f} (+0.35% statutory fee buffer).\n"
                     f"   ⏰ ACTION AT 3:15 PM: Open Zerodha/Groww -> Move Stop-Loss order up to ₹{be_sl:.2f}.\n"
                     f"   🛡️ RESULT: Trade is now 100% risk-free. You cannot lose any capital!"
                 )
@@ -2641,10 +2701,10 @@ def generate_position_management_alerts(
                     f"   🛡️ NEXT STEP: Move Stop-Loss on remaining 50% shares to breakeven (₹{be_sl:.2f})."
                 )
 
-            # 3. ⏳ 5-DAY TIME STOP TRIGGERED: days_held >= 5 AND Close <= Entry AND Close < EMA10
-            if days_held >= 5 and close_now <= entry and close_now < ema10_now:
+            # 3. ⏳ 8-DAY TIME STOP TRIGGERED: days_held >= TIME_STOP_DAYS AND Close <= Entry AND Close < EMA10
+            if days_held >= TIME_STOP_DAYS and close_now <= entry and close_now < ema10_now:
                 alerts.append(
-                    f"⏳ 5-DAY TIME STOP TRIGGERED: {sym} | Held {days_held} days with zero price expansion (Close ₹{close_now:.2f} <= Entry ₹{entry:.2f} & < 10-EMA ₹{ema10_now:.2f}) -> Liquidate dead-money position.\n"
+                    f"⏳ 8-DAY TIME STOP TRIGGERED: {sym} | Held {days_held} trading days with zero price expansion (Close ₹{close_now:.2f} <= Entry ₹{entry:.2f} & < 10-EMA ₹{ema10_now:.2f}) -> Liquidate dead-money position.\n"
                     f"   ⏰ ACTION AT 3:15 PM: Sell entire position at market close.\n"
                     f"   💡 REASON: Stock is stagnant. Free up cash for faster moving opportunities."
                 )
@@ -3359,13 +3419,13 @@ def calculate_position_risk_parameters(
     effective_atr_mult = round(ATR_STOP_MULTIPLIER * factor, 3)
 
     if signal_type == "SPRING":
-        # Initial stop placed below the spring low (tighter than default)
-        spring_low = float(low_price) if (low_price is not None and not pd.isna(low_price)) else (entry - 0.5 * atr)
-        stop = min(spring_low - 0.05, entry - 0.5 * atr)
+        # Initial stop placed below the spring low with 0.25x ATR buffer (entry - 1.5x ATR ceiling)
+        spring_low = float(low_price) if (low_price is not None and not pd.isna(low_price)) else (entry - 1.5 * atr)
+        stop = min(spring_low - 0.25 * atr, entry - 1.5 * atr)
     elif signal_type == "PULLBACK":
-        # Stop below the pullback low
-        pullback_low = float(low_price) if (low_price is not None and not pd.isna(low_price)) else (entry - 0.5 * atr)
-        stop = min(pullback_low - 0.05, entry - 0.5 * atr)
+        # Stop below the pullback low with 0.25x ATR buffer (entry - 1.5x ATR ceiling)
+        pullback_low = float(low_price) if (low_price is not None and not pd.isna(low_price)) else (entry - 1.5 * atr)
+        stop = min(pullback_low - 0.25 * atr, entry - 1.5 * atr)
     else:
         # Rule 09: Adaptive ATR stop (SL_raw = Entry - (2.0 * ATR14 * factor))
         stop = entry - (effective_atr_mult * atr)
@@ -3752,7 +3812,6 @@ def run_scanner() -> Tuple[List[Dict[str, Any]], int, bool]:
     momentum_eligible = get_momentum_eligible_symbols(symbols)
 
     signals: List[Dict[str, Any]] = []
-    messages: List[str] = []
 
     for i, sym in enumerate(symbols, start=1):
         print(f"{i}/{total}: {sym}")
@@ -3763,9 +3822,18 @@ def run_scanner() -> Tuple[List[Dict[str, Any]], int, bool]:
         )
         if sig:
             signals.append(sig)
-            formatted = f"{format_signal(sig)}\n\n{DISCIPLINE_CARD}"
-            messages.append(formatted)
         time.sleep(0.25)
+
+    # Prioritize candidate signals: BREAKOUT first (0) > SPRING (1) > PULLBACK (2), then RS rating descending
+    type_prio = {"BREAKOUT": 0, "SPRING": 1, "PULLBACK": 2}
+    signals.sort(
+        key=lambda s: (
+            type_prio.get(s.get("Type", ""), 9),
+            -float(s.get("rs_rating") or 0),
+            s.get("Symbol", ""),
+        )
+    )
+    messages = [f"{format_signal(sig)}\n\n{DISCIPLINE_CARD}" for sig in signals]
 
     if messages:
         joined_message = "\n\n----\n\n".join(messages)
@@ -4895,14 +4963,8 @@ def handle_command(text: str, chat_id: Any = None) -> Optional[str]:
 
             today_str = datetime.date.today().isoformat()
 
-            # Holding period calculation
-            holding_days = 0
-            try:
-                d_entry = datetime.date.fromisoformat(str(entry_date)[:10])
-                d_exit = datetime.date.fromisoformat(str(today_str)[:10])
-                holding_days = (d_exit - d_entry).days
-            except Exception:
-                holding_days = 0
+            # Holding period calculation (actual NSE trading days)
+            holding_days = count_trading_days_held(entry_date, today_str)
 
             # Tags handling (combine buy tags and sell tags without duplicates)
             pos_tags = matched_pos.get("tags") or []
@@ -4912,7 +4974,7 @@ def handle_command(text: str, chat_id: Any = None) -> Optional[str]:
 
             # Mistake tracking
             # 1) If exit price is worse than planned_stop: "stop_moved"
-            # 2) If held more than 5 days with return <= fee buffer (0.35%): "time_stop_ignored"
+            # 2) If held more than TIME_STOP_DAYS trading days with return <= fee buffer (0.35%): "time_stop_ignored"
             # 3) Otherwise mistake is null
             mistake = None
             planned_stop_num = None
@@ -4924,7 +4986,7 @@ def handle_command(text: str, chat_id: Any = None) -> Optional[str]:
 
             if planned_stop_num is not None and exit_price < planned_stop_num:
                 mistake = "stop_moved"
-            elif holding_days > 5 and net_return_pct <= 0.35:
+            elif holding_days > TIME_STOP_DAYS and net_return_pct <= 0.35:
                 mistake = "time_stop_ignored"
 
             closed_trade = {

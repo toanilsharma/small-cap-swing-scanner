@@ -99,12 +99,12 @@ def build_scenario_dataframe(scenario: str) -> pd.DataFrame:
             open_[-1] = 200.0
             volume[-1] = 1600000.0
         elif scenario == "pullback":
-            # Scenario (f): Pullback to 20-EMA on declining volume, reclaimed by a green candle
+            # Scenario (f): Pullback to 20-EMA on quiet volume, reclaimed by a green confirmation candle on healthy volume
             close[-1] = 204.5
             high[-1] = 205.0
             low[-1] = 201.0
             open_[-1] = 202.0
-            volume[-1] = 300000.0
+            volume[-1] = 1000000.0
         elif scenario == "obv_reject":
             # Scenario (g): Breakout setup identical to textbook, but OBV non-confirmation blocks signal
             close[-1] = 207.0

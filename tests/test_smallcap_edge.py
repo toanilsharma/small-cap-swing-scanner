@@ -113,13 +113,17 @@ def test_spring_trigger(monkeypatch: pytest.MonkeyPatch):
     assert sig["Type"] == "SPRING"
     spring_low = float(last["Low"])
     assert sig["Stop"] <= spring_low, f"Spring stop ({sig['Stop']}) must be placed below spring low ({spring_low})"
-    assert sig["Stop"] == round(spring_low - 0.05, 2), "Spring stop must be placed just below the spring low"
+    expected_spring_stop = max(
+        round(min(spring_low - 0.25 * float(last["ATR14"]), float(last["Close"]) - 1.5 * float(last["ATR14"])), 2),
+        round(float(last["Close"]) * (1.0 - main.MAX_STOP_LOSS_PCT), 2)
+    )
+    assert sig["Stop"] == expected_spring_stop, f"Spring stop ({sig['Stop']}) must match adaptive buffer ({expected_spring_stop})"
 
 
 def test_refined_pullback_trigger(monkeypatch: pytest.MonkeyPatch):
     """
     5) Refined pullback: Stage-2 pullback to 20-EMA on declining volume reclaimed green candle.
-    Stop placed below pullback low.
+    Stop placed below pullback low with 0.25x ATR buffer.
     """
     pb_df = build_scenario_dataframe("pullback")
     res = main.add_indicators(pb_df)
@@ -138,6 +142,11 @@ def test_refined_pullback_trigger(monkeypatch: pytest.MonkeyPatch):
     assert sig["Type"] == "PULLBACK"
     pb_low = float(last["Low"])
     assert sig["Stop"] <= pb_low, f"Pullback stop ({sig['Stop']}) must be placed below pullback low ({pb_low})"
+    expected_pb_stop = max(
+        round(min(pb_low - 0.25 * float(last["ATR14"]), float(last["Close"]) - 1.5 * float(last["ATR14"])), 2),
+        round(float(last["Close"]) * (1.0 - main.MAX_STOP_LOSS_PCT), 2)
+    )
+    assert sig["Stop"] == expected_pb_stop, f"Pullback stop ({sig['Stop']}) must match adaptive buffer ({expected_pb_stop})"
 
 
 def test_catalyst_gate_by_grade(monkeypatch: pytest.MonkeyPatch):
@@ -361,7 +370,7 @@ def test_mean_reversion_setups_ignore_hurst(monkeypatch: pytest.MonkeyPatch):
 def test_ofi_composite_breakout_gate(monkeypatch: pytest.MonkeyPatch):
     """
     10) OFI Composite Breakout Gate:
-    - BREAKOUT volume integrity requires: OBV > OBV_HIGH20 AND rolling CMF20 >= OFI_GATE (0.10).
+    - BREAKOUT volume integrity requires: OBV > OBV_HIGH20 AND rolling CMF20 >= OFI_GATE (0.05).
     - If CMF20 < OFI_GATE (e.g. -0.05 sell-side clustering), breakout signal is rejected.
     - If CMF20 is None (<20 bars history), fails open to OBV-only.
     """
@@ -372,16 +381,16 @@ def test_ofi_composite_breakout_gate(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(main, "get_next_earnings", lambda sym: "2026-12-01")
     monkeypatch.setattr(main, "diagnose", lambda sym: {"grade": "A", "score": 85})
 
-    # 1. OBV new high AND rolling CMF20 >= 0.10 passes
+    # 1. OBV new high AND rolling CMF20 >= 0.05 passes
     sig_pass = main.scan_symbol("OFI_PASS.NS")
-    assert sig_pass is not None, "Breakout with OBV new high and CMF20 >= 0.10 must emit signal"
+    assert sig_pass is not None, "Breakout with OBV new high and CMF20 >= 0.05 must emit signal"
     assert sig_pass["Type"] == "BREAKOUT"
 
-    # 2. OBV new high but CMF20 < 0.10 (sell-side clustering) is rejected
+    # 2. OBV new high but CMF20 < 0.05 (sell-side clustering) is rejected
     tb_neg = tb.copy()
     tb_neg.loc[tb_neg.index[-20:-1], "Close"] = tb_neg.loc[tb_neg.index[-20:-1], "Low"]
     tb_neg_res = main.add_indicators(tb_neg.copy())
-    assert bool(tb_neg_res.iloc[-1]["OBV_CONFIRM"]) is False, "OBV_CONFIRM must be False when CMF20 < 0.10"
+    assert bool(tb_neg_res.iloc[-1]["OBV_CONFIRM"]) is False, "OBV_CONFIRM must be False when CMF20 < 0.05"
     monkeypatch.setattr(main, "get_history", lambda sym: tb_neg.copy())
     sig_rej = main.scan_symbol("OFI_REJ.NS")
     assert sig_rej is None, "Breakout with negative CMF20 must be rejected (sell-side clustering)"
@@ -442,4 +451,38 @@ def test_top_momentum_and_rs_rating_gates(monkeypatch: pytest.MonkeyPatch):
     sig_pass = main.scan_symbol("SYM1.NS", rs_rating=82, momentum_eligible={"SYM1.NS", "LEADER2.NS"})
     assert sig_pass is not None, "Symbol with top-momentum and rs_rating >= 75 must pass"
     assert sig_pass["rs_rating"] == 82
+
+
+def test_multiscale_hurst_exponent():
+    """
+    Test multi-scale Hurst exponent calculation on rolling 100-bar returns:
+    - Synthetic random walks (independent normal increments) must score near 0.50 ± 0.08 on average.
+    - Persistent trends (strong AR(1) positive autocorrelation) must score > 0.60.
+    """
+    np.random.seed(42)
+    rw_scores = []
+    for _ in range(50):
+        increments = np.random.normal(0, 0.01, 100)
+        prices = 100.0 * np.exp(np.cumsum(np.insert(increments, 0, 0.0)))
+        df_rw = pd.DataFrame({"Close": prices})
+        h = main.calculate_hurst_exponent(df_rw)
+        assert h is not None
+        rw_scores.append(h)
+
+    mean_rw_h = float(np.mean(rw_scores))
+    assert 0.42 <= mean_rw_h <= 0.60, f"Random walk Hurst mean ({mean_rw_h:.3f}) must be near 0.50 ± 0.08"
+
+    trend_scores = []
+    for _ in range(50):
+        rets = np.zeros(100)
+        for t in range(1, 100):
+            rets[t] = 0.70 * rets[t-1] + np.random.normal(0, 0.01)
+        prices = 100.0 * np.exp(np.cumsum(np.insert(rets, 0, 0.0)))
+        df_trend = pd.DataFrame({"Close": prices})
+        h = main.calculate_hurst_exponent(df_trend)
+        assert h is not None
+        trend_scores.append(h)
+
+    mean_trend_h = float(np.mean(trend_scores))
+    assert mean_trend_h > 0.60, f"Persistent trend Hurst mean ({mean_trend_h:.3f}) must be > 0.60"
 

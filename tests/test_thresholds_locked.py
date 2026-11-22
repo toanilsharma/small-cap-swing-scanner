@@ -20,7 +20,7 @@ def test_core_trading_constants():
     assert main.RISK_PCT == 0.01, f"RISK_PCT changed: {main.RISK_PCT}"
     assert main.CAPITAL == 200000, f"CAPITAL changed: {main.CAPITAL}"
     assert main.SETUP_WINDOW_DAYS == 10, f"SETUP_WINDOW_DAYS changed: {main.SETUP_WINDOW_DAYS}"
-    assert main.TIME_STOP_DAYS == 5, f"TIME_STOP_DAYS changed: {main.TIME_STOP_DAYS}"
+    assert main.TIME_STOP_DAYS == 8, f"TIME_STOP_DAYS changed: {main.TIME_STOP_DAYS}"
     assert main.ADV20_MIN_RUPEES == 50000000, f"ADV20_MIN_RUPEES changed: {main.ADV20_MIN_RUPEES}"
     assert main.MAX_POSITION_ADV_PCT == 0.01, f"MAX_POSITION_ADV_PCT changed: {main.MAX_POSITION_ADV_PCT}"
     assert main.WORST_CASE_GAP_PCT == 0.20, f"WORST_CASE_GAP_PCT changed: {main.WORST_CASE_GAP_PCT}"
@@ -35,7 +35,7 @@ def test_core_trading_constants():
     assert main.MONTHLY_STOP_PCT == 0.06, f"MONTHLY_STOP_PCT changed: {main.MONTHLY_STOP_PCT}"
     assert main.MOMENTUM_RANK_TOP == 20, f"MOMENTUM_RANK_TOP changed: {main.MOMENTUM_RANK_TOP}"
     assert main.HURST_GATE == 0.50, f"HURST_GATE changed: {main.HURST_GATE}"
-    assert main.OFI_GATE == 0.10, f"OFI_GATE changed: {main.OFI_GATE}"
+    assert main.OFI_GATE == 0.05, f"OFI_GATE changed: {main.OFI_GATE}"
     assert main.FEE_BUFFER_PCT == 0.0035, f"FEE_BUFFER_PCT changed: {main.FEE_BUFFER_PCT}"
 
 

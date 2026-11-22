@@ -5,535 +5,388 @@
   },
   "trades": [
     {
-      "symbol": "CHENNPETRO.NS",
+      "symbol": "APOLLOTYRE.NS",
+      "entry_date": "2025-11-25",
+      "entry_price": 530.0,
+      "qty": 19,
+      "initial_stop": 504.68,
+      "target": 580.64,
+      "signal_type": "PULLBACK",
+      "grade": "A",
+      "exit_date": "2025-12-05",
+      "exit_price": 520.93,
+      "exit_reason": "TIME_STOP",
+      "gross_pnl": -172.36,
+      "net_pnl": -202.31,
+      "pnl": -202.31,
+      "turnover": 19967.64,
+      "fees": 29.95,
+      "r_multiple": -0.42,
+      "holding_days": 8,
+      "risk_amount": 481.04
+    },
+    {
+      "symbol": "IIFL.NS",
       "entry_date": "2025-11-26",
-      "entry_price": 1018.2,
-      "qty": 29,
-      "initial_stop": 977.15,
-      "target": 1100.3,
+      "entry_price": 560.0,
+      "qty": 18,
+      "initial_stop": 534.07,
+      "target": 611.85,
       "signal_type": "PULLBACK",
       "grade": "A",
-      "exit_date": "2025-11-27",
-      "exit_price": 906.74,
-      "exit_reason": "STOP_LOSS",
-      "gross_pnl": -3232.27,
-      "net_pnl": -3316.01,
-      "pnl": -3316.01,
-      "turnover": 55823.33,
-      "fees": 83.73,
-      "r_multiple": -2.79,
-      "holding_days": 1,
-      "risk_amount": 1190.45
-    },
-    {
-      "symbol": "SYRMA.NS",
-      "entry_date": "2025-11-27",
-      "entry_price": 861.0,
-      "qty": 34,
-      "initial_stop": 830.35,
-      "target": 922.3,
-      "signal_type": "PULLBACK",
-      "grade": "A",
-      "exit_date": "2025-11-28",
-      "exit_price": 829.52,
-      "exit_reason": "STOP_LOSS",
-      "gross_pnl": -1070.33,
-      "net_pnl": -1156.55,
-      "pnl": -1156.55,
-      "turnover": 57477.67,
-      "fees": 86.22,
-      "r_multiple": -1.11,
-      "holding_days": 1,
-      "risk_amount": 1042.1
-    },
-    {
-      "symbol": "DATAPATTNS.NS",
-      "entry_date": "2025-11-28",
-      "entry_price": 2962.0,
-      "qty": 9,
-      "initial_stop": 2898.83,
-      "target": 3088.34,
-      "signal_type": "PULLBACK",
-      "grade": "A",
-      "exit_date": "2025-12-02",
-      "exit_price": 2895.93,
-      "exit_reason": "STOP_LOSS",
-      "gross_pnl": -594.62,
-      "net_pnl": -673.7,
-      "pnl": -673.7,
-      "turnover": 52721.38,
-      "fees": 79.08,
-      "r_multiple": -1.18,
-      "holding_days": 2,
-      "risk_amount": 568.54
-    },
-    {
-      "symbol": "MTARTECH.NS",
-      "entry_date": "2025-12-02",
-      "entry_price": 2574.0,
-      "qty": 11,
-      "initial_stop": 2499.95,
-      "target": 2722.1,
-      "signal_type": "PULLBACK",
-      "grade": "A",
-      "exit_date": "2025-12-03",
-      "exit_price": 2497.45,
-      "exit_reason": "STOP_LOSS",
-      "gross_pnl": -842.05,
-      "net_pnl": -925.73,
-      "pnl": -925.73,
-      "turnover": 55785.95,
-      "fees": 83.68,
-      "r_multiple": -1.14,
-      "holding_days": 1,
-      "risk_amount": 814.55
-    },
-    {
-      "symbol": "IIFL.NS",
-      "entry_date": "2025-12-08",
-      "entry_price": 571.95,
-      "qty": 50,
-      "initial_stop": 558.5,
-      "target": 598.85,
-      "signal_type": "PULLBACK",
-      "grade": "A",
-      "exit_date": "2025-12-09",
-      "exit_price": 551.5,
-      "exit_reason": "STOP_LOSS",
-      "gross_pnl": -1022.6,
-      "net_pnl": -1106.86,
-      "pnl": -1106.86,
-      "turnover": 56172.4,
-      "fees": 84.26,
-      "r_multiple": -1.65,
-      "holding_days": 1,
-      "risk_amount": 672.5
-    },
-    {
-      "symbol": "IIFL.NS",
-      "entry_date": "2025-12-12",
-      "entry_price": 570.0,
-      "qty": 50,
-      "initial_stop": 561.75,
-      "target": 586.5,
-      "signal_type": "PULLBACK",
-      "grade": "A",
-      "exit_date": "2025-12-17",
-      "exit_price": 561.19,
-      "exit_reason": "STOP_LOSS",
-      "gross_pnl": -440.59,
-      "net_pnl": -525.43,
-      "pnl": -525.43,
-      "turnover": 56559.41,
-      "fees": 84.84,
-      "r_multiple": -1.27,
-      "holding_days": 3,
-      "risk_amount": 412.5
-    },
-    {
-      "symbol": "CEMPRO.NS",
-      "entry_date": "2025-12-12",
-      "entry_price": 830.0,
-      "qty": 29,
-      "initial_stop": 799.95,
-      "target": 890.1,
-      "signal_type": "PULLBACK",
-      "grade": "A",
-      "exit_date": "2025-12-17",
-      "exit_price": 799.15,
-      "exit_reason": "STOP_LOSS",
-      "gross_pnl": -894.65,
-      "net_pnl": -965.52,
-      "pnl": -965.52,
-      "turnover": 47245.35,
-      "fees": 70.87,
-      "r_multiple": -1.11,
-      "holding_days": 3,
-      "risk_amount": 871.45
-    },
-    {
-      "symbol": "GESHIP.NS",
-      "entry_date": "2025-12-18",
-      "entry_price": 1103.8,
-      "qty": 26,
-      "initial_stop": 1090.43,
-      "target": 1130.54,
-      "signal_type": "PULLBACK",
-      "grade": "A",
-      "exit_date": "2025-12-19",
-      "exit_price": 1089.34,
-      "exit_reason": "STOP_LOSS",
-      "gross_pnl": -375.97,
-      "net_pnl": -461.5,
-      "pnl": -461.5,
-      "turnover": 57021.63,
-      "fees": 85.53,
-      "r_multiple": -1.33,
-      "holding_days": 1,
-      "risk_amount": 347.66
-    },
-    {
-      "symbol": "GESHIP.NS",
-      "entry_date": "2025-12-19",
-      "entry_price": 1111.8,
-      "qty": 25,
-      "initial_stop": 1098.52,
-      "target": 1138.36,
-      "signal_type": "PULLBACK",
-      "grade": "A",
-      "exit_date": "2025-12-22",
-      "exit_price": 1097.42,
-      "exit_reason": "STOP_LOSS",
-      "gross_pnl": -359.46,
-      "net_pnl": -442.31,
-      "pnl": -442.31,
-      "turnover": 55230.54,
-      "fees": 82.85,
-      "r_multiple": -1.33,
-      "holding_days": 1,
-      "risk_amount": 332.05
+      "exit_date": "2025-12-08",
+      "exit_price": 554.1,
+      "exit_reason": "TIME_STOP",
+      "gross_pnl": -106.28,
+      "net_pnl": -136.36,
+      "pnl": -136.36,
+      "turnover": 20053.72,
+      "fees": 30.08,
+      "r_multiple": -0.29,
+      "holding_days": 8,
+      "risk_amount": 466.67
     },
     {
       "symbol": "NAVINFLUOR.NS",
-      "entry_date": "2025-12-23",
-      "entry_price": 5890.0,
-      "qty": 4,
-      "initial_stop": 5770.45,
-      "target": 6129.1,
+      "entry_date": "2025-12-24",
+      "entry_price": 6080.0,
+      "qty": 1,
+      "initial_stop": 5791.68,
+      "target": 6656.64,
       "signal_type": "PULLBACK",
       "grade": "A",
       "exit_date": "2025-12-26",
-      "exit_price": 5764.68,
+      "exit_price": 5785.89,
       "exit_reason": "STOP_LOSS",
-      "gross_pnl": -501.28,
-      "net_pnl": -571.21,
-      "pnl": -571.21,
-      "turnover": 46618.72,
-      "fees": 69.93,
-      "r_multiple": -1.19,
-      "holding_days": 2,
-      "risk_amount": 478.2
+      "gross_pnl": -294.11,
+      "net_pnl": -311.91,
+      "pnl": -311.91,
+      "turnover": 11865.89,
+      "fees": 17.8,
+      "r_multiple": -1.08,
+      "holding_days": 1,
+      "risk_amount": 288.32
     },
     {
       "symbol": "RRKABEL.NS",
-      "entry_date": "2025-12-19",
-      "entry_price": 1446.0,
-      "qty": 16,
-      "initial_stop": 1400.75,
-      "target": 1536.5,
+      "entry_date": "2025-12-11",
+      "entry_price": 1419.0,
+      "qty": 7,
+      "initial_stop": 1355.87,
+      "target": 1545.26,
       "signal_type": "PULLBACK",
       "grade": "A",
       "exit_date": "2025-12-29",
-      "exit_price": 1449.61,
-      "exit_reason": "BREAKEVEN_STOP",
-      "gross_pnl": 752.87,
-      "net_pnl": 682.33,
-      "pnl": 682.33,
-      "turnover": 47024.87,
-      "fees": 70.54,
-      "r_multiple": 0.94,
-      "holding_days": 5,
-      "risk_amount": 724.0
+      "exit_price": 1437.06,
+      "exit_reason": "EMA20_TRAIL",
+      "gross_pnl": 451.03,
+      "net_pnl": 420.55,
+      "pnl": 420.55,
+      "turnover": 20317.03,
+      "fees": 30.48,
+      "r_multiple": 0.95,
+      "holding_days": 11,
+      "risk_amount": 441.9
     },
     {
       "symbol": "KIRLOSENG.NS",
-      "entry_date": "2025-12-31",
-      "entry_price": 1221.1,
-      "qty": 23,
-      "initial_stop": 1192.74,
-      "target": 1277.83,
-      "signal_type": "PULLBACK",
-      "grade": "A",
-      "exit_date": "2026-01-07",
-      "exit_price": 1224.14,
-      "exit_reason": "BREAKEVEN_STOP",
-      "gross_pnl": 660.57,
-      "net_pnl": 575.32,
-      "pnl": 575.32,
-      "turnover": 56831.16,
-      "fees": 85.25,
-      "r_multiple": 0.88,
-      "holding_days": 5,
-      "risk_amount": 652.38
-    },
-    {
-      "symbol": "FORCEMOT.NS",
-      "entry_date": "2026-01-01",
-      "entry_price": 20695.0,
-      "qty": 1,
-      "initial_stop": 19407.14,
-      "target": 23270.71,
+      "entry_date": "2025-12-23",
+      "entry_price": 1311.9,
+      "qty": 4,
+      "initial_stop": 1200.39,
+      "target": 1534.92,
       "signal_type": "BREAKOUT",
       "grade": "A",
-      "exit_date": "2026-01-08",
-      "exit_price": 19999.98,
+      "exit_date": "2026-01-07",
+      "exit_price": 1220.28,
       "exit_reason": "TIME_STOP",
-      "gross_pnl": -695.02,
-      "net_pnl": -756.06,
-      "pnl": -756.06,
-      "turnover": 40694.98,
-      "fees": 61.04,
-      "r_multiple": -0.59,
-      "holding_days": 5,
-      "risk_amount": 1287.86
+      "gross_pnl": -366.49,
+      "net_pnl": -381.68,
+      "pnl": -381.68,
+      "turnover": 10128.71,
+      "fees": 15.19,
+      "r_multiple": -0.86,
+      "holding_days": 10,
+      "risk_amount": 446.05
     },
     {
-      "symbol": "GPIL.NS",
-      "entry_date": "2026-01-14",
-      "entry_price": 259.4,
-      "qty": 94,
-      "initial_stop": 254.85,
-      "target": 268.49,
+      "symbol": "MANAPPURAM.NS",
+      "entry_date": "2025-12-15",
+      "entry_price": 287.55,
+      "qty": 42,
+      "initial_stop": 276.39,
+      "target": 309.87,
       "signal_type": "PULLBACK",
       "grade": "A",
-      "exit_date": "2026-01-16",
-      "exit_price": 260.05,
+      "exit_date": "2026-01-09",
+      "exit_price": 288.27,
       "exit_reason": "BREAKEVEN_STOP",
-      "gross_pnl": 61.07,
-      "net_pnl": -12.17,
-      "pnl": -12.17,
-      "turnover": 48828.27,
-      "fees": 73.24,
-      "r_multiple": -0.03,
-      "holding_days": 2,
-      "risk_amount": 427.36
-    },
-    {
-      "symbol": "IDBI.NS",
-      "entry_date": "2026-01-13",
-      "entry_price": 104.9,
-      "qty": 273,
-      "initial_stop": 101.0,
-      "target": 112.7,
-      "signal_type": "PULLBACK",
-      "grade": "A",
-      "exit_date": "2026-01-19",
-      "exit_price": 100.9,
-      "exit_reason": "STOP_LOSS",
-      "gross_pnl": -1092.27,
-      "net_pnl": -1176.55,
-      "pnl": -1176.55,
-      "turnover": 56183.13,
-      "fees": 84.27,
-      "r_multiple": -1.11,
-      "holding_days": 4,
-      "risk_amount": 1064.7
-    },
-    {
-      "symbol": "RBLBANK.NS",
-      "entry_date": "2026-01-15",
-      "entry_price": 312.0,
-      "qty": 66,
-      "initial_stop": 304.2,
-      "target": 327.6,
-      "signal_type": "PULLBACK",
-      "grade": "A",
-      "exit_date": "2026-01-19",
-      "exit_price": 308.69,
-      "exit_reason": "BREAKEVEN_STOP",
-      "gross_pnl": 405.6,
-      "net_pnl": 343.22,
-      "pnl": 343.22,
-      "turnover": 41589.6,
-      "fees": 62.38,
-      "r_multiple": 0.67,
-      "holding_days": 2,
-      "risk_amount": 514.8
-    },
-    {
-      "symbol": "ANANDRATHI.NS",
-      "entry_date": "2026-01-19",
-      "entry_price": 1535.0,
-      "qty": 18,
-      "initial_stop": 1517.61,
-      "target": 1569.78,
-      "signal_type": "PULLBACK",
-      "grade": "A",
-      "exit_date": "2026-01-20",
-      "exit_price": 1516.09,
-      "exit_reason": "STOP_LOSS",
-      "gross_pnl": -340.34,
-      "net_pnl": -422.72,
-      "pnl": -422.72,
-      "turnover": 54919.66,
-      "fees": 82.38,
-      "r_multiple": -1.35,
-      "holding_days": 1,
-      "risk_amount": 313.01
-    },
-    {
-      "symbol": "SAGILITY.NS",
-      "entry_date": "2026-01-23",
-      "entry_price": 52.4,
-      "qty": 545,
-      "initial_stop": 51.62,
-      "target": 53.97,
-      "signal_type": "PULLBACK",
-      "grade": "A",
-      "exit_date": "2026-01-27",
-      "exit_price": 51.57,
-      "exit_reason": "STOP_LOSS",
-      "gross_pnl": -453.23,
-      "net_pnl": -538.23,
-      "pnl": -538.23,
-      "turnover": 56662.77,
-      "fees": 84.99,
-      "r_multiple": -1.27,
-      "holding_days": 1,
-      "risk_amount": 427.05
-    },
-    {
-      "symbol": "GESHIP.NS",
-      "entry_date": "2026-01-23",
-      "entry_price": 1115.0,
-      "qty": 21,
-      "initial_stop": 1095.75,
-      "target": 1153.5,
-      "signal_type": "PULLBACK",
-      "grade": "A",
-      "exit_date": "2026-01-27",
-      "exit_price": 1094.65,
-      "exit_reason": "STOP_LOSS",
-      "gross_pnl": -427.26,
-      "net_pnl": -496.86,
-      "pnl": -496.86,
-      "turnover": 46402.74,
-      "fees": 69.6,
-      "r_multiple": -1.23,
-      "holding_days": 1,
-      "risk_amount": 404.25
+      "gross_pnl": 483.87,
+      "net_pnl": 446.91,
+      "pnl": 446.91,
+      "turnover": 24638.07,
+      "fees": 36.96,
+      "r_multiple": 0.95,
+      "holding_days": 18,
+      "risk_amount": 468.67
     },
     {
       "symbol": "NAVINFLUOR.NS",
-      "entry_date": "2026-01-27",
-      "entry_price": 5948.5,
-      "qty": 4,
-      "initial_stop": 5846.45,
-      "target": 6152.6,
+      "entry_date": "2025-12-31",
+      "entry_price": 6136.0,
+      "qty": 1,
+      "initial_stop": 5711.54,
+      "target": 6984.91,
       "signal_type": "PULLBACK",
       "grade": "A",
-      "exit_date": "2026-01-28",
-      "exit_price": 5840.6,
+      "exit_date": "2026-01-09",
+      "exit_price": 5705.83,
       "exit_reason": "STOP_LOSS",
-      "gross_pnl": -431.59,
-      "net_pnl": -502.32,
-      "pnl": -502.32,
-      "turnover": 47156.41,
-      "fees": 70.73,
-      "r_multiple": -1.23,
-      "holding_days": 1,
-      "risk_amount": 408.2
+      "gross_pnl": -430.17,
+      "net_pnl": -447.93,
+      "pnl": -447.93,
+      "turnover": 11841.83,
+      "fees": 17.76,
+      "r_multiple": -1.06,
+      "holding_days": 7,
+      "risk_amount": 424.46
     },
     {
-      "symbol": "CUB.NS",
-      "entry_date": "2026-01-29",
-      "entry_price": 221.25,
-      "qty": 109,
-      "initial_stop": 212.01,
-      "target": 239.73,
-      "signal_type": "PULLBACK",
+      "symbol": "SAILIFE.NS",
+      "entry_date": "2026-01-06",
+      "entry_price": 962.1,
+      "qty": 8,
+      "initial_stop": 914.24,
+      "target": 1057.83,
+      "signal_type": "BREAKOUT",
       "grade": "A",
-      "exit_date": "2026-02-02",
-      "exit_price": 211.8,
+      "exit_date": "2026-01-12",
+      "exit_price": 902.85,
       "exit_reason": "STOP_LOSS",
-      "gross_pnl": -1030.27,
-      "net_pnl": -1101.07,
-      "pnl": -1101.07,
-      "turnover": 47202.23,
-      "fees": 70.8,
-      "r_multiple": -1.09,
-      "holding_days": 2,
-      "risk_amount": 1006.89
+      "gross_pnl": -474.03,
+      "net_pnl": -496.41,
+      "pnl": -496.41,
+      "turnover": 14919.57,
+      "fees": 22.38,
+      "r_multiple": -1.3,
+      "holding_days": 4,
+      "risk_amount": 382.91
     },
     {
-      "symbol": "KIRLOSENG.NS",
-      "entry_date": "2026-02-05",
-      "entry_price": 1229.3,
-      "qty": 21,
-      "initial_stop": 1162.25,
-      "target": 1363.4,
+      "symbol": "RRKABEL.NS",
+      "entry_date": "2026-01-05",
+      "entry_price": 1510.5,
+      "qty": 6,
+      "initial_stop": 1441.84,
+      "target": 1647.81,
       "signal_type": "PULLBACK",
       "grade": "A",
-      "exit_date": "2026-02-06",
-      "exit_price": 1161.09,
+      "exit_date": "2026-01-15",
+      "exit_price": 1498.6,
+      "exit_reason": "TIME_STOP",
+      "gross_pnl": -71.4,
+      "net_pnl": -98.48,
+      "pnl": -98.48,
+      "turnover": 18054.6,
+      "fees": 27.08,
+      "r_multiple": -0.24,
+      "holding_days": 8,
+      "risk_amount": 411.94
+    },
+    {
+      "symbol": "GPIL.NS",
+      "entry_date": "2026-01-15",
+      "entry_price": 265.15,
+      "qty": 35,
+      "initial_stop": 251.26,
+      "target": 292.93,
+      "signal_type": "PULLBACK",
+      "grade": "A",
+      "exit_date": "2026-01-19",
+      "exit_price": 251.01,
       "exit_reason": "STOP_LOSS",
-      "gross_pnl": -1432.46,
-      "net_pnl": -1507.76,
-      "pnl": -1507.76,
-      "turnover": 50198.14,
-      "fees": 75.3,
+      "gross_pnl": -494.94,
+      "net_pnl": -522.04,
+      "pnl": -522.04,
+      "turnover": 18065.56,
+      "fees": 27.1,
       "r_multiple": -1.07,
-      "holding_days": 1,
-      "risk_amount": 1408.05
+      "holding_days": 2,
+      "risk_amount": 486.19
     },
     {
-      "symbol": "MTARTECH.NS",
-      "entry_date": "2026-01-28",
-      "entry_price": 2554.9,
-      "qty": 11,
-      "initial_stop": 2389.95,
-      "target": 2884.8,
+      "symbol": "IIFL.NS",
+      "entry_date": "2025-12-26",
+      "entry_price": 605.8,
+      "qty": 13,
+      "initial_stop": 572.41,
+      "target": 672.57,
+      "signal_type": "BREAKOUT",
+      "grade": "A",
+      "exit_date": "2026-01-21",
+      "exit_price": 607.31,
+      "exit_reason": "BREAKEVEN_STOP",
+      "gross_pnl": 411.2,
+      "net_pnl": 386.96,
+      "pnl": 386.96,
+      "turnover": 16162.0,
+      "fees": 24.24,
+      "r_multiple": 0.89,
+      "holding_days": 18,
+      "risk_amount": 434.01
+    },
+    {
+      "symbol": "KARURVYSYA.NS",
+      "entry_date": "2026-01-15",
+      "entry_price": 266.85,
+      "qty": 30,
+      "initial_stop": 251.36,
+      "target": 297.83,
       "signal_type": "PULLBACK",
       "grade": "A",
-      "exit_date": "2026-03-04",
-      "exit_price": 3501.0,
-      "exit_reason": "EMA20_TRAIL",
-      "gross_pnl": 7326.07,
-      "net_pnl": 7230.77,
-      "pnl": 7230.77,
-      "turnover": 63533.87,
-      "fees": 95.3,
-      "r_multiple": 3.99,
-      "holding_days": 24,
-      "risk_amount": 1814.45
+      "exit_date": "2026-01-21",
+      "exit_price": 251.11,
+      "exit_reason": "STOP_LOSS",
+      "gross_pnl": -472.24,
+      "net_pnl": -495.55,
+      "pnl": -495.55,
+      "turnover": 15538.76,
+      "fees": 23.31,
+      "r_multiple": -1.07,
+      "holding_days": 4,
+      "risk_amount": 464.66
     },
     {
-      "symbol": "AVANTIFEED.NS",
-      "entry_date": "2026-03-04",
-      "entry_price": 1269.9,
-      "qty": 21,
-      "initial_stop": 1188.05,
-      "target": 1433.6,
+      "symbol": "GMDCLTD.NS",
+      "entry_date": "2026-02-05",
+      "entry_price": 610.0,
+      "qty": 11,
+      "initial_stop": 567.16,
+      "target": 695.68,
+      "signal_type": "PULLBACK",
+      "grade": "A",
+      "exit_date": "2026-02-13",
+      "exit_price": 566.59,
+      "exit_reason": "STOP_LOSS",
+      "gross_pnl": -477.48,
+      "net_pnl": -496.89,
+      "pnl": -496.89,
+      "turnover": 12942.52,
+      "fees": 19.41,
+      "r_multiple": -1.05,
+      "holding_days": 6,
+      "risk_amount": 471.25
+    },
+    {
+      "symbol": "GPIL.NS",
+      "entry_date": "2026-02-13",
+      "entry_price": 262.1,
+      "qty": 30,
+      "initial_stop": 246.6,
+      "target": 293.11,
+      "signal_type": "PULLBACK",
+      "grade": "A",
+      "exit_date": "2026-03-02",
+      "exit_price": 240.26,
+      "exit_reason": "STOP_LOSS",
+      "gross_pnl": -655.22,
+      "net_pnl": -677.82,
+      "pnl": -677.82,
+      "turnover": 15070.79,
+      "fees": 22.61,
+      "r_multiple": -1.46,
+      "holding_days": 11,
+      "risk_amount": 465.14
+    },
+    {
+      "symbol": "RBLBANK.NS",
+      "entry_date": "2026-02-18",
+      "entry_price": 323.75,
+      "qty": 27,
+      "initial_stop": 307.61,
+      "target": 356.04,
+      "signal_type": "BREAKOUT",
+      "grade": "A",
+      "exit_date": "2026-03-02",
+      "exit_price": 312.84,
+      "exit_reason": "TIME_STOP",
+      "gross_pnl": -294.66,
+      "net_pnl": -320.44,
+      "pnl": -320.44,
+      "turnover": 17187.84,
+      "fees": 25.78,
+      "r_multiple": -0.74,
+      "holding_days": 8,
+      "risk_amount": 435.86
+    },
+    {
+      "symbol": "IDBI.NS",
+      "entry_date": "2026-02-05",
+      "entry_price": 109.8,
+      "qty": 49,
+      "initial_stop": 100.47,
+      "target": 128.47,
       "signal_type": "PULLBACK",
       "grade": "A",
       "exit_date": "2026-03-06",
-      "exit_price": 1186.86,
-      "exit_reason": "STOP_LOSS",
-      "gross_pnl": -1743.8,
-      "net_pnl": -1821.19,
-      "pnl": -1821.19,
-      "turnover": 51592.0,
-      "fees": 77.39,
-      "r_multiple": -1.06,
-      "holding_days": 2,
-      "risk_amount": 1718.85
+      "exit_price": 108.78,
+      "exit_reason": "TIME_STOP",
+      "gross_pnl": -49.93,
+      "net_pnl": -65.99,
+      "pnl": -65.99,
+      "turnover": 10710.47,
+      "fees": 16.07,
+      "r_multiple": -0.14,
+      "holding_days": 20,
+      "risk_amount": 457.32
     },
     {
-      "symbol": "MTARTECH.NS",
-      "entry_date": "2026-03-06",
-      "entry_price": 3600.0,
-      "qty": 7,
-      "initial_stop": 3512.94,
-      "target": 3774.12,
+      "symbol": "MRPL.NS",
+      "entry_date": "2026-01-29",
+      "entry_price": 164.6,
+      "qty": 37,
+      "initial_stop": 151.28,
+      "target": 191.24,
       "signal_type": "PULLBACK",
       "grade": "A",
       "exit_date": "2026-03-09",
-      "exit_price": 3509.43,
-      "exit_reason": "STOP_LOSS",
-      "gross_pnl": -634.01,
-      "net_pnl": -708.66,
-      "pnl": -708.66,
-      "turnover": 49765.99,
-      "fees": 74.65,
-      "r_multiple": -1.16,
-      "holding_days": 1,
-      "risk_amount": 609.42
+      "exit_price": 189.84,
+      "exit_reason": "EMA20_TRAIL",
+      "gross_pnl": 959.08,
+      "net_pnl": 939.37,
+      "pnl": 939.37,
+      "turnover": 13139.48,
+      "fees": 19.71,
+      "r_multiple": 1.91,
+      "holding_days": 26,
+      "risk_amount": 492.76
+    },
+    {
+      "symbol": "CHENNPETRO.NS",
+      "entry_date": "2026-02-25",
+      "entry_price": 921.15,
+      "qty": 9,
+      "initial_stop": 874.49,
+      "target": 1014.47,
+      "signal_type": "PULLBACK",
+      "grade": "A",
+      "exit_date": "2026-03-10",
+      "exit_price": 923.45,
+      "exit_reason": "BREAKEVEN_STOP",
+      "gross_pnl": 402.88,
+      "net_pnl": 377.4,
+      "pnl": 377.4,
+      "turnover": 16983.58,
+      "fees": 25.48,
+      "r_multiple": 0.9,
+      "holding_days": 8,
+      "risk_amount": 419.92
     },
     {
       "symbol": "MRPL.NS",
       "entry_date": "2026-03-09",
       "entry_price": 208.1,
-      "qty": 107,
+      "qty": 27,
       "initial_stop": 191.45,
       "target": 241.41,
       "signal_type": "BREAKOUT",
@@ -541,20 +394,62 @@
       "exit_date": "2026-03-10",
       "exit_price": 191.26,
       "exit_reason": "STOP_LOSS",
-      "gross_pnl": -1802.04,
-      "net_pnl": -1866.13,
-      "pnl": -1866.13,
-      "turnover": 42731.37,
-      "fees": 64.1,
+      "gross_pnl": -454.72,
+      "net_pnl": -470.89,
+      "pnl": -470.89,
+      "turnover": 10782.68,
+      "fees": 16.17,
       "r_multiple": -1.05,
       "holding_days": 1,
-      "risk_amount": 1782.01
+      "risk_amount": 449.67
+    },
+    {
+      "symbol": "MTARTECH.NS",
+      "entry_date": "2026-03-09",
+      "entry_price": 3700.0,
+      "qty": 1,
+      "initial_stop": 3420.19,
+      "target": 4259.63,
+      "signal_type": "PULLBACK",
+      "grade": "A",
+      "exit_date": "2026-03-12",
+      "exit_price": 3416.77,
+      "exit_reason": "STOP_LOSS",
+      "gross_pnl": -283.23,
+      "net_pnl": -293.91,
+      "pnl": -293.91,
+      "turnover": 7116.77,
+      "fees": 10.68,
+      "r_multiple": -1.05,
+      "holding_days": 3,
+      "risk_amount": 279.81
+    },
+    {
+      "symbol": "SAILIFE.NS",
+      "entry_date": "2026-03-02",
+      "entry_price": 998.25,
+      "qty": 6,
+      "initial_stop": 931.94,
+      "target": 1130.86,
+      "signal_type": "BREAKOUT",
+      "grade": "A",
+      "exit_date": "2026-03-13",
+      "exit_price": 952.1,
+      "exit_reason": "TIME_STOP",
+      "gross_pnl": -276.92,
+      "net_pnl": -294.47,
+      "pnl": -294.47,
+      "turnover": 11702.08,
+      "fees": 17.55,
+      "r_multiple": -0.74,
+      "holding_days": 8,
+      "risk_amount": 397.84
     },
     {
       "symbol": "GESHIP.NS",
       "entry_date": "2026-03-13",
       "entry_price": 1487.7,
-      "qty": 16,
+      "qty": 4,
       "initial_stop": 1379.37,
       "target": 1704.36,
       "signal_type": "BREAKOUT",
@@ -562,20 +457,20 @@
       "exit_date": "2026-03-16",
       "exit_price": 1377.99,
       "exit_reason": "STOP_LOSS",
-      "gross_pnl": -1755.35,
-      "net_pnl": -1824.13,
-      "pnl": -1824.13,
-      "turnover": 45851.05,
-      "fees": 68.78,
+      "gross_pnl": -438.84,
+      "net_pnl": -456.03,
+      "pnl": -456.03,
+      "turnover": 11462.76,
+      "fees": 17.19,
       "r_multiple": -1.05,
       "holding_days": 1,
-      "risk_amount": 1733.26
+      "risk_amount": 433.31
     },
     {
       "symbol": "MRPL.NS",
       "entry_date": "2026-03-17",
       "entry_price": 208.22,
-      "qty": 99,
+      "qty": 27,
       "initial_stop": 190.52,
       "target": 243.62,
       "signal_type": "SPRING",
@@ -583,938 +478,1190 @@
       "exit_date": "2026-03-18",
       "exit_price": 190.33,
       "exit_reason": "STOP_LOSS",
-      "gross_pnl": -1771.16,
-      "net_pnl": -1830.35,
-      "pnl": -1830.35,
-      "turnover": 39456.4,
-      "fees": 59.18,
+      "gross_pnl": -483.04,
+      "net_pnl": -499.19,
+      "pnl": -499.19,
+      "turnover": 10760.84,
+      "fees": 16.14,
       "r_multiple": -1.04,
       "holding_days": 1,
-      "risk_amount": 1752.17
+      "risk_amount": 477.86
     },
     {
       "symbol": "KIRLOSENG.NS",
       "entry_date": "2026-02-10",
       "entry_price": 1233.0,
-      "qty": 21,
-      "initial_stop": 1177.85,
-      "target": 1343.3,
+      "qty": 5,
+      "initial_stop": 1153.93,
+      "target": 1391.14,
       "signal_type": "PULLBACK",
       "grade": "A",
       "exit_date": "2026-03-20",
       "exit_price": 1375.32,
       "exit_reason": "EMA20_TRAIL",
-      "gross_pnl": 2735.56,
-      "net_pnl": 2653.77,
-      "pnl": 2653.77,
-      "turnover": 54521.56,
-      "fees": 81.78,
-      "r_multiple": 2.29,
+      "gross_pnl": 743.25,
+      "net_pnl": 723.64,
+      "pnl": 723.64,
+      "turnover": 13073.25,
+      "fees": 19.61,
+      "r_multiple": 1.83,
       "holding_days": 27,
-      "risk_amount": 1158.15
+      "risk_amount": 395.36
     },
     {
-      "symbol": "MTARTECH.NS",
-      "entry_date": "2026-03-18",
-      "entry_price": 3626.0,
-      "qty": 7,
-      "initial_stop": 3451.95,
-      "target": 3974.1,
+      "symbol": "STLTECH.NS",
+      "entry_date": "2026-03-19",
+      "entry_price": 189.99,
+      "qty": 29,
+      "initial_stop": 173.84,
+      "target": 222.29,
       "signal_type": "PULLBACK",
       "grade": "A",
       "exit_date": "2026-03-23",
-      "exit_price": 3448.5,
+      "exit_price": 173.67,
       "exit_reason": "STOP_LOSS",
-      "gross_pnl": -1242.51,
-      "net_pnl": -1316.8,
-      "pnl": -1316.8,
-      "turnover": 49521.49,
-      "fees": 74.28,
-      "r_multiple": -1.08,
-      "holding_days": 3,
-      "risk_amount": 1218.35
-    },
-    {
-      "symbol": "TDPOWERSYS.NS",
-      "entry_date": "2026-03-23",
-      "entry_price": 420.0,
-      "qty": 63,
-      "initial_stop": 409.25,
-      "target": 441.49,
-      "signal_type": "PULLBACK",
-      "grade": "A",
-      "exit_date": "2026-03-30",
-      "exit_price": 419.58,
-      "exit_reason": "BREAKEVEN_STOP",
-      "gross_pnl": 652.75,
-      "net_pnl": 572.39,
-      "pnl": 572.39,
-      "turnover": 53572.75,
-      "fees": 80.36,
-      "r_multiple": 0.85,
-      "holding_days": 4,
-      "risk_amount": 676.97
+      "gross_pnl": -473.39,
+      "net_pnl": -489.21,
+      "pnl": -489.21,
+      "turnover": 10546.03,
+      "fees": 15.82,
+      "r_multiple": -1.04,
+      "holding_days": 2,
+      "risk_amount": 468.33
     },
     {
       "symbol": "ACUTAAS.NS",
-      "entry_date": "2026-03-20",
-      "entry_price": 2254.9,
-      "qty": 10,
-      "initial_stop": 2177.35,
-      "target": 2410.0,
-      "signal_type": "PULLBACK",
-      "grade": "A",
-      "exit_date": "2026-04-01",
-      "exit_price": 2260.53,
-      "exit_reason": "BREAKEVEN_STOP",
-      "gross_pnl": 803.64,
-      "net_pnl": 734.78,
-      "pnl": 734.78,
-      "turnover": 45901.64,
-      "fees": 68.85,
-      "r_multiple": 0.95,
-      "holding_days": 6,
-      "risk_amount": 775.5
-    },
-    {
-      "symbol": "MTARTECH.NS",
-      "entry_date": "2026-03-30",
-      "entry_price": 3560.0,
-      "qty": 7,
-      "initial_stop": 3469.2,
-      "target": 3741.59,
-      "signal_type": "PULLBACK",
+      "entry_date": "2026-03-23",
+      "entry_price": 2399.8,
+      "qty": 2,
+      "initial_stop": 2195.82,
+      "target": 2807.77,
+      "signal_type": "BREAKOUT",
       "grade": "A",
       "exit_date": "2026-04-02",
-      "exit_price": 3465.73,
+      "exit_price": 2193.62,
       "exit_reason": "STOP_LOSS",
-      "gross_pnl": -659.88,
-      "net_pnl": -733.65,
-      "pnl": -733.65,
-      "turnover": 49180.12,
-      "fees": 73.77,
-      "r_multiple": -1.15,
-      "holding_days": 2,
-      "risk_amount": 635.58
+      "gross_pnl": -412.35,
+      "net_pnl": -426.13,
+      "pnl": -426.13,
+      "turnover": 9186.85,
+      "fees": 13.78,
+      "r_multiple": -1.04,
+      "holding_days": 6,
+      "risk_amount": 407.97
     },
     {
-      "symbol": "AVANTIFEED.NS",
-      "entry_date": "2026-04-02",
-      "entry_price": 1221.7,
-      "qty": 23,
-      "initial_stop": 1186.24,
-      "target": 1292.61,
+      "symbol": "CHENNPETRO.NS",
+      "entry_date": "2026-04-23",
+      "entry_price": 1075.0,
+      "qty": 6,
+      "initial_stop": 1008.16,
+      "target": 1208.68,
       "signal_type": "PULLBACK",
       "grade": "A",
-      "exit_date": "2026-04-07",
-      "exit_price": 1224.75,
-      "exit_reason": "BREAKEVEN_STOP",
-      "gross_pnl": 816.66,
-      "net_pnl": 731.14,
-      "pnl": 731.14,
-      "turnover": 57014.86,
-      "fees": 85.52,
-      "r_multiple": 0.9,
-      "holding_days": 2,
-      "risk_amount": 815.51
+      "exit_date": "2026-04-24",
+      "exit_price": 1007.15,
+      "exit_reason": "STOP_LOSS",
+      "gross_pnl": -407.09,
+      "net_pnl": -425.83,
+      "pnl": -425.83,
+      "turnover": 12492.91,
+      "fees": 18.74,
+      "r_multiple": -1.06,
+      "holding_days": 1,
+      "risk_amount": 401.05
     },
     {
       "symbol": "ANANDRATHI.NS",
-      "entry_date": "2026-04-02",
-      "entry_price": 1544.55,
-      "qty": 15,
-      "initial_stop": 1522.85,
-      "target": 1587.95,
+      "entry_date": "2026-04-06",
+      "entry_price": 1600.05,
+      "qty": 5,
+      "initial_stop": 1514.52,
+      "target": 1771.11,
       "signal_type": "PULLBACK",
       "grade": "A",
       "exit_date": "2026-05-12",
       "exit_price": 1763.14,
       "exit_reason": "EMA20_TRAIL",
-      "gross_pnl": 2137.18,
-      "net_pnl": 2064.47,
-      "pnl": 2064.47,
-      "turnover": 48473.68,
-      "fees": 72.71,
-      "r_multiple": 6.34,
-      "holding_days": 25,
-      "risk_amount": 325.5
+      "gross_pnl": 831.38,
+      "net_pnl": 806.13,
+      "pnl": 806.13,
+      "turnover": 16831.88,
+      "fees": 25.25,
+      "r_multiple": 1.89,
+      "holding_days": 24,
+      "risk_amount": 427.65
     },
     {
-      "symbol": "RBLBANK.NS",
-      "entry_date": "2026-05-15",
-      "entry_price": 337.2,
-      "qty": 79,
-      "initial_stop": 322.55,
-      "target": 366.5,
+      "symbol": "KARURVYSYA.NS",
+      "entry_date": "2026-05-07",
+      "entry_price": 308.8,
+      "qty": 32,
+      "initial_stop": 295.33,
+      "target": 335.75,
+      "signal_type": "PULLBACK",
+      "grade": "A",
+      "exit_date": "2026-05-12",
+      "exit_price": 295.03,
+      "exit_reason": "STOP_LOSS",
+      "gross_pnl": -440.49,
+      "net_pnl": -469.47,
+      "pnl": -469.47,
+      "turnover": 19322.71,
+      "fees": 28.98,
+      "r_multiple": -1.09,
+      "holding_days": 3,
+      "risk_amount": 431.14
+    },
+    {
+      "symbol": "SONACOMS.NS",
+      "entry_date": "2026-04-28",
+      "entry_price": 588.65,
+      "qty": 13,
+      "initial_stop": 556.23,
+      "target": 653.48,
+      "signal_type": "PULLBACK",
+      "grade": "A",
+      "exit_date": "2026-05-15",
+      "exit_price": 572.98,
+      "exit_reason": "TIME_STOP",
+      "gross_pnl": -203.76,
+      "net_pnl": -226.41,
+      "pnl": -226.41,
+      "turnover": 15101.14,
+      "fees": 22.65,
+      "r_multiple": -0.54,
+      "holding_days": 12,
+      "risk_amount": 421.41
+    },
+    {
+      "symbol": "ATHERENERG.NS",
+      "entry_date": "2026-05-12",
+      "entry_price": 974.0,
+      "qty": 6,
+      "initial_stop": 904.52,
+      "target": 1112.96,
       "signal_type": "PULLBACK",
       "grade": "A",
       "exit_date": "2026-05-19",
-      "exit_price": 322.23,
+      "exit_price": 903.62,
       "exit_reason": "STOP_LOSS",
-      "gross_pnl": -1182.83,
-      "net_pnl": -1260.97,
-      "pnl": -1260.97,
-      "turnover": 52094.77,
-      "fees": 78.14,
-      "r_multiple": -1.09,
-      "holding_days": 2,
-      "risk_amount": 1157.35
-    },
-    {
-      "symbol": "RBLBANK.NS",
-      "entry_date": "2026-05-21",
-      "entry_price": 333.0,
-      "qty": 71,
-      "initial_stop": 318.4,
-      "target": 362.2,
-      "signal_type": "PULLBACK",
-      "grade": "A",
-      "exit_date": "2026-06-02",
-      "exit_price": 333.84,
-      "exit_reason": "BREAKEVEN_STOP",
-      "gross_pnl": 59.34,
-      "net_pnl": -11.67,
-      "pnl": -11.67,
-      "turnover": 47345.34,
-      "fees": 71.02,
-      "r_multiple": -0.01,
-      "holding_days": 7,
-      "risk_amount": 1036.6
-    },
-    {
-      "symbol": "MTARTECH.NS",
-      "entry_date": "2026-04-07",
-      "entry_price": 3648.0,
-      "qty": 7,
-      "initial_stop": 3524.05,
-      "target": 3895.9,
-      "signal_type": "PULLBACK",
-      "grade": "A",
-      "exit_date": "2026-06-08",
-      "exit_price": 7044.95,
-      "exit_reason": "EMA20_TRAIL",
-      "gross_pnl": 14928.79,
-      "net_pnl": 14829.79,
-      "pnl": 14829.79,
-      "turnover": 66000.79,
-      "fees": 99.0,
-      "r_multiple": 17.09,
-      "holding_days": 41,
-      "risk_amount": 867.65
-    },
-    {
-      "symbol": "NEULANDLAB.NS",
-      "entry_date": "2026-06-09",
-      "entry_price": 17100.0,
-      "qty": 1,
-      "initial_stop": 16400.95,
-      "target": 18498.1,
-      "signal_type": "PULLBACK",
-      "grade": "A",
-      "exit_date": "2026-06-16",
-      "exit_price": 16705.28,
-      "exit_reason": "TIME_STOP",
-      "gross_pnl": -394.72,
-      "net_pnl": -445.43,
-      "pnl": -445.43,
-      "turnover": 33805.28,
-      "fees": 50.71,
-      "r_multiple": -0.64,
+      "gross_pnl": -422.31,
+      "net_pnl": -439.21,
+      "pnl": -439.21,
+      "turnover": 11265.69,
+      "fees": 16.9,
+      "r_multiple": -1.05,
       "holding_days": 5,
-      "risk_amount": 699.05
+      "risk_amount": 416.89
     },
     {
-      "symbol": "WELCORP.NS",
-      "entry_date": "2026-06-18",
-      "entry_price": 1394.4,
-      "qty": 20,
-      "initial_stop": 1370.45,
-      "target": 1442.3,
+      "symbol": "TDPOWERSYS.NS",
+      "entry_date": "2026-03-25",
+      "entry_price": 432.35,
+      "qty": 14,
+      "initial_stop": 399.9,
+      "target": 497.26,
       "signal_type": "PULLBACK",
       "grade": "A",
-      "exit_date": "2026-06-22",
-      "exit_price": 1397.88,
-      "exit_reason": "BREAKEVEN_STOP",
-      "gross_pnl": 69.61,
-      "net_pnl": -14.15,
-      "pnl": -14.15,
-      "turnover": 55845.61,
-      "fees": 83.77,
-      "r_multiple": -0.03,
-      "holding_days": 2,
-      "risk_amount": 479.0
+      "exit_date": "2026-06-01",
+      "exit_price": 614.73,
+      "exit_reason": "EMA20_TRAIL",
+      "gross_pnl": 1731.06,
+      "net_pnl": 1710.31,
+      "pnl": 1710.31,
+      "turnover": 13836.86,
+      "fees": 20.76,
+      "r_multiple": 3.76,
+      "holding_days": 42,
+      "risk_amount": 454.35
+    },
+    {
+      "symbol": "GPIL.NS",
+      "entry_date": "2026-03-27",
+      "entry_price": 277.3,
+      "qty": 19,
+      "initial_stop": 253.73,
+      "target": 324.44,
+      "signal_type": "BREAKOUT",
+      "grade": "A",
+      "exit_date": "2026-06-09",
+      "exit_price": 274.68,
+      "exit_reason": "TIME_STOP",
+      "gross_pnl": -49.87,
+      "net_pnl": -65.6,
+      "pnl": -65.6,
+      "turnover": 10487.53,
+      "fees": 15.73,
+      "r_multiple": -0.15,
+      "holding_days": 47,
+      "risk_amount": 447.84
+    },
+    {
+      "symbol": "BANDHANBNK.NS",
+      "entry_date": "2026-06-10",
+      "entry_price": 206.93,
+      "qty": 50,
+      "initial_stop": 198.24,
+      "target": 224.31,
+      "signal_type": "PULLBACK",
+      "grade": "A",
+      "exit_date": "2026-06-11",
+      "exit_price": 198.04,
+      "exit_reason": "STOP_LOSS",
+      "gross_pnl": -444.41,
+      "net_pnl": -474.78,
+      "pnl": -474.78,
+      "turnover": 20248.59,
+      "fees": 30.37,
+      "r_multiple": -1.09,
+      "holding_days": 1,
+      "risk_amount": 434.62
+    },
+    {
+      "symbol": "CHENNPETRO.NS",
+      "entry_date": "2026-06-02",
+      "entry_price": 1094.0,
+      "qty": 8,
+      "initial_stop": 1041.82,
+      "target": 1198.36,
+      "signal_type": "PULLBACK",
+      "grade": "A",
+      "exit_date": "2026-06-18",
+      "exit_price": 1118.28,
+      "exit_reason": "EMA20_TRAIL",
+      "gross_pnl": 514.56,
+      "net_pnl": 487.53,
+      "pnl": 487.53,
+      "turnover": 18018.56,
+      "fees": 27.03,
+      "r_multiple": 1.17,
+      "holding_days": 12,
+      "risk_amount": 417.43
+    },
+    {
+      "symbol": "NETWEB.NS",
+      "entry_date": "2026-06-17",
+      "entry_price": 4899.8,
+      "qty": 1,
+      "initial_stop": 4483.32,
+      "target": 5732.77,
+      "signal_type": "PULLBACK",
+      "grade": "A",
+      "exit_date": "2026-06-29",
+      "exit_price": 4478.84,
+      "exit_reason": "STOP_LOSS",
+      "gross_pnl": -420.96,
+      "net_pnl": -435.03,
+      "pnl": -435.03,
+      "turnover": 9378.64,
+      "fees": 14.07,
+      "r_multiple": -1.04,
+      "holding_days": 7,
+      "risk_amount": 416.48
     },
     {
       "symbol": "RBLBANK.NS",
-      "entry_date": "2026-06-03",
-      "entry_price": 344.15,
-      "qty": 69,
-      "initial_stop": 332.95,
-      "target": 366.55,
+      "entry_date": "2026-05-26",
+      "entry_price": 344.8,
+      "qty": 27,
+      "initial_stop": 327.95,
+      "target": 378.5,
       "signal_type": "PULLBACK",
       "grade": "A",
       "exit_date": "2026-07-01",
       "exit_price": 361.44,
       "exit_reason": "EMA20_TRAIL",
-      "gross_pnl": 1366.69,
-      "net_pnl": 1293.4,
-      "pnl": 1293.4,
-      "turnover": 48859.39,
-      "fees": 73.29,
-      "r_multiple": 1.67,
-      "holding_days": 19,
-      "risk_amount": 772.8
+      "gross_pnl": 671.03,
+      "net_pnl": 642.1,
+      "pnl": 642.1,
+      "turnover": 19290.23,
+      "fees": 28.94,
+      "r_multiple": 1.41,
+      "holding_days": 24,
+      "risk_amount": 454.9
     },
     {
-      "symbol": "RBLBANK.NS",
-      "entry_date": "2026-07-01",
-      "entry_price": 369.15,
-      "qty": 69,
-      "initial_stop": 363.95,
-      "target": 379.55,
+      "symbol": "STLTECH.NS",
+      "entry_date": "2026-04-07",
+      "entry_price": 187.25,
+      "qty": 27,
+      "initial_stop": 171.33,
+      "target": 219.08,
       "signal_type": "PULLBACK",
       "grade": "A",
       "exit_date": "2026-07-02",
-      "exit_price": 363.04,
-      "exit_reason": "STOP_LOSS",
-      "gross_pnl": -421.82,
-      "net_pnl": -497.61,
-      "pnl": -497.61,
-      "turnover": 50520.87,
-      "fees": 75.78,
-      "r_multiple": -1.39,
-      "holding_days": 1,
-      "risk_amount": 358.8
+      "exit_price": 562.04,
+      "exit_reason": "EMA20_TRAIL",
+      "gross_pnl": 5660.81,
+      "net_pnl": 5637.15,
+      "pnl": 5637.15,
+      "turnover": 15772.31,
+      "fees": 23.66,
+      "r_multiple": 13.11,
+      "holding_days": 58,
+      "risk_amount": 429.74
     },
     {
-      "symbol": "HSCL.NS",
-      "entry_date": "2026-06-25",
-      "entry_price": 663.95,
-      "qty": 42,
-      "initial_stop": 630.0,
-      "target": 731.85,
+      "symbol": "NAVINFLUOR.NS",
+      "entry_date": "2026-06-22",
+      "entry_price": 7480.0,
+      "qty": 1,
+      "initial_stop": 7170.36,
+      "target": 8099.29,
       "signal_type": "PULLBACK",
       "grade": "A",
-      "exit_date": "2026-07-07",
-      "exit_price": 642.91,
+      "exit_date": "2026-07-08",
+      "exit_price": 7355.64,
       "exit_reason": "TIME_STOP",
-      "gross_pnl": -883.83,
-      "net_pnl": -966.16,
-      "pnl": -966.16,
-      "turnover": 54887.97,
-      "fees": 82.33,
-      "r_multiple": -0.68,
-      "holding_days": 7,
-      "risk_amount": 1425.9
+      "gross_pnl": -124.36,
+      "net_pnl": -146.62,
+      "pnl": -146.62,
+      "turnover": 14835.64,
+      "fees": 22.25,
+      "r_multiple": -0.47,
+      "holding_days": 11,
+      "risk_amount": 309.64
     },
     {
-      "symbol": "ACUTAAS.NS",
-      "entry_date": "2026-07-09",
-      "entry_price": 3450.0,
+      "symbol": "PNBHOUSING.NS",
+      "entry_date": "2026-07-08",
+      "entry_price": 1109.7,
       "qty": 8,
-      "initial_stop": 3374.7,
-      "target": 3600.6,
-      "signal_type": "PULLBACK",
+      "initial_stop": 1054.73,
+      "target": 1219.64,
+      "signal_type": "BREAKOUT",
       "grade": "A",
-      "exit_date": "2026-07-10",
-      "exit_price": 3371.33,
+      "exit_date": "2026-07-09",
+      "exit_price": 1053.68,
       "exit_reason": "STOP_LOSS",
-      "gross_pnl": -629.4,
-      "net_pnl": -711.25,
-      "pnl": -711.25,
-      "turnover": 54570.6,
-      "fees": 81.86,
-      "r_multiple": -1.18,
+      "gross_pnl": -448.2,
+      "net_pnl": -474.16,
+      "pnl": -474.16,
+      "turnover": 17307.0,
+      "fees": 25.96,
+      "r_multiple": -1.08,
       "holding_days": 1,
-      "risk_amount": 602.4
+      "risk_amount": 439.77
     },
     {
-      "symbol": "KIRLOSENG.NS",
-      "entry_date": "2026-05-18",
-      "entry_price": 1739.0,
-      "qty": 10,
-      "initial_stop": 1591.19,
-      "target": 2034.63,
-      "signal_type": "SPRING",
+      "symbol": "SYRMA.NS",
+      "entry_date": "2026-06-01",
+      "entry_price": 1102.0,
+      "qty": 5,
+      "initial_stop": 1025.82,
+      "target": 1254.36,
+      "signal_type": "PULLBACK",
       "grade": "A",
       "exit_date": "2026-07-17",
-      "exit_price": 2253.44,
+      "exit_price": 1357.74,
       "exit_reason": "EMA20_TRAIL",
-      "gross_pnl": 4050.37,
-      "net_pnl": 3992.13,
-      "pnl": 3992.13,
-      "turnover": 38830.37,
-      "fees": 58.25,
-      "r_multiple": 2.7,
-      "holding_days": 42,
-      "risk_amount": 1478.15
+      "gross_pnl": 1071.94,
+      "net_pnl": 1053.8,
+      "pnl": 1053.8,
+      "turnover": 12091.94,
+      "fees": 18.14,
+      "r_multiple": 2.77,
+      "holding_days": 33,
+      "risk_amount": 380.89
+    },
+    {
+      "symbol": "NAVINFLUOR.NS",
+      "entry_date": "2026-07-10",
+      "entry_price": 7702.0,
+      "qty": 1,
+      "initial_stop": 7332.79,
+      "target": 8440.43,
+      "signal_type": "PULLBACK",
+      "grade": "A",
+      "exit_date": "2026-07-23",
+      "exit_price": 7665.83,
+      "exit_reason": "TIME_STOP",
+      "gross_pnl": -36.17,
+      "net_pnl": -59.23,
+      "pnl": -59.23,
+      "turnover": 15367.83,
+      "fees": 23.05,
+      "r_multiple": -0.16,
+      "holding_days": 9,
+      "risk_amount": 369.21
+    },
+    {
+      "symbol": "ATHERENERG.NS",
+      "entry_date": "2026-07-09",
+      "entry_price": 1212.0,
+      "qty": 4,
+      "initial_stop": 1113.44,
+      "target": 1409.11,
+      "signal_type": "BREAKOUT",
+      "grade": "A",
+      "exit_date": "2026-07-24",
+      "exit_price": 1207.49,
+      "exit_reason": "TIME_STOP",
+      "gross_pnl": -18.03,
+      "net_pnl": -32.55,
+      "pnl": -32.55,
+      "turnover": 9677.97,
+      "fees": 14.52,
+      "r_multiple": -0.08,
+      "holding_days": 11,
+      "risk_amount": 394.23
     },
     {
       "symbol": "WELCORP.NS",
       "entry_date": "2026-07-10",
       "entry_price": 1617.8,
-      "qty": 16,
+      "qty": 3,
       "initial_stop": 1497.87,
       "target": 1857.66,
       "signal_type": "BREAKOUT",
       "grade": "A",
-      "exit_date": "2026-07-17",
-      "exit_price": 1579.92,
+      "exit_date": "2026-07-24",
+      "exit_price": 1595.3,
       "exit_reason": "TIME_STOP",
-      "gross_pnl": -606.1,
-      "net_pnl": -682.85,
-      "pnl": -682.85,
-      "turnover": 51163.5,
-      "fees": 76.75,
-      "r_multiple": -0.36,
-      "holding_days": 5,
-      "risk_amount": 1918.86
+      "gross_pnl": -67.49,
+      "net_pnl": -81.95,
+      "pnl": -81.95,
+      "turnover": 9639.31,
+      "fees": 14.46,
+      "r_multiple": -0.23,
+      "holding_days": 10,
+      "risk_amount": 359.79
     },
     {
-      "symbol": "NUVAMA.NS",
-      "entry_date": "2026-07-20",
-      "entry_price": 1845.0,
-      "qty": 16,
-      "initial_stop": 1810.11,
-      "target": 1914.78,
-      "signal_type": "PULLBACK",
+      "symbol": "CHENNPETRO.NS",
+      "entry_date": "2026-07-23",
+      "entry_price": 1311.5,
+      "qty": 3,
+      "initial_stop": 1200.02,
+      "target": 1534.45,
+      "signal_type": "BREAKOUT",
       "grade": "A",
-      "exit_date": "2026-07-28",
-      "exit_price": 1849.61,
-      "exit_reason": "BREAKEVEN_STOP",
-      "gross_pnl": 595.11,
-      "net_pnl": 505.66,
-      "pnl": 505.66,
-      "turnover": 59635.11,
-      "fees": 89.45,
-      "r_multiple": 0.91,
-      "holding_days": 6,
-      "risk_amount": 558.23
+      "exit_date": "2026-07-27",
+      "exit_price": 1198.82,
+      "exit_reason": "STOP_LOSS",
+      "gross_pnl": -338.04,
+      "net_pnl": -349.34,
+      "pnl": -349.34,
+      "turnover": 7530.96,
+      "fees": 11.3,
+      "r_multiple": -1.04,
+      "holding_days": 2,
+      "risk_amount": 334.43
     },
     {
-      "symbol": "KARURVYSYA.NS",
-      "entry_date": "2026-07-20",
-      "entry_price": 311.3,
-      "qty": 85,
-      "initial_stop": 301.55,
-      "target": 330.8,
+      "symbol": "ANANDRATHI.NS",
+      "entry_date": "2026-06-29",
+      "entry_price": 1920.0,
+      "qty": 5,
+      "initial_stop": 1835.51,
+      "target": 2088.98,
       "signal_type": "PULLBACK",
       "grade": "A",
-      "exit_date": "2026-08-19",
-      "exit_price": 330.72,
+      "exit_date": "2026-07-29",
+      "exit_price": 2032.96,
       "exit_reason": "EMA20_TRAIL",
-      "gross_pnl": 1654.02,
-      "net_pnl": 1572.15,
-      "pnl": 1572.15,
-      "turnover": 54575.01,
-      "fees": 81.86,
-      "r_multiple": 1.9,
+      "gross_pnl": 676.85,
+      "net_pnl": 647.04,
+      "pnl": 647.04,
+      "turnover": 19876.85,
+      "fees": 29.82,
+      "r_multiple": 1.53,
       "holding_days": 22,
-      "risk_amount": 828.75
+      "risk_amount": 422.46
     },
     {
-      "symbol": "RBLBANK.NS",
-      "entry_date": "2026-08-19",
-      "entry_price": 383.3,
-      "qty": 65,
-      "initial_stop": 376.35,
-      "target": 397.2,
+      "symbol": "WOCKPHARMA.NS",
+      "entry_date": "2026-08-04",
+      "entry_price": 2028.4,
+      "qty": 3,
+      "initial_stop": 1914.01,
+      "target": 2257.17,
+      "signal_type": "BREAKOUT",
+      "grade": "A",
+      "exit_date": "2026-08-10",
+      "exit_price": 1912.1,
+      "exit_reason": "STOP_LOSS",
+      "gross_pnl": -348.91,
+      "net_pnl": -366.64,
+      "pnl": -366.64,
+      "turnover": 11821.49,
+      "fees": 17.73,
+      "r_multiple": -1.07,
+      "holding_days": 4,
+      "risk_amount": 343.16
+    },
+    {
+      "symbol": "MANAPPURAM.NS",
+      "entry_date": "2026-07-21",
+      "entry_price": 339.0,
+      "qty": 25,
+      "initial_stop": 321.41,
+      "target": 374.18,
       "signal_type": "PULLBACK",
       "grade": "A",
-      "exit_date": "2026-08-25",
-      "exit_price": 384.26,
-      "exit_reason": "BREAKEVEN_STOP",
-      "gross_pnl": 62.1,
-      "net_pnl": -12.74,
-      "pnl": -12.74,
-      "turnover": 49891.1,
-      "fees": 74.84,
-      "r_multiple": -0.03,
-      "holding_days": 4,
-      "risk_amount": 451.75
+      "exit_date": "2026-08-12",
+      "exit_price": 352.25,
+      "exit_reason": "EMA20_TRAIL",
+      "gross_pnl": 594.38,
+      "net_pnl": 568.06,
+      "pnl": 568.06,
+      "turnover": 17544.38,
+      "fees": 26.32,
+      "r_multiple": 1.29,
+      "holding_days": 16,
+      "risk_amount": 439.71
     },
     {
       "symbol": "AEGISLOG.NS",
-      "entry_date": "2026-08-19",
-      "entry_price": 1372.1,
-      "qty": 21,
-      "initial_stop": 1303.05,
-      "target": 1510.2,
+      "entry_date": "2026-08-04",
+      "entry_price": 1380.0,
+      "qty": 3,
+      "initial_stop": 1263.22,
+      "target": 1613.56,
       "signal_type": "PULLBACK",
       "grade": "A",
-      "exit_date": "2026-08-26",
-      "exit_price": 1330.37,
-      "exit_reason": "TIME_STOP",
-      "gross_pnl": -876.37,
-      "net_pnl": -961.49,
-      "pnl": -961.49,
-      "turnover": 56751.83,
-      "fees": 85.13,
-      "r_multiple": -0.66,
-      "holding_days": 5,
-      "risk_amount": 1450.05
-    },
-    {
-      "symbol": "KARURVYSYA.NS",
-      "entry_date": "2026-08-26",
-      "entry_price": 347.3,
-      "qty": 84,
-      "initial_stop": 336.95,
-      "target": 368.0,
-      "signal_type": "PULLBACK",
-      "grade": "A",
-      "exit_date": "2026-09-07",
-      "exit_price": 341.36,
-      "exit_reason": "TIME_STOP",
-      "gross_pnl": -499.1,
-      "net_pnl": -585.87,
-      "pnl": -585.87,
-      "turnover": 57847.3,
-      "fees": 86.77,
-      "r_multiple": -0.67,
-      "holding_days": 8,
-      "risk_amount": 869.4
-    },
-    {
-      "symbol": "PNBHOUSING.NS",
-      "entry_date": "2026-09-07",
-      "entry_price": 1166.0,
-      "qty": 21,
-      "initial_stop": 1141.05,
-      "target": 1215.9,
-      "signal_type": "PULLBACK",
-      "grade": "A",
-      "exit_date": "2026-09-09",
-      "exit_price": 1139.91,
+      "exit_date": "2026-08-12",
+      "exit_price": 1261.96,
       "exit_reason": "STOP_LOSS",
-      "gross_pnl": -547.91,
-      "net_pnl": -620.55,
-      "pnl": -620.55,
-      "turnover": 48424.09,
-      "fees": 72.64,
-      "r_multiple": -1.18,
-      "holding_days": 2,
-      "risk_amount": 523.95
+      "gross_pnl": -354.13,
+      "net_pnl": -366.02,
+      "pnl": -366.02,
+      "turnover": 7925.87,
+      "fees": 11.89,
+      "r_multiple": -1.04,
+      "holding_days": 6,
+      "risk_amount": 350.35
     },
     {
-      "symbol": "LALPATHLAB.NS",
-      "entry_date": "2026-09-09",
-      "entry_price": 1905.2,
-      "qty": 13,
-      "initial_stop": 1881.35,
-      "target": 1952.9,
-      "signal_type": "PULLBACK",
-      "grade": "A",
-      "exit_date": "2026-09-10",
-      "exit_price": 1879.47,
-      "exit_reason": "STOP_LOSS",
-      "gross_pnl": -334.51,
-      "net_pnl": -408.31,
-      "pnl": -408.31,
-      "turnover": 49200.69,
-      "fees": 73.8,
-      "r_multiple": -1.32,
-      "holding_days": 1,
-      "risk_amount": 310.05
-    },
-    {
-      "symbol": "RBLBANK.NS",
-      "entry_date": "2026-09-04",
-      "entry_price": 409.0,
-      "qty": 61,
-      "initial_stop": 391.74,
-      "target": 443.53,
+      "symbol": "NETWEB.NS",
+      "entry_date": "2026-08-14",
+      "entry_price": 5200.0,
+      "qty": 1,
+      "initial_stop": 4758.0,
+      "target": 6084.0,
       "signal_type": "BREAKOUT",
       "grade": "A",
-      "exit_date": "2026-09-15",
-      "exit_price": 403.2,
+      "exit_date": "2026-08-31",
+      "exit_price": 5183.41,
       "exit_reason": "TIME_STOP",
-      "gross_pnl": -354.02,
-      "net_pnl": -428.34,
-      "pnl": -428.34,
-      "turnover": 49543.98,
-      "fees": 74.32,
-      "r_multiple": -0.41,
-      "holding_days": 6,
-      "risk_amount": 1053.12
+      "gross_pnl": -16.59,
+      "net_pnl": -32.16,
+      "pnl": -32.16,
+      "turnover": 10383.41,
+      "fees": 15.58,
+      "r_multiple": -0.07,
+      "holding_days": 11,
+      "risk_amount": 442.0
     },
     {
-      "symbol": "LALPATHLAB.NS",
+      "symbol": "RRKABEL.NS",
+      "entry_date": "2026-07-27",
+      "entry_price": 2529.0,
+      "qty": 2,
+      "initial_stop": 2314.04,
+      "target": 2958.93,
+      "signal_type": "PULLBACK",
+      "grade": "A",
+      "exit_date": "2026-09-02",
+      "exit_price": 2627.77,
+      "exit_reason": "EMA20_TRAIL",
+      "gross_pnl": 528.7,
+      "net_pnl": 512.73,
+      "pnl": 512.73,
+      "turnover": 10644.7,
+      "fees": 15.97,
+      "r_multiple": 1.19,
+      "holding_days": 27,
+      "risk_amount": 429.93
+    },
+    {
+      "symbol": "TDPOWERSYS.NS",
+      "entry_date": "2026-08-18",
+      "entry_price": 774.5,
+      "qty": 7,
+      "initial_stop": 708.67,
+      "target": 906.16,
+      "signal_type": "BREAKOUT",
+      "grade": "A",
+      "exit_date": "2026-09-02",
+      "exit_price": 734.31,
+      "exit_reason": "TIME_STOP",
+      "gross_pnl": -281.3,
+      "net_pnl": -297.14,
+      "pnl": -297.14,
+      "turnover": 10561.7,
+      "fees": 15.84,
+      "r_multiple": -0.64,
+      "holding_days": 11,
+      "risk_amount": 460.83
+    },
+    {
+      "symbol": "IFCI.NS",
+      "entry_date": "2026-08-19",
+      "entry_price": 81.87,
+      "qty": 80,
+      "initial_stop": 76.27,
+      "target": 93.06,
+      "signal_type": "BREAKOUT",
+      "grade": "A",
+      "exit_date": "2026-09-10",
+      "exit_price": 85.06,
+      "exit_reason": "EMA20_TRAIL",
+      "gross_pnl": 575.39,
+      "net_pnl": 554.88,
+      "pnl": 554.88,
+      "turnover": 13674.59,
+      "fees": 20.51,
+      "r_multiple": 1.24,
+      "holding_days": 16,
+      "risk_amount": 447.66
+    },
+    {
+      "symbol": "GLAND.NS",
       "entry_date": "2026-09-10",
-      "entry_price": 1917.2,
-      "qty": 13,
-      "initial_stop": 1892.7,
-      "target": 1966.19,
+      "entry_price": 3031.0,
+      "qty": 3,
+      "initial_stop": 2899.99,
+      "target": 3293.03,
+      "signal_type": "PULLBACK",
+      "grade": "A",
+      "exit_date": "2026-09-11",
+      "exit_price": 2897.09,
+      "exit_reason": "STOP_LOSS",
+      "gross_pnl": -401.73,
+      "net_pnl": -428.41,
+      "pnl": -428.41,
+      "turnover": 17784.27,
+      "fees": 26.68,
+      "r_multiple": -1.09,
+      "holding_days": 1,
+      "risk_amount": 393.04
+    },
+    {
+      "symbol": "CGCL.NS",
+      "entry_date": "2026-08-31",
+      "entry_price": 257.98,
+      "qty": 27,
+      "initial_stop": 241.51,
+      "target": 290.92,
       "signal_type": "PULLBACK",
       "grade": "A",
       "exit_date": "2026-09-15",
-      "exit_price": 1890.81,
-      "exit_reason": "STOP_LOSS",
-      "gross_pnl": -343.1,
-      "net_pnl": -417.36,
-      "pnl": -417.36,
-      "turnover": 49504.09,
-      "fees": 74.26,
-      "r_multiple": -1.31,
-      "holding_days": 2,
-      "risk_amount": 318.45
+      "exit_price": 254.84,
+      "exit_reason": "TIME_STOP",
+      "gross_pnl": -84.65,
+      "net_pnl": -105.42,
+      "pnl": -105.42,
+      "turnover": 13846.27,
+      "fees": 20.77,
+      "r_multiple": -0.24,
+      "holding_days": 10,
+      "risk_amount": 444.72
     },
     {
-      "symbol": "HFCL.NS",
-      "entry_date": "2026-09-15",
-      "entry_price": 230.5,
-      "qty": 126,
-      "initial_stop": 222.2,
-      "target": 247.1,
+      "symbol": "NAVINFLUOR.NS",
+      "entry_date": "2026-09-09",
+      "entry_price": 8740.0,
+      "qty": 1,
+      "initial_stop": 8412.79,
+      "target": 9394.43,
       "signal_type": "PULLBACK",
       "grade": "A",
-      "exit_date": "2026-09-16",
-      "exit_price": 214.39,
+      "exit_date": "2026-09-15",
+      "exit_price": 8404.38,
       "exit_reason": "STOP_LOSS",
-      "gross_pnl": -2030.44,
-      "net_pnl": -2114.52,
-      "pnl": -2114.52,
-      "turnover": 56055.56,
-      "fees": 84.08,
-      "r_multiple": -2.02,
-      "holding_days": 1,
-      "risk_amount": 1045.8
+      "gross_pnl": -335.62,
+      "net_pnl": -361.34,
+      "pnl": -361.34,
+      "turnover": 17144.38,
+      "fees": 25.72,
+      "r_multiple": -1.1,
+      "holding_days": 3,
+      "risk_amount": 327.21
     },
     {
-      "symbol": "CUPID.NS",
-      "entry_date": "2026-09-16",
-      "entry_price": 284.5,
-      "qty": 101,
-      "initial_stop": 278.95,
-      "target": 295.6,
+      "symbol": "DATAPATTNS.NS",
+      "entry_date": "2026-09-09",
+      "entry_price": 4932.5,
+      "qty": 1,
+      "initial_stop": 4571.09,
+      "target": 5655.32,
       "signal_type": "PULLBACK",
       "grade": "A",
-      "exit_date": "2026-09-17",
-      "exit_price": 278.67,
+      "exit_date": "2026-09-15",
+      "exit_price": 4566.52,
       "exit_reason": "STOP_LOSS",
-      "gross_pnl": -588.72,
-      "net_pnl": -674.04,
-      "pnl": -674.04,
-      "turnover": 56880.28,
-      "fees": 85.32,
-      "r_multiple": -1.2,
-      "holding_days": 1,
-      "risk_amount": 560.55
-    },
-    {
-      "symbol": "RBLBANK.NS",
-      "entry_date": "2026-09-18",
-      "entry_price": 406.15,
-      "qty": 60,
-      "initial_stop": 401.16,
-      "target": 416.12,
-      "signal_type": "PULLBACK",
-      "grade": "A",
-      "exit_date": "2026-09-21",
-      "exit_price": 400.76,
-      "exit_reason": "STOP_LOSS",
-      "gross_pnl": -323.47,
-      "net_pnl": -396.09,
-      "pnl": -396.09,
-      "turnover": 48414.53,
-      "fees": 72.62,
-      "r_multiple": -1.32,
-      "holding_days": 1,
-      "risk_amount": 299.25
+      "gross_pnl": -365.98,
+      "net_pnl": -380.23,
+      "pnl": -380.23,
+      "turnover": 9499.02,
+      "fees": 14.25,
+      "r_multiple": -1.05,
+      "holding_days": 3,
+      "risk_amount": 361.41
     },
     {
       "symbol": "ACUTAAS.NS",
-      "entry_date": "2026-09-17",
-      "entry_price": 3343.0,
-      "qty": 8,
-      "initial_stop": 3188.75,
-      "target": 3651.5,
+      "entry_date": "2026-09-11",
+      "entry_price": 3488.0,
+      "qty": 1,
+      "initial_stop": 3261.56,
+      "target": 3940.89,
+      "signal_type": "BREAKOUT",
+      "grade": "A",
+      "exit_date": "2026-09-15",
+      "exit_price": 3258.3,
+      "exit_reason": "STOP_LOSS",
+      "gross_pnl": -229.7,
+      "net_pnl": -239.82,
+      "pnl": -239.82,
+      "turnover": 6746.3,
+      "fees": 10.12,
+      "r_multiple": -1.06,
+      "holding_days": 1,
+      "risk_amount": 226.44
+    },
+    {
+      "symbol": "TDPOWERSYS.NS",
+      "entry_date": "2026-09-15",
+      "entry_price": 814.15,
+      "qty": 7,
+      "initial_stop": 744.95,
+      "target": 952.56,
+      "signal_type": "BREAKOUT",
+      "grade": "A",
+      "exit_date": "2026-09-16",
+      "exit_price": 728.02,
+      "exit_reason": "STOP_LOSS",
+      "gross_pnl": -602.9,
+      "net_pnl": -619.09,
+      "pnl": -619.09,
+      "turnover": 10795.2,
+      "fees": 16.19,
+      "r_multiple": -1.28,
+      "holding_days": 1,
+      "risk_amount": 484.42
+    },
+    {
+      "symbol": "CUPID.NS",
+      "entry_date": "2026-06-05",
+      "entry_price": 134.0,
+      "qty": 59,
+      "initial_stop": 126.87,
+      "target": 148.26,
+      "signal_type": "PULLBACK",
+      "grade": "A",
+      "exit_date": "2026-09-18",
+      "exit_price": 264.74,
+      "exit_reason": "EMA20_TRAIL",
+      "gross_pnl": 4335.59,
+      "net_pnl": 4305.37,
+      "pnl": 4305.37,
+      "turnover": 20147.59,
+      "fees": 30.22,
+      "r_multiple": 10.23,
+      "holding_days": 73,
+      "risk_amount": 420.75
+    },
+    {
+      "symbol": "ATHERENERG.NS",
+      "entry_date": "2026-09-21",
+      "entry_price": 1621.0,
+      "qty": 4,
+      "initial_stop": 1515.98,
+      "target": 1831.04,
       "signal_type": "PULLBACK",
       "grade": "A",
       "exit_date": "2026-09-23",
-      "exit_price": 3185.56,
+      "exit_price": 1514.46,
       "exit_reason": "STOP_LOSS",
-      "gross_pnl": -1259.51,
-      "net_pnl": -1337.85,
-      "pnl": -1337.85,
-      "turnover": 52228.49,
-      "fees": 78.34,
-      "r_multiple": -1.08,
-      "holding_days": 4,
-      "risk_amount": 1234.0
+      "gross_pnl": -426.14,
+      "net_pnl": -444.96,
+      "pnl": -444.96,
+      "turnover": 12541.86,
+      "fees": 18.81,
+      "r_multiple": -1.06,
+      "holding_days": 2,
+      "risk_amount": 420.09
     },
     {
-      "symbol": "RBLBANK.NS",
+      "symbol": "AEGISLOG.NS",
       "entry_date": "2026-09-21",
-      "entry_price": 408.0,
-      "qty": 60,
-      "initial_stop": 402.78,
-      "target": 418.44,
-      "signal_type": "PULLBACK",
-      "grade": "A",
-      "exit_date": "2026-09-24",
-      "exit_price": 409.02,
-      "exit_reason": "BREAKEVEN_STOP",
-      "gross_pnl": 343.82,
-      "net_pnl": 269.86,
-      "pnl": 269.86,
-      "turnover": 49303.82,
-      "fees": 73.96,
-      "r_multiple": 0.86,
-      "holding_days": 3,
-      "risk_amount": 313.07
-    },
-    {
-      "symbol": "SONACOMS.NS",
-      "entry_date": "2026-09-23",
-      "entry_price": 808.55,
-      "qty": 33,
-      "initial_stop": 794.0,
-      "target": 837.65,
+      "entry_price": 1422.0,
+      "qty": 5,
+      "initial_stop": 1324.34,
+      "target": 1617.32,
       "signal_type": "PULLBACK",
       "grade": "A",
       "exit_date": "2026-09-28",
-      "exit_price": 810.57,
-      "exit_reason": "BREAKEVEN_STOP",
-      "gross_pnl": 66.61,
-      "net_pnl": -13.53,
-      "pnl": -13.53,
-      "turnover": 53430.91,
-      "fees": 80.15,
-      "r_multiple": -0.03,
-      "holding_days": 3,
-      "risk_amount": 480.15
+      "exit_price": 1323.02,
+      "exit_reason": "STOP_LOSS",
+      "gross_pnl": -494.92,
+      "net_pnl": -515.51,
+      "pnl": -515.51,
+      "turnover": 13725.08,
+      "fees": 20.59,
+      "r_multiple": -1.06,
+      "holding_days": 5,
+      "risk_amount": 488.3
     },
     {
       "symbol": "SAILIFE.NS",
       "entry_date": "2026-07-28",
       "entry_price": 1287.0,
-      "qty": 22,
-      "initial_stop": 1239.25,
-      "target": 1382.5,
+      "qty": 7,
+      "initial_stop": 1229.92,
+      "target": 1401.17,
       "signal_type": "PULLBACK",
       "grade": "A",
       "exit_date": "2026-09-29",
       "exit_price": 1558.34,
       "exit_reason": "EMA20_TRAIL",
-      "gross_pnl": 4035.24,
-      "net_pnl": 3944.25,
-      "pnl": 3944.25,
-      "turnover": 60663.24,
-      "fees": 90.99,
-      "r_multiple": 3.75,
+      "gross_pnl": 1427.87,
+      "net_pnl": 1398.7,
+      "pnl": 1398.7,
+      "turnover": 19445.87,
+      "fees": 29.17,
+      "r_multiple": 3.5,
       "holding_days": 44,
-      "risk_amount": 1050.5
+      "risk_amount": 399.59
     },
     {
-      "symbol": "RBLBANK.NS",
-      "entry_date": "2026-09-28",
-      "entry_price": 412.0,
-      "qty": 59,
-      "initial_stop": 406.45,
-      "target": 423.1,
+      "symbol": "WOCKPHARMA.NS",
+      "entry_date": "2026-09-22",
+      "entry_price": 2205.9,
+      "qty": 2,
+      "initial_stop": 2062.07,
+      "target": 2493.56,
       "signal_type": "PULLBACK",
       "grade": "A",
-      "exit_date": "2026-09-29",
-      "exit_price": 405.59,
+      "exit_date": "2026-10-01",
+      "exit_price": 2060.01,
       "exit_reason": "STOP_LOSS",
-      "gross_pnl": -377.95,
-      "net_pnl": -450.31,
-      "pnl": -450.31,
-      "turnover": 48238.05,
-      "fees": 72.36,
-      "r_multiple": -1.38,
-      "holding_days": 1,
-      "risk_amount": 327.34
-    },
-    {
-      "symbol": "GLAND.NS",
-      "entry_date": "2026-09-28",
-      "entry_price": 2910.0,
-      "qty": 9,
-      "initial_stop": 2867.41,
-      "target": 2995.18,
-      "signal_type": "PULLBACK",
-      "grade": "A",
-      "exit_date": "2026-09-30",
-      "exit_price": 2917.26,
-      "exit_reason": "BREAKEVEN_STOP",
-      "gross_pnl": 377.02,
-      "net_pnl": 297.88,
-      "pnl": 297.88,
-      "turnover": 52757.02,
-      "fees": 79.14,
-      "r_multiple": 0.78,
-      "holding_days": 2,
-      "risk_amount": 383.3
+      "gross_pnl": -291.78,
+      "net_pnl": -304.58,
+      "pnl": -304.58,
+      "turnover": 8531.82,
+      "fees": 12.8,
+      "r_multiple": -1.06,
+      "holding_days": 7,
+      "risk_amount": 287.66
     },
     {
       "symbol": "SONACOMS.NS",
-      "entry_date": "2026-10-07",
-      "entry_price": 819.45,
-      "qty": 32,
-      "initial_stop": 793.2,
-      "target": 871.95,
+      "entry_date": "2026-09-24",
+      "entry_price": 833.0,
+      "qty": 9,
+      "initial_stop": 788.13,
+      "target": 922.74,
+      "signal_type": "BREAKOUT",
+      "grade": "A",
+      "exit_date": "2026-10-01",
+      "exit_price": 787.34,
+      "exit_reason": "STOP_LOSS",
+      "gross_pnl": -410.92,
+      "net_pnl": -432.8,
+      "pnl": -432.8,
+      "turnover": 14583.08,
+      "fees": 21.87,
+      "r_multiple": -1.07,
+      "holding_days": 5,
+      "risk_amount": 403.84
+    },
+    {
+      "symbol": "GLAND.NS",
+      "entry_date": "2026-09-30",
+      "entry_price": 2990.0,
+      "qty": 3,
+      "initial_stop": 2865.59,
+      "target": 3238.83,
+      "signal_type": "PULLBACK",
+      "grade": "A",
+      "exit_date": "2026-10-01",
+      "exit_price": 2862.72,
+      "exit_reason": "STOP_LOSS",
+      "gross_pnl": -381.83,
+      "net_pnl": -408.16,
+      "pnl": -408.16,
+      "turnover": 17558.17,
+      "fees": 26.34,
+      "r_multiple": -1.09,
+      "holding_days": 1,
+      "risk_amount": 373.24
+    },
+    {
+      "symbol": "RBLBANK.NS",
+      "entry_date": "2026-09-21",
+      "entry_price": 408.0,
+      "qty": 29,
+      "initial_stop": 392.35,
+      "target": 439.31,
       "signal_type": "PULLBACK",
       "grade": "A",
       "exit_date": "2026-10-08",
-      "exit_price": 792.41,
-      "exit_reason": "STOP_LOSS",
-      "gross_pnl": -865.38,
-      "net_pnl": -942.75,
-      "pnl": -942.75,
-      "turnover": 51579.42,
-      "fees": 77.37,
-      "r_multiple": -1.12,
-      "holding_days": 1,
-      "risk_amount": 840.0
+      "exit_price": 400.3,
+      "exit_reason": "TIME_STOP",
+      "gross_pnl": -223.32,
+      "net_pnl": -258.48,
+      "pnl": -258.48,
+      "turnover": 23440.68,
+      "fees": 35.16,
+      "r_multiple": -0.57,
+      "holding_days": 12,
+      "risk_amount": 453.95
     },
     {
-      "symbol": "WELCORP.NS",
-      "entry_date": "2026-10-07",
-      "entry_price": 2660.9,
-      "qty": 11,
-      "initial_stop": 2518.55,
-      "target": 2945.6,
+      "symbol": "REDINGTON.NS",
+      "entry_date": "2026-10-06",
+      "entry_price": 414.0,
+      "qty": 19,
+      "initial_stop": 390.2,
+      "target": 461.59,
+      "signal_type": "PULLBACK",
+      "grade": "A",
+      "exit_date": "2026-10-08",
+      "exit_price": 389.81,
+      "exit_reason": "STOP_LOSS",
+      "gross_pnl": -459.61,
+      "net_pnl": -482.52,
+      "pnl": -482.52,
+      "turnover": 15272.39,
+      "fees": 22.91,
+      "r_multiple": -1.07,
+      "holding_days": 2,
+      "risk_amount": 452.13
+    },
+    {
+      "symbol": "CHENNPETRO.NS",
+      "entry_date": "2026-10-08",
+      "entry_price": 1605.0,
+      "qty": 3,
+      "initial_stop": 1468.58,
+      "target": 1877.85,
+      "signal_type": "PULLBACK",
+      "grade": "A",
+      "exit_date": "2026-10-12",
+      "exit_price": 1467.11,
+      "exit_reason": "STOP_LOSS",
+      "gross_pnl": -413.67,
+      "net_pnl": -427.49,
+      "pnl": -427.49,
+      "turnover": 9216.33,
+      "fees": 13.82,
+      "r_multiple": -1.04,
+      "holding_days": 2,
+      "risk_amount": 409.27
+    },
+    {
+      "symbol": "AEGISLOG.NS",
+      "entry_date": "2026-10-08",
+      "entry_price": 1473.9,
+      "qty": 4,
+      "initial_stop": 1365.43,
+      "target": 1690.84,
+      "signal_type": "PULLBACK",
+      "grade": "A",
+      "exit_date": "2026-10-13",
+      "exit_price": 1364.06,
+      "exit_reason": "STOP_LOSS",
+      "gross_pnl": -439.34,
+      "net_pnl": -456.37,
+      "pnl": -456.37,
+      "turnover": 11351.86,
+      "fees": 17.03,
+      "r_multiple": -1.05,
+      "holding_days": 3,
+      "risk_amount": 433.89
+    },
+    {
+      "symbol": "RBLBANK.NS",
+      "entry_date": "2026-10-12",
+      "entry_price": 420.0,
+      "qty": 20,
+      "initial_stop": 397.03,
+      "target": 465.95,
+      "signal_type": "PULLBACK",
+      "grade": "A",
+      "exit_date": "2026-10-13",
+      "exit_price": 396.63,
+      "exit_reason": "STOP_LOSS",
+      "gross_pnl": -467.34,
+      "net_pnl": -491.84,
+      "pnl": -491.84,
+      "turnover": 16332.66,
+      "fees": 24.5,
+      "r_multiple": -1.07,
+      "holding_days": 1,
+      "risk_amount": 459.46
+    },
+    {
+      "symbol": "NUVAMA.NS",
+      "entry_date": "2026-10-13",
+      "entry_price": 1857.6,
+      "qty": 4,
+      "initial_stop": 1746.51,
+      "target": 2079.77,
       "signal_type": "PULLBACK",
       "grade": "A",
       "exit_date": "2026-10-14",
-      "exit_price": 2631.17,
-      "exit_reason": "TIME_STOP",
-      "gross_pnl": -327.07,
-      "net_pnl": -414.39,
-      "pnl": -414.39,
-      "turnover": 58212.73,
-      "fees": 87.32,
-      "r_multiple": -0.26,
-      "holding_days": 5,
-      "risk_amount": 1565.85
+      "exit_price": 1744.76,
+      "exit_reason": "STOP_LOSS",
+      "gross_pnl": -451.35,
+      "net_pnl": -472.96,
+      "pnl": -472.96,
+      "turnover": 14409.45,
+      "fees": 21.61,
+      "r_multiple": -1.06,
+      "holding_days": 1,
+      "risk_amount": 444.34
     },
     {
-      "symbol": "RRKABEL.NS",
+      "symbol": "TDPOWERSYS.NS",
+      "entry_date": "2026-09-21",
+      "entry_price": 740.0,
+      "qty": 7,
+      "initial_stop": 677.1,
+      "target": 865.8,
+      "signal_type": "PULLBACK",
+      "grade": "A",
+      "exit_date": "2026-10-15",
+      "exit_price": 734.02,
+      "exit_reason": "TIME_STOP",
+      "gross_pnl": -41.89,
+      "net_pnl": -57.37,
+      "pnl": -57.37,
+      "turnover": 10318.11,
+      "fees": 15.48,
+      "r_multiple": -0.13,
+      "holding_days": 17,
+      "risk_amount": 440.3
+    },
+    {
+      "symbol": "WELCORP.NS",
+      "entry_date": "2026-10-13",
+      "entry_price": 2800.0,
+      "qty": 2,
+      "initial_stop": 2576.79,
+      "target": 3246.42,
+      "signal_type": "PULLBACK",
+      "grade": "A",
+      "exit_date": "2026-10-15",
+      "exit_price": 2574.21,
+      "exit_reason": "STOP_LOSS",
+      "gross_pnl": -451.57,
+      "net_pnl": -467.7,
+      "pnl": -467.7,
+      "turnover": 10748.43,
+      "fees": 16.12,
+      "r_multiple": -1.05,
+      "holding_days": 2,
+      "risk_amount": 446.42
+    },
+    {
+      "symbol": "AEGISLOG.NS",
       "entry_date": "2026-10-15",
-      "entry_price": 2640.0,
-      "qty": 10,
-      "initial_stop": 2590.0,
-      "target": 2740.01,
+      "entry_price": 1499.0,
+      "qty": 3,
+      "initial_stop": 1371.59,
+      "target": 1753.83,
       "signal_type": "PULLBACK",
       "grade": "A",
       "exit_date": "2026-10-16",
-      "exit_price": 2587.41,
+      "exit_price": 1370.22,
       "exit_reason": "STOP_LOSS",
-      "gross_pnl": -525.9,
-      "net_pnl": -604.31,
-      "pnl": -604.31,
-      "turnover": 52274.1,
-      "fees": 78.41,
-      "r_multiple": -1.21,
+      "gross_pnl": -386.34,
+      "net_pnl": -399.26,
+      "pnl": -399.26,
+      "turnover": 8607.66,
+      "fees": 12.91,
+      "r_multiple": -1.04,
       "holding_days": 1,
-      "risk_amount": 500.04
+      "risk_amount": 382.24
+    },
+    {
+      "symbol": "CHENNPETRO.NS",
+      "entry_date": "2026-10-15",
+      "entry_price": 1553.0,
+      "qty": 3,
+      "initial_stop": 1425.85,
+      "target": 1807.29,
+      "signal_type": "PULLBACK",
+      "grade": "A",
+      "exit_date": "2026-10-16",
+      "exit_price": 1424.42,
+      "exit_reason": "STOP_LOSS",
+      "gross_pnl": -385.73,
+      "net_pnl": -399.13,
+      "pnl": -399.13,
+      "turnover": 8932.27,
+      "fees": 13.4,
+      "r_multiple": -1.05,
+      "holding_days": 1,
+      "risk_amount": 381.44
     },
     {
       "symbol": "GLAND.NS",
       "entry_date": "2026-10-08",
       "entry_price": 3162.0,
-      "qty": 8,
+      "qty": 2,
       "initial_stop": 2983.61,
       "target": 3518.77,
       "signal_type": "BREAKOUT",
       "grade": "A",
-      "exit_date": "2026-10-19",
-      "exit_price": 3016.78,
-      "exit_reason": "TIME_STOP",
-      "gross_pnl": -1161.76,
-      "net_pnl": -1235.9,
-      "pnl": -1235.9,
-      "turnover": 49430.24,
-      "fees": 74.15,
-      "r_multiple": -0.87,
-      "holding_days": 7,
-      "risk_amount": 1427.09
-    },
-    {
-      "symbol": "AARTIIND.NS",
-      "entry_date": "2026-10-16",
-      "entry_price": 505.05,
-      "qty": 53,
-      "initial_stop": 489.95,
-      "target": 535.25,
-      "signal_type": "PULLBACK",
-      "grade": "A",
-      "exit_date": "2026-10-19",
-      "exit_price": 489.46,
+      "exit_date": "2026-10-21",
+      "exit_price": 2980.63,
       "exit_reason": "STOP_LOSS",
-      "gross_pnl": -826.27,
-      "net_pnl": -905.33,
-      "pnl": -905.33,
-      "turnover": 52709.03,
-      "fees": 79.06,
-      "r_multiple": -1.13,
-      "holding_days": 1,
-      "risk_amount": 800.3
+      "gross_pnl": -362.75,
+      "net_pnl": -381.18,
+      "pnl": -381.18,
+      "turnover": 12285.25,
+      "fees": 18.43,
+      "r_multiple": -1.07,
+      "holding_days": 8,
+      "risk_amount": 356.77
     },
     {
       "symbol": "CUPID.NS",
-      "entry_date": "2026-10-22",
-      "entry_price": 338.7,
-      "qty": 90,
-      "initial_stop": 321.95,
-      "target": 372.2,
-      "signal_type": "PULLBACK",
+      "entry_date": "2026-09-30",
+      "entry_price": 288.0,
+      "qty": 18,
+      "initial_stop": 263.52,
+      "target": 336.96,
+      "signal_type": "BREAKOUT",
       "grade": "A",
-      "exit_date": "2026-10-23",
-      "exit_price": 320.53,
+      "exit_date": "2026-10-22",
+      "exit_price": 319.73,
+      "exit_reason": "EMA20_TRAIL",
+      "gross_pnl": 726.21,
+      "net_pnl": 709.57,
+      "pnl": 709.57,
+      "turnover": 11094.21,
+      "fees": 16.64,
+      "r_multiple": 1.61,
+      "holding_days": 14,
+      "risk_amount": 440.64
+    },
+    {
+      "symbol": "BEML.NS",
+      "entry_date": "2026-11-05",
+      "entry_price": 2139.8,
+      "qty": 3,
+      "initial_stop": 1983.83,
+      "target": 2451.74,
+      "signal_type": "BREAKOUT",
+      "grade": "A",
+      "exit_date": "2026-11-06",
+      "exit_price": 1981.85,
       "exit_reason": "STOP_LOSS",
-      "gross_pnl": -1635.38,
-      "net_pnl": -1724.37,
-      "pnl": -1724.37,
-      "turnover": 59330.63,
-      "fees": 89.0,
-      "r_multiple": -1.14,
+      "gross_pnl": -473.86,
+      "net_pnl": -492.41,
+      "pnl": -492.41,
+      "turnover": 12364.94,
+      "fees": 18.55,
+      "r_multiple": -1.05,
       "holding_days": 1,
-      "risk_amount": 1507.5
-    },
-    {
-      "symbol": "KARURVYSYA.NS",
-      "entry_date": "2026-10-28",
-      "entry_price": 352.0,
-      "qty": 73,
-      "initial_stop": 337.2,
-      "target": 381.6,
-      "signal_type": "PULLBACK",
-      "grade": "A",
-      "exit_date": "2026-11-03",
-      "exit_price": 336.86,
-      "exit_reason": "STOP_LOSS",
-      "gross_pnl": -1105.02,
-      "net_pnl": -1180.45,
-      "pnl": -1180.45,
-      "turnover": 50286.98,
-      "fees": 75.43,
-      "r_multiple": -1.09,
-      "holding_days": 4,
-      "risk_amount": 1080.4
-    },
-    {
-      "symbol": "CHENNPETRO.NS",
-      "entry_date": "2026-11-03",
-      "entry_price": 1555.0,
-      "qty": 16,
-      "initial_stop": 1468.65,
-      "target": 1727.7,
-      "signal_type": "PULLBACK",
-      "grade": "A",
-      "exit_date": "2026-11-05",
-      "exit_price": 1467.18,
-      "exit_reason": "STOP_LOSS",
-      "gross_pnl": -1405.1,
-      "net_pnl": -1477.63,
-      "pnl": -1477.63,
-      "turnover": 48354.9,
-      "fees": 72.53,
-      "r_multiple": -1.07,
-      "holding_days": 2,
-      "risk_amount": 1381.6
+      "risk_amount": 467.91
     }
   ],
   "equity_curve": [
@@ -2775,1236 +2922,1236 @@
     },
     {
       "date": "2025-11-25",
-      "value": 200000,
-      "drawdown": 0.0
+      "value": 199848.95,
+      "drawdown": 0.08
     },
     {
       "date": "2025-11-26",
-      "value": 196473.6,
-      "drawdown": 1.76
+      "value": 200031.05,
+      "drawdown": 0.0
     },
     {
       "date": "2025-11-27",
-      "value": 196403.93,
-      "drawdown": 1.8
+      "value": 199948.45,
+      "drawdown": 0.04
     },
     {
       "date": "2025-11-28",
-      "value": 195776.6,
-      "drawdown": 2.11
+      "value": 200032.6,
+      "drawdown": 0.0
     },
     {
       "date": "2025-12-01",
-      "value": 195401.3,
-      "drawdown": 2.3
+      "value": 200234.75,
+      "drawdown": 0.0
     },
     {
       "date": "2025-12-02",
-      "value": 194593.48,
-      "drawdown": 2.7
+      "value": 200169.25,
+      "drawdown": 0.03
     },
     {
       "date": "2025-12-03",
-      "value": 194260.73,
-      "drawdown": 2.87
+      "value": 200358.0,
+      "drawdown": 0.0
     },
     {
       "date": "2025-12-04",
-      "value": 194260.73,
-      "drawdown": 2.87
+      "value": 200125.7,
+      "drawdown": 0.12
     },
     {
       "date": "2025-12-05",
-      "value": 194260.73,
-      "drawdown": 2.87
-    },
-    {
-      "date": "2025-12-08",
-      "value": 193395.73,
-      "drawdown": 3.3
-    },
-    {
-      "date": "2025-12-09",
-      "value": 193238.12,
-      "drawdown": 3.38
-    },
-    {
-      "date": "2025-12-10",
-      "value": 193238.12,
-      "drawdown": 3.38
-    },
-    {
-      "date": "2025-12-11",
-      "value": 193238.12,
-      "drawdown": 3.38
-    },
-    {
-      "date": "2025-12-12",
-      "value": 193801.17,
-      "drawdown": 3.1
-    },
-    {
-      "date": "2025-12-15",
-      "value": 193321.23,
-      "drawdown": 3.34
-    },
-    {
-      "date": "2025-12-16",
-      "value": 192665.67,
-      "drawdown": 3.67
-    },
-    {
-      "date": "2025-12-17",
-      "value": 191902.89,
-      "drawdown": 4.05
-    },
-    {
-      "date": "2025-12-18",
-      "value": 192110.89,
-      "drawdown": 3.94
-    },
-    {
-      "date": "2025-12-19",
-      "value": 191710.41,
-      "drawdown": 4.14
-    },
-    {
-      "date": "2025-12-22",
-      "value": 192585.05,
-      "drawdown": 3.71
-    },
-    {
-      "date": "2025-12-23",
-      "value": 193228.65,
-      "drawdown": 3.39
-    },
-    {
-      "date": "2025-12-24",
-      "value": 192253.05,
-      "drawdown": 3.87
-    },
-    {
-      "date": "2025-12-26",
-      "value": 191611.77,
-      "drawdown": 4.19
-    },
-    {
-      "date": "2025-12-29",
-      "value": 191419.04,
-      "drawdown": 4.29
-    },
-    {
-      "date": "2025-12-30",
-      "value": 191419.04,
-      "drawdown": 4.29
-    },
-    {
-      "date": "2025-12-31",
-      "value": 191366.14,
-      "drawdown": 4.32
-    },
-    {
-      "date": "2026-01-01",
-      "value": 191800.24,
-      "drawdown": 4.1
-    },
-    {
-      "date": "2026-01-02",
-      "value": 192874.04,
-      "drawdown": 3.56
-    },
-    {
-      "date": "2026-01-05",
-      "value": 192776.47,
-      "drawdown": 3.61
-    },
-    {
-      "date": "2026-01-06",
-      "value": 192550.27,
-      "drawdown": 3.72
-    },
-    {
-      "date": "2026-01-07",
-      "value": 192039.61,
-      "drawdown": 3.98
-    },
-    {
-      "date": "2026-01-08",
-      "value": 191384.59,
-      "drawdown": 4.31
-    },
-    {
-      "date": "2026-01-09",
-      "value": 191384.59,
-      "drawdown": 4.31
-    },
-    {
-      "date": "2026-01-12",
-      "value": 191384.59,
-      "drawdown": 4.31
-    },
-    {
-      "date": "2026-01-13",
-      "value": 191040.61,
-      "drawdown": 4.48
-    },
-    {
-      "date": "2026-01-14",
-      "value": 191911.44,
-      "drawdown": 4.04
-    },
-    {
-      "date": "2026-01-15",
-      "value": 191911.44,
-      "drawdown": 4.04
-    },
-    {
-      "date": "2026-01-16",
-      "value": 192280.71,
-      "drawdown": 3.86
-    },
-    {
-      "date": "2026-01-19",
-      "value": 191009.19,
-      "drawdown": 4.5
-    },
-    {
-      "date": "2026-01-20",
-      "value": 190418.65,
-      "drawdown": 4.79
-    },
-    {
-      "date": "2026-01-21",
-      "value": 190418.65,
-      "drawdown": 4.79
-    },
-    {
-      "date": "2026-01-22",
-      "value": 190418.65,
-      "drawdown": 4.79
-    },
-    {
-      "date": "2026-01-23",
-      "value": 189901.5,
-      "drawdown": 5.05
-    },
-    {
-      "date": "2026-01-27",
-      "value": 189226.16,
-      "drawdown": 5.39
-    },
-    {
-      "date": "2026-01-28",
-      "value": 190720.27,
-      "drawdown": 4.64
-    },
-    {
-      "date": "2026-01-29",
-      "value": 190894.9,
-      "drawdown": 4.55
-    },
-    {
-      "date": "2026-01-30",
-      "value": 193567.48,
-      "drawdown": 3.22
-    },
-    {
-      "date": "2026-02-02",
-      "value": 192595.6,
-      "drawdown": 3.7
-    },
-    {
-      "date": "2026-02-03",
-      "value": 193830.4,
-      "drawdown": 3.08
-    },
-    {
-      "date": "2026-02-04",
-      "value": 194747.8,
-      "drawdown": 2.63
-    },
-    {
-      "date": "2026-02-05",
-      "value": 193435.9,
-      "drawdown": 3.28
-    },
-    {
-      "date": "2026-02-06",
-      "value": 192588.14,
-      "drawdown": 3.71
-    },
-    {
-      "date": "2026-02-09",
-      "value": 193392.14,
-      "drawdown": 3.3
-    },
-    {
-      "date": "2026-02-10",
-      "value": 195454.04,
-      "drawdown": 2.27
-    },
-    {
-      "date": "2026-02-11",
-      "value": 196198.34,
-      "drawdown": 1.9
-    },
-    {
-      "date": "2026-02-12",
-      "value": 196641.55,
-      "drawdown": 1.68
-    },
-    {
-      "date": "2026-02-13",
-      "value": 197268.84,
-      "drawdown": 1.37
-    },
-    {
-      "date": "2026-02-16",
-      "value": 198370.14,
-      "drawdown": 0.81
-    },
-    {
-      "date": "2026-02-17",
-      "value": 198828.24,
-      "drawdown": 0.59
-    },
-    {
-      "date": "2026-02-18",
-      "value": 198627.94,
-      "drawdown": 0.69
-    },
-    {
-      "date": "2026-02-19",
-      "value": 198103.64,
-      "drawdown": 0.95
-    },
-    {
-      "date": "2026-02-20",
-      "value": 198120.05,
-      "drawdown": 0.94
-    },
-    {
-      "date": "2026-02-23",
-      "value": 198299.34,
-      "drawdown": 0.85
-    },
-    {
-      "date": "2026-02-24",
-      "value": 198446.94,
-      "drawdown": 0.78
-    },
-    {
-      "date": "2026-02-25",
-      "value": 198146.84,
-      "drawdown": 0.93
-    },
-    {
-      "date": "2026-02-26",
-      "value": 198030.64,
-      "drawdown": 0.98
-    },
-    {
-      "date": "2026-02-27",
-      "value": 198736.94,
-      "drawdown": 0.63
-    },
-    {
-      "date": "2026-03-02",
-      "value": 198489.44,
-      "drawdown": 0.76
-    },
-    {
-      "date": "2026-03-04",
-      "value": 195791.32,
-      "drawdown": 2.1
-    },
-    {
-      "date": "2026-03-05",
-      "value": 196513.22,
-      "drawdown": 1.74
-    },
-    {
-      "date": "2026-03-06",
-      "value": 197724.02,
-      "drawdown": 1.14
-    },
-    {
-      "date": "2026-03-09",
-      "value": 193268.42,
-      "drawdown": 3.37
-    },
-    {
-      "date": "2026-03-10",
-      "value": 193206.27,
-      "drawdown": 3.4
-    },
-    {
-      "date": "2026-03-11",
-      "value": 193351.47,
-      "drawdown": 3.32
-    },
-    {
-      "date": "2026-03-12",
-      "value": 193554.97,
-      "drawdown": 3.22
-    },
-    {
-      "date": "2026-03-13",
-      "value": 192916.57,
-      "drawdown": 3.54
-    },
-    {
-      "date": "2026-03-16",
-      "value": 191813.92,
-      "drawdown": 4.09
-    },
-    {
-      "date": "2026-03-17",
-      "value": 190721.18,
-      "drawdown": 4.64
-    },
-    {
-      "date": "2026-03-18",
-      "value": 189320.56,
-      "drawdown": 5.34
-    },
-    {
-      "date": "2026-03-19",
-      "value": 188570.36,
-      "drawdown": 5.71
-    },
-    {
-      "date": "2026-03-20",
-      "value": 189743.22,
-      "drawdown": 5.13
-    },
-    {
-      "date": "2026-03-23",
-      "value": 187959.15,
-      "drawdown": 6.02
-    },
-    {
-      "date": "2026-03-24",
-      "value": 190065.68,
-      "drawdown": 4.97
-    },
-    {
-      "date": "2026-03-25",
-      "value": 191290.69,
-      "drawdown": 4.35
-    },
-    {
-      "date": "2026-03-27",
-      "value": 190789.59,
-      "drawdown": 4.61
-    },
-    {
-      "date": "2026-03-30",
-      "value": 190057.25,
-      "drawdown": 4.97
-    },
-    {
-      "date": "2026-04-01",
-      "value": 189518.19,
-      "drawdown": 5.24
-    },
-    {
-      "date": "2026-04-02",
-      "value": 189266.96,
-      "drawdown": 5.37
-    },
-    {
-      "date": "2026-04-06",
-      "value": 190702.02,
-      "drawdown": 4.65
-    },
-    {
-      "date": "2026-04-07",
-      "value": 192521.76,
-      "drawdown": 3.74
-    },
-    {
-      "date": "2026-04-08",
-      "value": 194306.46,
-      "drawdown": 2.85
-    },
-    {
-      "date": "2026-04-09",
-      "value": 194999.66,
-      "drawdown": 2.5
-    },
-    {
-      "date": "2026-04-10",
-      "value": 195160.06,
-      "drawdown": 2.42
-    },
-    {
-      "date": "2026-04-13",
-      "value": 196109.26,
-      "drawdown": 1.95
-    },
-    {
-      "date": "2026-04-15",
-      "value": 198533.26,
-      "drawdown": 0.73
-    },
-    {
-      "date": "2026-04-16",
-      "value": 197979.26,
-      "drawdown": 1.01
-    },
-    {
-      "date": "2026-04-17",
-      "value": 198341.26,
-      "drawdown": 0.83
-    },
-    {
-      "date": "2026-04-20",
-      "value": 198574.46,
-      "drawdown": 0.71
-    },
-    {
-      "date": "2026-04-21",
-      "value": 199020.86,
-      "drawdown": 0.49
-    },
-    {
-      "date": "2026-04-22",
-      "value": 199725.26,
-      "drawdown": 0.14
-    },
-    {
-      "date": "2026-04-23",
-      "value": 199991.26,
-      "drawdown": 0.0
-    },
-    {
-      "date": "2026-04-24",
-      "value": 199031.26,
-      "drawdown": 0.48
-    },
-    {
-      "date": "2026-04-27",
-      "value": 199596.86,
-      "drawdown": 0.2
-    },
-    {
-      "date": "2026-04-28",
-      "value": 199635.67,
+      "value": 199995.94,
       "drawdown": 0.18
     },
     {
-      "date": "2026-04-29",
-      "value": 201122.86,
-      "drawdown": 0.0
+      "date": "2025-12-08",
+      "value": 199721.36,
+      "drawdown": 0.32
     },
     {
-      "date": "2026-04-30",
-      "value": 204385.67,
-      "drawdown": 0.0
+      "date": "2025-12-09",
+      "value": 199721.36,
+      "drawdown": 0.32
     },
     {
-      "date": "2026-05-04",
-      "value": 203087.26,
-      "drawdown": 0.64
+      "date": "2025-12-10",
+      "value": 199721.36,
+      "drawdown": 0.32
     },
     {
-      "date": "2026-05-05",
-      "value": 203666.06,
+      "date": "2025-12-11",
+      "value": 199651.36,
       "drawdown": 0.35
     },
     {
-      "date": "2026-05-06",
-      "value": 203770.46,
+      "date": "2025-12-12",
+      "value": 199756.36,
       "drawdown": 0.3
     },
     {
+      "date": "2025-12-15",
+      "value": 199929.96,
+      "drawdown": 0.21
+    },
+    {
+      "date": "2025-12-16",
+      "value": 199698.26,
+      "drawdown": 0.33
+    },
+    {
+      "date": "2025-12-17",
+      "value": 199740.26,
+      "drawdown": 0.31
+    },
+    {
+      "date": "2025-12-18",
+      "value": 199778.76,
+      "drawdown": 0.29
+    },
+    {
+      "date": "2025-12-19",
+      "value": 200411.56,
+      "drawdown": 0.0
+    },
+    {
+      "date": "2025-12-22",
+      "value": 200830.04,
+      "drawdown": 0.0
+    },
+    {
+      "date": "2025-12-23",
+      "value": 200779.84,
+      "drawdown": 0.02
+    },
+    {
+      "date": "2025-12-24",
+      "value": 201057.46,
+      "drawdown": 0.0
+    },
+    {
+      "date": "2025-12-26",
+      "value": 200781.8,
+      "drawdown": 0.14
+    },
+    {
+      "date": "2025-12-29",
+      "value": 200316.89,
+      "drawdown": 0.37
+    },
+    {
+      "date": "2025-12-30",
+      "value": 200424.14,
+      "drawdown": 0.31
+    },
+    {
+      "date": "2025-12-31",
+      "value": 200260.69,
+      "drawdown": 0.4
+    },
+    {
+      "date": "2026-01-01",
+      "value": 200565.89,
+      "drawdown": 0.24
+    },
+    {
+      "date": "2026-01-02",
+      "value": 200869.19,
+      "drawdown": 0.09
+    },
+    {
+      "date": "2026-01-05",
+      "value": 201001.29,
+      "drawdown": 0.03
+    },
+    {
+      "date": "2026-01-06",
+      "value": 201248.16,
+      "drawdown": 0.0
+    },
+    {
+      "date": "2026-01-07",
+      "value": 201325.53,
+      "drawdown": 0.0
+    },
+    {
+      "date": "2026-01-08",
+      "value": 200798.23,
+      "drawdown": 0.26
+    },
+    {
+      "date": "2026-01-09",
+      "value": 199953.01,
+      "drawdown": 0.68
+    },
+    {
+      "date": "2026-01-12",
+      "value": 199609.93,
+      "drawdown": 0.85
+    },
+    {
+      "date": "2026-01-13",
+      "value": 199665.73,
+      "drawdown": 0.82
+    },
+    {
+      "date": "2026-01-14",
+      "value": 199636.53,
+      "drawdown": 0.84
+    },
+    {
+      "date": "2026-01-15",
+      "value": 199627.53,
+      "drawdown": 0.84
+    },
+    {
+      "date": "2026-01-16",
+      "value": 199369.13,
+      "drawdown": 0.97
+    },
+    {
+      "date": "2026-01-19",
+      "value": 199243.23,
+      "drawdown": 1.03
+    },
+    {
+      "date": "2026-01-20",
+      "value": 198866.83,
+      "drawdown": 1.22
+    },
+    {
+      "date": "2026-01-21",
+      "value": 198464.08,
+      "drawdown": 1.42
+    },
+    {
+      "date": "2026-01-22",
+      "value": 198464.08,
+      "drawdown": 1.42
+    },
+    {
+      "date": "2026-01-23",
+      "value": 198464.08,
+      "drawdown": 1.42
+    },
+    {
+      "date": "2026-01-27",
+      "value": 198464.08,
+      "drawdown": 1.42
+    },
+    {
+      "date": "2026-01-28",
+      "value": 198464.08,
+      "drawdown": 1.42
+    },
+    {
+      "date": "2026-01-29",
+      "value": 198920.66,
+      "drawdown": 1.19
+    },
+    {
+      "date": "2026-01-30",
+      "value": 198905.86,
+      "drawdown": 1.2
+    },
+    {
+      "date": "2026-02-02",
+      "value": 198939.9,
+      "drawdown": 1.18
+    },
+    {
+      "date": "2026-02-03",
+      "value": 199007.98,
+      "drawdown": 1.15
+    },
+    {
+      "date": "2026-02-04",
+      "value": 199142.29,
+      "drawdown": 1.08
+    },
+    {
+      "date": "2026-02-05",
+      "value": 198837.88,
+      "drawdown": 1.24
+    },
+    {
+      "date": "2026-02-06",
+      "value": 198975.17,
+      "drawdown": 1.17
+    },
+    {
+      "date": "2026-02-09",
+      "value": 199371.01,
+      "drawdown": 0.97
+    },
+    {
+      "date": "2026-02-10",
+      "value": 199536.61,
+      "drawdown": 0.89
+    },
+    {
+      "date": "2026-02-11",
+      "value": 199855.07,
+      "drawdown": 0.73
+    },
+    {
+      "date": "2026-02-12",
+      "value": 199886.9,
+      "drawdown": 0.71
+    },
+    {
+      "date": "2026-02-13",
+      "value": 199565.15,
+      "drawdown": 0.87
+    },
+    {
+      "date": "2026-02-16",
+      "value": 200001.92,
+      "drawdown": 0.66
+    },
+    {
+      "date": "2026-02-17",
+      "value": 200424.86,
+      "drawdown": 0.45
+    },
+    {
+      "date": "2026-02-18",
+      "value": 200281.22,
+      "drawdown": 0.52
+    },
+    {
+      "date": "2026-02-19",
+      "value": 200186.41,
+      "drawdown": 0.57
+    },
+    {
+      "date": "2026-02-20",
+      "value": 200157.97,
+      "drawdown": 0.58
+    },
+    {
+      "date": "2026-02-23",
+      "value": 200106.14,
+      "drawdown": 0.61
+    },
+    {
+      "date": "2026-02-24",
+      "value": 200293.96,
+      "drawdown": 0.51
+    },
+    {
+      "date": "2026-02-25",
+      "value": 200552.53,
+      "drawdown": 0.38
+    },
+    {
+      "date": "2026-02-26",
+      "value": 200427.45,
+      "drawdown": 0.45
+    },
+    {
+      "date": "2026-02-27",
+      "value": 200553.04,
+      "drawdown": 0.38
+    },
+    {
+      "date": "2026-03-02",
+      "value": 199186.38,
+      "drawdown": 1.06
+    },
+    {
+      "date": "2026-03-04",
+      "value": 199654.19,
+      "drawdown": 0.83
+    },
+    {
+      "date": "2026-03-05",
+      "value": 200329.1,
+      "drawdown": 0.49
+    },
+    {
+      "date": "2026-03-06",
+      "value": 200467.8,
+      "drawdown": 0.43
+    },
+    {
+      "date": "2026-03-09",
+      "value": 198934.27,
+      "drawdown": 1.19
+    },
+    {
+      "date": "2026-03-10",
+      "value": 198908.72,
+      "drawdown": 1.2
+    },
+    {
+      "date": "2026-03-11",
+      "value": 198832.32,
+      "drawdown": 1.24
+    },
+    {
+      "date": "2026-03-12",
+      "value": 198698.39,
+      "drawdown": 1.3
+    },
+    {
+      "date": "2026-03-13",
+      "value": 198193.87,
+      "drawdown": 1.56
+    },
+    {
+      "date": "2026-03-16",
+      "value": 197922.93,
+      "drawdown": 1.69
+    },
+    {
+      "date": "2026-03-17",
+      "value": 197624.91,
+      "drawdown": 1.84
+    },
+    {
+      "date": "2026-03-18",
+      "value": 197336.09,
+      "drawdown": 1.98
+    },
+    {
+      "date": "2026-03-19",
+      "value": 197144.42,
+      "drawdown": 2.08
+    },
+    {
+      "date": "2026-03-20",
+      "value": 197113.79,
+      "drawdown": 2.09
+    },
+    {
+      "date": "2026-03-23",
+      "value": 196418.67,
+      "drawdown": 2.44
+    },
+    {
+      "date": "2026-03-24",
+      "value": 196752.87,
+      "drawdown": 2.27
+    },
+    {
+      "date": "2026-03-25",
+      "value": 197083.52,
+      "drawdown": 2.11
+    },
+    {
+      "date": "2026-03-27",
+      "value": 196762.17,
+      "drawdown": 2.27
+    },
+    {
+      "date": "2026-03-30",
+      "value": 196744.52,
+      "drawdown": 2.28
+    },
+    {
+      "date": "2026-04-01",
+      "value": 196557.42,
+      "drawdown": 2.37
+    },
+    {
+      "date": "2026-04-02",
+      "value": 196249.97,
+      "drawdown": 2.52
+    },
+    {
+      "date": "2026-04-06",
+      "value": 196538.62,
+      "drawdown": 2.38
+    },
+    {
+      "date": "2026-04-07",
+      "value": 196825.43,
+      "drawdown": 2.24
+    },
+    {
+      "date": "2026-04-08",
+      "value": 197402.49,
+      "drawdown": 1.95
+    },
+    {
+      "date": "2026-04-09",
+      "value": 198260.92,
+      "drawdown": 1.52
+    },
+    {
+      "date": "2026-04-10",
+      "value": 198874.66,
+      "drawdown": 1.22
+    },
+    {
+      "date": "2026-04-13",
+      "value": 198971.15,
+      "drawdown": 1.17
+    },
+    {
+      "date": "2026-04-15",
+      "value": 199689.62,
+      "drawdown": 0.81
+    },
+    {
+      "date": "2026-04-16",
+      "value": 199821.38,
+      "drawdown": 0.75
+    },
+    {
+      "date": "2026-04-17",
+      "value": 200275.42,
+      "drawdown": 0.52
+    },
+    {
+      "date": "2026-04-20",
+      "value": 200370.07,
+      "drawdown": 0.47
+    },
+    {
+      "date": "2026-04-21",
+      "value": 200305.8,
+      "drawdown": 0.51
+    },
+    {
+      "date": "2026-04-22",
+      "value": 200653.56,
+      "drawdown": 0.33
+    },
+    {
+      "date": "2026-04-23",
+      "value": 200359.12,
+      "drawdown": 0.48
+    },
+    {
+      "date": "2026-04-24",
+      "value": 199861.58,
+      "drawdown": 0.73
+    },
+    {
+      "date": "2026-04-27",
+      "value": 200076.29,
+      "drawdown": 0.62
+    },
+    {
+      "date": "2026-04-28",
+      "value": 200652.75,
+      "drawdown": 0.33
+    },
+    {
+      "date": "2026-04-29",
+      "value": 200827.94,
+      "drawdown": 0.25
+    },
+    {
+      "date": "2026-04-30",
+      "value": 200791.46,
+      "drawdown": 0.27
+    },
+    {
+      "date": "2026-05-04",
+      "value": 200802.16,
+      "drawdown": 0.26
+    },
+    {
+      "date": "2026-05-05",
+      "value": 201084.31,
+      "drawdown": 0.12
+    },
+    {
+      "date": "2026-05-06",
+      "value": 201340.96,
+      "drawdown": 0.0
+    },
+    {
       "date": "2026-05-07",
-      "value": 205315.66,
+      "value": 201953.11,
       "drawdown": 0.0
     },
     {
       "date": "2026-05-08",
-      "value": 204466.06,
-      "drawdown": 0.41
+      "value": 201639.31,
+      "drawdown": 0.16
     },
     {
       "date": "2026-05-11",
-      "value": 204551.66,
-      "drawdown": 0.37
+      "value": 201624.16,
+      "drawdown": 0.16
     },
     {
       "date": "2026-05-12",
-      "value": 203249.95,
-      "drawdown": 1.01
+      "value": 200871.22,
+      "drawdown": 0.54
     },
     {
       "date": "2026-05-13",
-      "value": 205309.95,
-      "drawdown": 0.0
+      "value": 201405.37,
+      "drawdown": 0.27
     },
     {
       "date": "2026-05-14",
-      "value": 208607.95,
-      "drawdown": 0.0
+      "value": 201548.67,
+      "drawdown": 0.2
     },
     {
       "date": "2026-05-15",
-      "value": 207263.05,
-      "drawdown": 0.64
+      "value": 201718.32,
+      "drawdown": 0.12
     },
     {
       "date": "2026-05-18",
-      "value": 205391.55,
-      "drawdown": 1.54
+      "value": 201556.46,
+      "drawdown": 0.2
     },
     {
       "date": "2026-05-19",
-      "value": 203526.11,
-      "drawdown": 2.44
+      "value": 201108.86,
+      "drawdown": 0.42
     },
     {
       "date": "2026-05-20",
-      "value": 206142.11,
-      "drawdown": 1.18
+      "value": 201367.71,
+      "drawdown": 0.29
     },
     {
       "date": "2026-05-21",
-      "value": 207918.36,
-      "drawdown": 0.33
+      "value": 201675.46,
+      "drawdown": 0.14
     },
     {
       "date": "2026-05-22",
-      "value": 208790.96,
-      "drawdown": 0.0
+      "value": 201823.96,
+      "drawdown": 0.06
     },
     {
       "date": "2026-05-25",
-      "value": 209249.96,
+      "value": 202035.81,
       "drawdown": 0.0
     },
     {
       "date": "2026-05-26",
-      "value": 209501.86,
+      "value": 202580.61,
       "drawdown": 0.0
     },
     {
       "date": "2026-05-27",
-      "value": 210623.86,
+      "value": 202835.46,
       "drawdown": 0.0
     },
     {
       "date": "2026-05-29",
-      "value": 211333.11,
+      "value": 203178.31,
       "drawdown": 0.0
     },
     {
       "date": "2026-06-01",
-      "value": 207557.91,
-      "drawdown": 1.79
+      "value": 202979.05,
+      "drawdown": 0.1
     },
     {
       "date": "2026-06-02",
-      "value": 207175.46,
-      "drawdown": 1.97
+      "value": 204284.5,
+      "drawdown": 0.0
     },
     {
       "date": "2026-06-03",
-      "value": 208788.91,
-      "drawdown": 1.2
+      "value": 205367.99,
+      "drawdown": 0.0
     },
     {
       "date": "2026-06-04",
-      "value": 210925.86,
-      "drawdown": 0.19
+      "value": 206081.79,
+      "drawdown": 0.0
     },
     {
       "date": "2026-06-05",
-      "value": 209514.26,
-      "drawdown": 0.86
+      "value": 205625.99,
+      "drawdown": 0.22
     },
     {
       "date": "2026-06-08",
-      "value": 206517.45,
-      "drawdown": 2.28
+      "value": 205095.92,
+      "drawdown": 0.48
     },
     {
       "date": "2026-06-09",
-      "value": 207685.9,
-      "drawdown": 1.73
+      "value": 206536.03,
+      "drawdown": 0.0
     },
     {
       "date": "2026-06-10",
-      "value": 206829.45,
-      "drawdown": 2.13
+      "value": 205589.18,
+      "drawdown": 0.46
     },
     {
       "date": "2026-06-11",
-      "value": 206805.8,
-      "drawdown": 2.14
+      "value": 205356.32,
+      "drawdown": 0.57
     },
     {
       "date": "2026-06-12",
-      "value": 208446.35,
-      "drawdown": 1.37
+      "value": 205979.47,
+      "drawdown": 0.27
     },
     {
       "date": "2026-06-15",
-      "value": 208975.35,
-      "drawdown": 1.12
+      "value": 207055.76,
+      "drawdown": 0.0
     },
     {
       "date": "2026-06-16",
-      "value": 208368.38,
-      "drawdown": 1.4
+      "value": 207086.32,
+      "drawdown": 0.0
     },
     {
       "date": "2026-06-17",
-      "value": 209052.88,
-      "drawdown": 1.08
+      "value": 206933.62,
+      "drawdown": 0.07
     },
     {
       "date": "2026-06-18",
-      "value": 209318.28,
-      "drawdown": 0.95
+      "value": 207579.99,
+      "drawdown": 0.0
     },
     {
       "date": "2026-06-19",
-      "value": 210214.28,
-      "drawdown": 0.53
+      "value": 208109.54,
+      "drawdown": 0.0
     },
     {
       "date": "2026-06-22",
-      "value": 211683.14,
-      "drawdown": 0.0
-    },
-    {
-      "date": "2026-06-23",
-      "value": 212002.39,
-      "drawdown": 0.0
-    },
-    {
-      "date": "2026-06-24",
-      "value": 212501.39,
-      "drawdown": 0.0
-    },
-    {
-      "date": "2026-06-25",
-      "value": 212489.19,
-      "drawdown": 0.01
-    },
-    {
-      "date": "2026-06-29",
-      "value": 211910.24,
-      "drawdown": 0.28
-    },
-    {
-      "date": "2026-06-30",
-      "value": 211863.89,
-      "drawdown": 0.3
-    },
-    {
-      "date": "2026-07-01",
-      "value": 209562.53,
-      "drawdown": 1.38
-    },
-    {
-      "date": "2026-07-02",
-      "value": 210267.55,
-      "drawdown": 1.05
-    },
-    {
-      "date": "2026-07-03",
-      "value": 210570.55,
-      "drawdown": 0.91
-    },
-    {
-      "date": "2026-07-06",
-      "value": 210891.55,
-      "drawdown": 0.76
-    },
-    {
-      "date": "2026-07-07",
-      "value": 209180.82,
-      "drawdown": 1.56
-    },
-    {
-      "date": "2026-07-08",
-      "value": 209216.32,
-      "drawdown": 1.55
-    },
-    {
-      "date": "2026-07-09",
-      "value": 210025.72,
-      "drawdown": 1.17
-    },
-    {
-      "date": "2026-07-10",
-      "value": 209578.22,
-      "drawdown": 1.38
-    },
-    {
-      "date": "2026-07-13",
-      "value": 209416.53,
-      "drawdown": 1.45
-    },
-    {
-      "date": "2026-07-14",
-      "value": 210063.03,
-      "drawdown": 1.15
-    },
-    {
-      "date": "2026-07-15",
-      "value": 210269.72,
-      "drawdown": 1.05
-    },
-    {
-      "date": "2026-07-16",
-      "value": 210241.63,
-      "drawdown": 1.06
-    },
-    {
-      "date": "2026-07-17",
-      "value": 207863.04,
-      "drawdown": 2.18
-    },
-    {
-      "date": "2026-07-20",
-      "value": 207131.54,
-      "drawdown": 2.53
-    },
-    {
-      "date": "2026-07-21",
-      "value": 210860.08,
-      "drawdown": 0.77
-    },
-    {
-      "date": "2026-07-22",
-      "value": 210737.03,
-      "drawdown": 0.83
-    },
-    {
-      "date": "2026-07-23",
-      "value": 211158.68,
-      "drawdown": 0.63
-    },
-    {
-      "date": "2026-07-24",
-      "value": 211507.88,
-      "drawdown": 0.47
-    },
-    {
-      "date": "2026-07-27",
-      "value": 211032.13,
-      "drawdown": 0.69
-    },
-    {
-      "date": "2026-07-28",
-      "value": 210739.45,
-      "drawdown": 0.83
-    },
-    {
-      "date": "2026-07-29",
-      "value": 211151.35,
-      "drawdown": 0.64
-    },
-    {
-      "date": "2026-07-30",
-      "value": 211144.55,
-      "drawdown": 0.64
-    },
-    {
-      "date": "2026-07-31",
-      "value": 211234.8,
-      "drawdown": 0.6
-    },
-    {
-      "date": "2026-08-03",
-      "value": 211880.35,
-      "drawdown": 0.29
-    },
-    {
-      "date": "2026-08-04",
-      "value": 212320.4,
+      "value": 207913.94,
       "drawdown": 0.09
     },
     {
+      "date": "2026-06-23",
+      "value": 207498.24,
+      "drawdown": 0.29
+    },
+    {
+      "date": "2026-06-24",
+      "value": 207682.04,
+      "drawdown": 0.21
+    },
+    {
+      "date": "2026-06-25",
+      "value": 207928.44,
+      "drawdown": 0.09
+    },
+    {
+      "date": "2026-06-29",
+      "value": 207696.87,
+      "drawdown": 0.2
+    },
+    {
+      "date": "2026-06-30",
+      "value": 207883.27,
+      "drawdown": 0.11
+    },
+    {
+      "date": "2026-07-01",
+      "value": 207479.41,
+      "drawdown": 0.3
+    },
+    {
+      "date": "2026-07-02",
+      "value": 207153.43,
+      "drawdown": 0.46
+    },
+    {
+      "date": "2026-07-03",
+      "value": 207555.93,
+      "drawdown": 0.27
+    },
+    {
+      "date": "2026-07-06",
+      "value": 208361.19,
+      "drawdown": 0.0
+    },
+    {
+      "date": "2026-07-07",
+      "value": 208183.99,
+      "drawdown": 0.09
+    },
+    {
+      "date": "2026-07-08",
+      "value": 207022.73,
+      "drawdown": 0.64
+    },
+    {
+      "date": "2026-07-09",
+      "value": 207622.83,
+      "drawdown": 0.35
+    },
+    {
+      "date": "2026-07-10",
+      "value": 207900.03,
+      "drawdown": 0.22
+    },
+    {
+      "date": "2026-07-13",
+      "value": 207371.93,
+      "drawdown": 0.47
+    },
+    {
+      "date": "2026-07-14",
+      "value": 207738.03,
+      "drawdown": 0.3
+    },
+    {
+      "date": "2026-07-15",
+      "value": 208176.63,
+      "drawdown": 0.09
+    },
+    {
+      "date": "2026-07-16",
+      "value": 207954.03,
+      "drawdown": 0.2
+    },
+    {
+      "date": "2026-07-17",
+      "value": 207470.75,
+      "drawdown": 0.43
+    },
+    {
+      "date": "2026-07-20",
+      "value": 207718.85,
+      "drawdown": 0.31
+    },
+    {
+      "date": "2026-07-21",
+      "value": 208209.1,
+      "drawdown": 0.07
+    },
+    {
+      "date": "2026-07-22",
+      "value": 207780.25,
+      "drawdown": 0.28
+    },
+    {
+      "date": "2026-07-23",
+      "value": 207407.43,
+      "drawdown": 0.46
+    },
+    {
+      "date": "2026-07-24",
+      "value": 207226.51,
+      "drawdown": 0.54
+    },
+    {
+      "date": "2026-07-27",
+      "value": 207614.57,
+      "drawdown": 0.36
+    },
+    {
+      "date": "2026-07-28",
+      "value": 208115.77,
+      "drawdown": 0.12
+    },
+    {
+      "date": "2026-07-29",
+      "value": 208453.46,
+      "drawdown": 0.0
+    },
+    {
+      "date": "2026-07-30",
+      "value": 208335.22,
+      "drawdown": 0.06
+    },
+    {
+      "date": "2026-07-31",
+      "value": 208511.62,
+      "drawdown": 0.0
+    },
+    {
+      "date": "2026-08-03",
+      "value": 208618.77,
+      "drawdown": 0.0
+    },
+    {
+      "date": "2026-08-04",
+      "value": 208886.47,
+      "drawdown": 0.0
+    },
+    {
       "date": "2026-08-05",
-      "value": 212641.0,
+      "value": 209964.37,
       "drawdown": 0.0
     },
     {
       "date": "2026-08-06",
-      "value": 212845.75,
+      "value": 210244.08,
       "drawdown": 0.0
     },
     {
       "date": "2026-08-07",
-      "value": 212230.6,
-      "drawdown": 0.29
-    },
-    {
-      "date": "2026-08-10",
-      "value": 212714.55,
+      "value": 210113.43,
       "drawdown": 0.06
     },
     {
+      "date": "2026-08-10",
+      "value": 209964.17,
+      "drawdown": 0.13
+    },
+    {
       "date": "2026-08-11",
-      "value": 213043.75,
+      "value": 210337.77,
       "drawdown": 0.0
     },
     {
       "date": "2026-08-12",
-      "value": 213452.75,
+      "value": 210557.05,
       "drawdown": 0.0
     },
     {
       "date": "2026-08-13",
-      "value": 213193.8,
-      "drawdown": 0.12
+      "value": 210746.35,
+      "drawdown": 0.0
     },
     {
       "date": "2026-08-14",
-      "value": 212998.9,
-      "drawdown": 0.21
+      "value": 210421.76,
+      "drawdown": 0.15
     },
     {
       "date": "2026-08-17",
-      "value": 212727.15,
-      "drawdown": 0.34
+      "value": 209622.16,
+      "drawdown": 0.53
     },
     {
       "date": "2026-08-18",
-      "value": 212983.55,
-      "drawdown": 0.22
+      "value": 210564.55,
+      "drawdown": 0.09
     },
     {
       "date": "2026-08-19",
-      "value": 212362.77,
-      "drawdown": 0.51
+      "value": 210288.45,
+      "drawdown": 0.22
     },
     {
       "date": "2026-08-20",
-      "value": 213024.37,
-      "drawdown": 0.2
+      "value": 210640.8,
+      "drawdown": 0.05
     },
     {
       "date": "2026-08-21",
-      "value": 214596.87,
+      "value": 210907.45,
       "drawdown": 0.0
     },
     {
       "date": "2026-08-24",
-      "value": 212463.47,
-      "drawdown": 0.99
+      "value": 210934.58,
+      "drawdown": 0.0
     },
     {
       "date": "2026-08-25",
-      "value": 212017.77,
-      "drawdown": 1.2
+      "value": 210330.49,
+      "drawdown": 0.29
     },
     {
       "date": "2026-08-26",
-      "value": 212854.6,
-      "drawdown": 0.81
+      "value": 210591.18,
+      "drawdown": 0.16
     },
     {
       "date": "2026-08-27",
-      "value": 212477.6,
-      "drawdown": 0.99
+      "value": 210495.58,
+      "drawdown": 0.21
     },
     {
       "date": "2026-08-28",
-      "value": 212417.2,
-      "drawdown": 1.02
+      "value": 211318.88,
+      "drawdown": 0.0
     },
     {
       "date": "2026-08-31",
-      "value": 212273.3,
-      "drawdown": 1.08
+      "value": 211153.55,
+      "drawdown": 0.08
     },
     {
       "date": "2026-09-01",
-      "value": 212915.7,
-      "drawdown": 0.78
+      "value": 210688.29,
+      "drawdown": 0.3
     },
     {
       "date": "2026-09-02",
-      "value": 213589.6,
-      "drawdown": 0.47
+      "value": 211553.51,
+      "drawdown": 0.0
     },
     {
       "date": "2026-09-03",
-      "value": 213741.0,
-      "drawdown": 0.4
+      "value": 211793.51,
+      "drawdown": 0.0
     },
     {
       "date": "2026-09-04",
-      "value": 214075.25,
-      "drawdown": 0.24
+      "value": 212367.71,
+      "drawdown": 0.0
     },
     {
       "date": "2026-09-07",
-      "value": 213772.0,
-      "drawdown": 0.38
+      "value": 212214.71,
+      "drawdown": 0.07
     },
     {
       "date": "2026-09-08",
-      "value": 214413.0,
-      "drawdown": 0.09
+      "value": 211770.56,
+      "drawdown": 0.28
     },
     {
       "date": "2026-09-09",
-      "value": 214189.29,
-      "drawdown": 0.19
+      "value": 211915.51,
+      "drawdown": 0.21
     },
     {
       "date": "2026-09-10",
-      "value": 212415.28,
-      "drawdown": 1.02
+      "value": 210917.65,
+      "drawdown": 0.68
     },
     {
       "date": "2026-09-11",
-      "value": 212354.83,
-      "drawdown": 1.04
+      "value": 210442.27,
+      "drawdown": 0.91
     },
     {
       "date": "2026-09-15",
-      "value": 209999.51,
-      "drawdown": 2.14
+      "value": 208951.33,
+      "drawdown": 1.61
     },
     {
       "date": "2026-09-16",
-      "value": 208557.92,
-      "drawdown": 2.81
+      "value": 208827.38,
+      "drawdown": 1.67
     },
     {
       "date": "2026-09-17",
-      "value": 208273.09,
-      "drawdown": 2.95
+      "value": 208828.28,
+      "drawdown": 1.67
     },
     {
       "date": "2026-09-18",
-      "value": 210462.49,
-      "drawdown": 1.93
+      "value": 208615.03,
+      "drawdown": 1.77
     },
     {
       "date": "2026-09-21",
-      "value": 209183.72,
-      "drawdown": 2.52
+      "value": 208741.73,
+      "drawdown": 1.71
     },
     {
       "date": "2026-09-22",
-      "value": 208510.42,
-      "drawdown": 2.84
+      "value": 208833.33,
+      "drawdown": 1.66
     },
     {
       "date": "2026-09-23",
-      "value": 209336.26,
-      "drawdown": 2.45
+      "value": 209143.89,
+      "drawdown": 1.52
     },
     {
       "date": "2026-09-24",
-      "value": 208054.08,
-      "drawdown": 3.05
+      "value": 208070.04,
+      "drawdown": 2.02
     },
     {
       "date": "2026-09-25",
-      "value": 208294.98,
-      "drawdown": 2.94
+      "value": 208200.89,
+      "drawdown": 1.96
     },
     {
       "date": "2026-09-28",
-      "value": 207310.85,
-      "drawdown": 3.4
+      "value": 207205.66,
+      "drawdown": 2.43
     },
     {
       "date": "2026-09-29",
-      "value": 207824.05,
-      "drawdown": 3.16
+      "value": 207433.22,
+      "drawdown": 2.32
     },
     {
       "date": "2026-09-30",
-      "value": 207461.85,
-      "drawdown": 3.32
+      "value": 207660.52,
+      "drawdown": 2.22
     },
     {
       "date": "2026-10-01",
-      "value": 207461.85,
-      "drawdown": 3.32
+      "value": 207345.44,
+      "drawdown": 2.36
     },
     {
       "date": "2026-10-05",
-      "value": 207461.85,
-      "drawdown": 3.32
+      "value": 207596.84,
+      "drawdown": 2.25
     },
     {
       "date": "2026-10-06",
-      "value": 207461.85,
-      "drawdown": 3.32
+      "value": 207655.19,
+      "drawdown": 2.22
     },
     {
       "date": "2026-10-07",
-      "value": 207656.15,
-      "drawdown": 3.23
+      "value": 207926.18,
+      "drawdown": 2.09
     },
     {
       "date": "2026-10-08",
-      "value": 205827.67,
-      "drawdown": 4.09
+      "value": 206436.65,
+      "drawdown": 2.79
     },
     {
       "date": "2026-10-09",
-      "value": 205569.37,
-      "drawdown": 4.21
+      "value": 206385.35,
+      "drawdown": 2.82
     },
     {
       "date": "2026-10-12",
-      "value": 207390.67,
-      "drawdown": 3.36
+      "value": 206739.78,
+      "drawdown": 2.65
     },
     {
       "date": "2026-10-13",
-      "value": 206789.37,
-      "drawdown": 3.64
+      "value": 205387.6,
+      "drawdown": 3.29
     },
     {
       "date": "2026-10-14",
-      "value": 205391.8,
-      "drawdown": 4.29
+      "value": 204780.3,
+      "drawdown": 3.57
     },
     {
       "date": "2026-10-15",
-      "value": 205142.8,
-      "drawdown": 4.41
+      "value": 203730.24,
+      "drawdown": 4.07
     },
     {
       "date": "2026-10-16",
-      "value": 204686.05,
-      "drawdown": 4.62
+      "value": 203515.36,
+      "drawdown": 4.17
     },
     {
       "date": "2026-10-19",
-      "value": 203755.47,
-      "drawdown": 5.05
+      "value": 203311.56,
+      "drawdown": 4.26
     },
     {
       "date": "2026-10-21",
-      "value": 203755.47,
-      "drawdown": 5.05
+      "value": 203273.27,
+      "drawdown": 4.28
     },
     {
       "date": "2026-10-22",
-      "value": 202076.97,
-      "drawdown": 5.83
+      "value": 203084.09,
+      "drawdown": 4.37
     },
     {
       "date": "2026-10-23",
-      "value": 202120.1,
-      "drawdown": 5.81
+      "value": 203084.09,
+      "drawdown": 4.37
     },
     {
       "date": "2026-10-26",
-      "value": 202120.1,
-      "drawdown": 5.81
+      "value": 203084.09,
+      "drawdown": 4.37
     },
     {
       "date": "2026-10-27",
-      "value": 202120.1,
-      "drawdown": 5.81
+      "value": 203084.09,
+      "drawdown": 4.37
     },
     {
       "date": "2026-10-28",
-      "value": 202877.7,
-      "drawdown": 5.46
+      "value": 203197.59,
+      "drawdown": 4.32
     },
     {
       "date": "2026-10-29",
-      "value": 202986.85,
-      "drawdown": 5.41
+      "value": 203189.79,
+      "drawdown": 4.32
     },
     {
       "date": "2026-10-30",
-      "value": 203695.15,
-      "drawdown": 5.08
+      "value": 203603.99,
+      "drawdown": 4.13
     },
     {
       "date": "2026-11-02",
-      "value": 203389.1,
-      "drawdown": 5.22
+      "value": 203783.39,
+      "drawdown": 4.04
     },
     {
       "date": "2026-11-03",
-      "value": 202392.93,
-      "drawdown": 5.69
+      "value": 203796.99,
+      "drawdown": 4.04
     },
     {
       "date": "2026-11-04",
-      "value": 202593.23,
-      "drawdown": 5.59
+      "value": 203881.59,
+      "drawdown": 4.0
     },
     {
       "date": "2026-11-05",
-      "value": 201751.98,
-      "drawdown": 5.99
+      "value": 203423.09,
+      "drawdown": 4.21
     },
     {
       "date": "2026-11-06",
-      "value": 201253.23,
-      "drawdown": 6.22
+      "value": 203424.22,
+      "drawdown": 4.21
     },
     {
       "date": "2026-11-09",
-      "value": 202058.23,
-      "drawdown": 5.84
+      "value": 203709.52,
+      "drawdown": 4.08
     },
     {
       "date": "2026-11-11",
-      "value": 202243.23,
-      "drawdown": 5.76
+      "value": 203832.72,
+      "drawdown": 4.02
     },
     {
       "date": "2026-11-12",
-      "value": 202278.23,
-      "drawdown": 5.74
+      "value": 204005.12,
+      "drawdown": 3.94
     },
     {
       "date": "2026-11-13",
-      "value": 201995.23,
-      "drawdown": 5.87
+      "value": 203992.32,
+      "drawdown": 3.94
     },
     {
       "date": "2026-11-16",
-      "value": 201356.23,
-      "drawdown": 6.17
+      "value": 203878.6,
+      "drawdown": 4.0
     },
     {
       "date": "2026-11-17",
-      "value": 201260.73,
-      "drawdown": 6.21
+      "value": 203750.2,
+      "drawdown": 4.06
     },
     {
       "date": "2026-11-18",
-      "value": 200884.23,
-      "drawdown": 6.39
+      "value": 203658.9,
+      "drawdown": 4.1
     },
     {
       "date": "2026-11-19",
-      "value": 201287.73,
-      "drawdown": 6.2
+      "value": 203898.8,
+      "drawdown": 3.99
     },
     {
       "date": "2026-11-20",
-      "value": 201013.73,
-      "drawdown": 6.33
+      "value": 204067.2,
+      "drawdown": 3.91
     }
   ],
-  "win_rate": 0.236,
-  "avg_win_R": 2.79,
-  "avg_loss_R": -1.03,
-  "expectancy_R": -0.13,
-  "profit_factor": 0.88,
-  "max_drawdown_pct": 6.39,
+  "win_rate": 0.241,
+  "avg_win_R": 2.74,
+  "avg_loss_R": -0.87,
+  "expectancy_R": 0.0,
+  "profit_factor": 1.05,
+  "max_drawdown_pct": 4.37,
   "by_grade": {
     "A+": {
       "trades": 0,
@@ -4013,10 +4160,10 @@
       "expectancy_R": 0.0
     },
     "A": {
-      "trades": 72,
+      "trades": 79,
       "win_rate": 0.24,
-      "profit_factor": 0.88,
-      "expectancy_R": -0.13
+      "profit_factor": 1.05,
+      "expectancy_R": 0.0
     },
     "B": {
       "trades": 0,
@@ -4033,27 +4180,27 @@
   },
   "by_signal_type": {
     "BREAKOUT": {
-      "trades": 6,
-      "win_rate": 0.0,
-      "profit_factor": 0.0,
-      "expectancy_R": -0.72
+      "trades": 23,
+      "win_rate": 0.13,
+      "profit_factor": 0.25,
+      "expectancy_R": -0.56
     },
     "PULLBACK": {
-      "trades": 64,
-      "win_rate": 0.25,
-      "profit_factor": 0.97,
-      "expectancy_R": -0.1
+      "trades": 55,
+      "win_rate": 0.29,
+      "profit_factor": 1.46,
+      "expectancy_R": 0.25
     },
     "SPRING": {
-      "trades": 2,
-      "win_rate": 0.5,
-      "profit_factor": 2.18,
-      "expectancy_R": 0.83
+      "trades": 1,
+      "win_rate": 0.0,
+      "profit_factor": 0.0,
+      "expectancy_R": -1.04
     }
   },
   "tail_capture": {
-    "pct_winners_past_2R": 35.3,
-    "avg_R_of_tails": 6.03,
-    "capped_vs_trailed_delta": 21326.38
+    "pct_winners_past_2R": 26.3,
+    "avg_R_of_tails": 6.67,
+    "capped_vs_trailed_delta": 9934.69
   }
 }

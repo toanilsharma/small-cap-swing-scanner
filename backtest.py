@@ -562,6 +562,7 @@ def run_backtest(
 
             sig_type = "BREAKOUT" if is_signal else ("SPRING" if is_spring else "PULLBACK")
             vol_ret = float(last_row.get("VOL_ADJ_RET", 0.0)) if "VOL_ADJ_RET" in last_row else 0.0
+            rs_val = float(last_row.get("RS_SLOPE", 0.0)) if "RS_SLOPE" in last_row else 0.0
 
             pending_orders.append({
                 "symbol": sym,
@@ -570,6 +571,7 @@ def run_backtest(
                 "signal_close": float(last_row["Close"]),
                 "atr": float(last_row["ATR14"]),
                 "vol_adj_ret": vol_ret,
+                "rs_rating": rs_val,
                 "low": float(last_row["Low"]) if "Low" in last_row else float(last_row["Close"]),
                 "grade": "A",
                 "breakout_vol": float(last_row["Volume"]),

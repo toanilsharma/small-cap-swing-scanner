@@ -124,10 +124,10 @@ def test_stats_command_uses_net_pnl(tmp_cwd, monkeypatch):
 def test_position_management_alerts_ratchet_breakeven():
     """
     Badge 1: 🟢 RATCHET SL TO BREAKEVEN+FEES
-    Triggered when Close >= Entry + 1.0R -> Move SL to Entry * 1.0035
+    Triggered when Close >= Entry + 1.5R -> Move SL to Entry * 1.0035
     """
     entry = 200.0
-    stop = 186.0  # 1.0R = 14.0, threshold = 214.0
+    stop = 186.0  # 1.0R = 14.0, 1.5R = 21.0, threshold = 221.0
     open_pos = [{
         "symbol": "RATCHET.NS",
         "entry_date": "2026-10-10",
@@ -137,14 +137,14 @@ def test_position_management_alerts_ratchet_breakeven():
         "target": 228.0,
     }]
 
-    # History where Close = 215.0 (>= 214.0)
+    # History where Close = 222.0 (>= 221.0)
     dates = pd.date_range("2026-10-01", periods=15)
     df = pd.DataFrame({
         "Date": dates,
-        "Open": [200.0]*14 + [212.0],
-        "High": [202.0]*14 + [216.0],
-        "Low": [198.0]*14 + [211.0],
-        "Close": [200.0]*14 + [215.0],
+        "Open": [200.0]*14 + [218.0],
+        "High": [202.0]*14 + [223.0],
+        "Low": [198.0]*14 + [217.0],
+        "Close": [200.0]*14 + [222.0],
         "Volume": [100000.0]*15,
     })
     main.add_indicators(df)
@@ -201,8 +201,8 @@ def test_position_management_alerts_book_2r():
 
 def test_position_management_alerts_5day_time_stop():
     """
-    Badge 3: ⏳ 5-DAY TIME STOP TRIGGERED
-    Triggered when days_held >= 5 AND Close <= Entry AND Close < EMA10
+    Badge 3: ⏳ 8-DAY TIME STOP TRIGGERED
+    Triggered when days_held >= 8 AND Close <= Entry AND Close < EMA10
     """
     entry = 500.0
     open_pos = [{
@@ -214,7 +214,7 @@ def test_position_management_alerts_5day_time_stop():
         "target": 580.0,
     }]
 
-    # 15 days of data, last close = 495.0 (<= 500), EMA10 = 505.0
+    # 20 days of data, last close = 495.0 (<= 500), EMA10 = 505.0
     dates = pd.date_range("2026-09-25", periods=20)
     closes = [510.0]*18 + [502.0, 495.0]
     df = pd.DataFrame({
@@ -230,9 +230,9 @@ def test_position_management_alerts_5day_time_stop():
     original_get_history = main.get_history
     main.get_history = lambda sym: df.copy()
     try:
-        # Date is 2026-10-10 -> days_held = 9 (>= 5)
-        alerts = main.generate_position_management_alerts(open_pos, current_date=datetime.date(2026, 10, 10))
-        time_alerts = [a for a in alerts if "5-DAY TIME STOP TRIGGERED" in a]
+        # Date is 2026-10-14 -> trading days held >= 8
+        alerts = main.generate_position_management_alerts(open_pos, current_date=datetime.date(2026, 10, 14))
+        time_alerts = [a for a in alerts if "8-DAY TIME STOP TRIGGERED" in a or "TIME STOP TRIGGERED" in a]
         assert len(time_alerts) == 1
         assert "Liquidate dead-money" in time_alerts[0]
 
@@ -240,8 +240,8 @@ def test_position_management_alerts_5day_time_stop():
         df_healthy = df.copy()
         df_healthy.loc[df_healthy.index[-1], "Close"] = 512.0  # Above entry & EMA10
         main.get_history = lambda sym: df_healthy.copy()
-        alerts_healthy = main.generate_position_management_alerts(open_pos, current_date=datetime.date(2026, 10, 10))
-        assert not any("5-DAY TIME STOP TRIGGERED" in a for a in alerts_healthy)
+        alerts_healthy = main.generate_position_management_alerts(open_pos, current_date=datetime.date(2026, 10, 14))
+        assert not any("TIME STOP TRIGGERED" in a for a in alerts_healthy)
     finally:
         main.get_history = original_get_history
 

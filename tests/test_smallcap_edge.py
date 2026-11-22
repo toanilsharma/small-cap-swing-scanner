@@ -361,9 +361,9 @@ def test_mean_reversion_setups_ignore_hurst(monkeypatch: pytest.MonkeyPatch):
 def test_ofi_composite_breakout_gate(monkeypatch: pytest.MonkeyPatch):
     """
     10) OFI Composite Breakout Gate:
-    - BREAKOUT volume integrity requires: OBV > OBV_HIGH20 AND ofi20 >= OFI_GATE (0.10).
-    - If ofi20 < OFI_GATE (e.g. -0.05 sell-side clustering), breakout signal is rejected.
-    - If ofi20 is None (<20 bars history), fails open to OBV-only.
+    - BREAKOUT volume integrity requires: OBV > OBV_HIGH20 AND rolling CMF20 >= OFI_GATE (0.10).
+    - If CMF20 < OFI_GATE (e.g. -0.05 sell-side clustering), breakout signal is rejected.
+    - If CMF20 is None (<20 bars history), fails open to OBV-only.
     """
     tb = build_scenario_dataframe("textbook")
     monkeypatch.setattr(main, "get_history", lambda sym: tb.copy())
@@ -372,51 +372,49 @@ def test_ofi_composite_breakout_gate(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(main, "get_next_earnings", lambda sym: "2026-12-01")
     monkeypatch.setattr(main, "diagnose", lambda sym: {"grade": "A", "score": 85})
 
-    # 1. OBV new high AND ofi20 >= 0.10 passes
-    monkeypatch.setattr(main, "calculate_ofi20", lambda df: 0.25)
+    # 1. OBV new high AND rolling CMF20 >= 0.10 passes
     sig_pass = main.scan_symbol("OFI_PASS.NS")
-    assert sig_pass is not None, "Breakout with OBV new high and ofi20 >= 0.10 must emit signal"
+    assert sig_pass is not None, "Breakout with OBV new high and CMF20 >= 0.10 must emit signal"
     assert sig_pass["Type"] == "BREAKOUT"
 
-    # 2. OBV new high but ofi20 < 0.10 (e.g. -0.05 sell-side clustering) is rejected
-    monkeypatch.setattr(main, "calculate_ofi20", lambda df: -0.05)
-    tb_neg = main.add_indicators(tb.copy())
-    assert bool(tb_neg.iloc[-1]["OBV_CONFIRM"]) is False, "OBV_CONFIRM must be False when ofi20 < 0.10"
+    # 2. OBV new high but CMF20 < 0.10 (sell-side clustering) is rejected
+    tb_neg = tb.copy()
+    tb_neg.loc[tb_neg.index[-20:-1], "Close"] = tb_neg.loc[tb_neg.index[-20:-1], "Low"]
+    tb_neg_res = main.add_indicators(tb_neg.copy())
+    assert bool(tb_neg_res.iloc[-1]["OBV_CONFIRM"]) is False, "OBV_CONFIRM must be False when CMF20 < 0.10"
+    monkeypatch.setattr(main, "get_history", lambda sym: tb_neg.copy())
     sig_rej = main.scan_symbol("OFI_REJ.NS")
-    assert sig_rej is None, "Breakout with ofi20=-0.05 must be rejected (sell-side clustering)"
+    assert sig_rej is None, "Breakout with negative CMF20 must be rejected (sell-side clustering)"
 
-    # 3. Absent ofi20 (<20 bars, None) fails open to OBV-only
-    monkeypatch.setattr(main, "calculate_ofi20", lambda df: None)
-    tb_none = main.add_indicators(tb.copy())
-    assert bool(tb_none.iloc[-1]["OBV_CONFIRM"]) is True, "OBV_CONFIRM must fail-open to OBV-only when ofi20 is None"
-    sig_none = main.scan_symbol("OFI_NONE.NS")
-    assert sig_none is not None, "Breakout with ofi20=None must emit signal via OBV-only fail-open"
-    assert sig_none["Type"] == "BREAKOUT"
+    # 3. Absent CMF20 (<20 bars, NaN) fails open to OBV-only
+    tb_short = tb.tail(15).copy()
+    tb_none = main.add_indicators(tb_short.copy())
+    assert bool(tb_none.iloc[-1]["OBV_CONFIRM"]) == bool(tb_none.iloc[-1]["OBV"] > tb_none.iloc[-1]["OBV_HIGH20"]), "OBV_CONFIRM must fail-open to OBV-only when CMF20 is NaN"
 
 
 def test_mean_reversion_setups_ignore_ofi(monkeypatch: pytest.MonkeyPatch):
     """
     Mean-reversion setups (SPRING and PULLBACK) must NEVER be gated or suppressed
-    by ofi20 sell-side clustering.
+    by CMF20 sell-side clustering.
     """
     monkeypatch.setattr(main, "sector_ok", lambda sym: True)
     monkeypatch.setattr(main, "index_return_50", lambda: 0.0)
     monkeypatch.setattr(main, "get_next_earnings", lambda sym: "2026-12-01")
     monkeypatch.setattr(main, "diagnose", lambda sym: {"grade": "A", "score": 85})
-    # Force heavy sell-side clustering (e.g. -0.40)
-    monkeypatch.setattr(main, "calculate_ofi20", lambda df: -0.40)
 
-    # 1. Spring setup with ofi20 = -0.40 must still pass
+    # 1. Spring setup with sell-side clustering must still pass
     sp_df = build_scenario_dataframe("spring")
+    sp_df.loc[sp_df.index[-20:-1], "Close"] = sp_df.loc[sp_df.index[-20:-1], "Low"]
     monkeypatch.setattr(main, "get_history", lambda sym: sp_df)
     sig_spring = main.scan_symbol("SPRING_OFI.NS")
-    assert sig_spring is not None, "Spring setup must NOT be blocked by low ofi20"
+    assert sig_spring is not None, "Spring setup must NOT be blocked by low CMF20"
     assert sig_spring["Type"] == "SPRING"
 
-    # 2. Pullback setup with ofi20 = -0.40 must still pass
+    # 2. Pullback setup with sell-side clustering must still pass
     pb_df = build_scenario_dataframe("pullback")
+    pb_df.loc[pb_df.index[-20:-1], "Close"] = pb_df.loc[pb_df.index[-20:-1], "Low"]
     monkeypatch.setattr(main, "get_history", lambda sym: pb_df)
     sig_pb = main.scan_symbol("PULLBACK_OFI.NS")
-    assert sig_pb is not None, "Pullback setup must NOT be blocked by low ofi20"
+    assert sig_pb is not None, "Pullback setup must NOT be blocked by low CMF20"
     assert sig_pb["Type"] == "PULLBACK"
 

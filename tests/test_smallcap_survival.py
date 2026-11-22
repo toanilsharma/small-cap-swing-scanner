@@ -123,8 +123,10 @@ def test_liquidity_size_aware(monkeypatch: pytest.MonkeyPatch):
 
 def test_earnings_unknown_blocks(monkeypatch: pytest.MonkeyPatch):
     """
-    Fail-closed earnings rule:
-    If a symbol has NO entry in earnings_dates.json (unknown earnings), entry must be BLOCKED.
+    Earnings handling when earnings date is unknown:
+    - Default (EARNINGS_FAIL_CLOSED = False): entry is allowed with visible warning tag
+      'earnings_status': 'UNVERIFIED — CHECK NSE BEFORE ORDER'.
+    - When EARNINGS_FAIL_CLOSED = True: entry is strictly blocked.
     """
     df = _create_synthetic_symbol_df(entry=100.0, atr=5.0)
 
@@ -132,15 +134,49 @@ def test_earnings_unknown_blocks(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(main, "add_indicators", lambda d: d)
     monkeypatch.setattr(main, "sector_ok", lambda sym: True)
     monkeypatch.setattr(main, "index_return_50", lambda: 0.0)
-    # Symbol has no entry in earnings dates -> returns None
+    # Symbol has no entry in earnings dates and yfinance returns None
     monkeypatch.setattr(main, "get_next_earnings", lambda sym: None)
 
+    # 1. Default: EARNINGS_FAIL_CLOSED = False allows entry with unverified warning tag
+    monkeypatch.setattr(main, "EARNINGS_FAIL_CLOSED", False)
     is_blocked, reason = main.check_earnings_blackout("MYSTERY.NS", datetime.date(2026, 10, 18))
-    assert is_blocked is True, "Unknown earnings must block entry"
-    assert "UNKNOWN" in reason
+    assert is_blocked is False, "When EARNINGS_FAIL_CLOSED=False, unknown earnings must not block entry"
+    assert reason == "UNVERIFIED — CHECK NSE BEFORE ORDER"
 
     sig = main.scan_symbol("MYSTERY.NS")
-    assert sig is None, "Signal must be blocked when earnings date is unknown"
+    assert sig is not None, "Signal must be allowed when EARNINGS_FAIL_CLOSED=False"
+    assert sig.get("earnings_status") == "UNVERIFIED — CHECK NSE BEFORE ORDER"
+
+    # 2. When EARNINGS_FAIL_CLOSED = True: entry is blocked
+    monkeypatch.setattr(main, "EARNINGS_FAIL_CLOSED", True)
+    is_blocked_closed, reason_closed = main.check_earnings_blackout("MYSTERY.NS", datetime.date(2026, 10, 18))
+    assert is_blocked_closed is True, "When EARNINGS_FAIL_CLOSED=True, unknown earnings must block entry"
+    assert "UNKNOWN" in reason_closed
+
+    sig_closed = main.scan_symbol("MYSTERY.NS")
+    assert sig_closed is None, "Signal must be blocked when EARNINGS_FAIL_CLOSED=True"
+
+
+def test_earnings_blackout_within_5_days_blocks(monkeypatch: pytest.MonkeyPatch):
+    """
+    When an earnings date is known and within EARNINGS_BLACKOUT_DAYS (5 days),
+    strictly block the entry regardless of EARNINGS_FAIL_CLOSED toggle.
+    """
+    df = _create_synthetic_symbol_df(entry=100.0, atr=5.0)
+    monkeypatch.setattr(main, "get_history", lambda sym: df)
+    monkeypatch.setattr(main, "add_indicators", lambda d: d)
+    monkeypatch.setattr(main, "sector_ok", lambda sym: True)
+    monkeypatch.setattr(main, "index_return_50", lambda: 0.0)
+
+    last_date = pd.to_datetime(df.iloc[-1]["Date"]).date()
+    earn_date_str = (last_date + datetime.timedelta(days=3)).isoformat()
+    monkeypatch.setattr(main, "get_next_earnings", lambda sym: earn_date_str)
+    is_blocked, reason = main.check_earnings_blackout("NEAR_EARN.NS", last_date)
+    assert is_blocked is True
+    assert reason == earn_date_str
+
+    sig = main.scan_symbol("NEAR_EARN.NS")
+    assert sig is None, "Signal must be strictly blocked when earnings is within 5 days"
 
 
 def test_heat_cap_blocks_buy(tmp_cwd: Any):

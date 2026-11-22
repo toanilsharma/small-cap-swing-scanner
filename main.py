@@ -82,6 +82,7 @@ CIRCUIT_PROXIMITY_PCT = 0.02
 
 # Earnings blackout
 EARNINGS_BLACKOUT_DAYS = 5
+EARNINGS_FAIL_CLOSED = os.getenv("EARNINGS_FAIL_CLOSED", "false").lower() in ("true", "1", "yes")
 
 # Portfolio heat & drawdown limits (Elder circuit-breaker)
 MAX_CONCURRENT_SMALLCAP = 5
@@ -810,9 +811,33 @@ def calculate_weekly_rs_slope(df_symbol: pd.DataFrame, df_benchmark: Optional[pd
     indices = [-16, -11, -6, -1]
     
     if df_benchmark is not None and len(df_benchmark) >= 20:
-        b = df_benchmark["Close"]
-        rs_vals = [(float(c.iloc[idx]) / max(1e-6, float(b.iloc[idx]))) for idx in indices]
+        if "Date" in df_symbol.columns and "Date" in df_benchmark.columns:
+            s_date = pd.to_datetime(df_symbol["Date"]).astype("datetime64[ns]")
+            b_date = pd.to_datetime(df_benchmark["Date"]).astype("datetime64[ns]")
+            s_temp = pd.DataFrame({
+                "Date": s_date,
+                "Close_sym": pd.to_numeric(df_symbol["Close"], errors="coerce"),
+                "_orig_idx": np.arange(len(df_symbol)),
+            }).sort_values("Date")
+            b_temp = pd.DataFrame({
+                "Date": b_date,
+                "Close_bench": pd.to_numeric(df_benchmark["Close"], errors="coerce"),
+            }).dropna(subset=["Date", "Close_bench"]).sort_values("Date")
+
+            merged = pd.merge_asof(s_temp, b_temp, on="Date", direction="backward").sort_values("_orig_idx").reset_index(drop=True)
+            c = merged["Close_sym"]
+            b = merged["Close_bench"].replace(0, np.nan)
+            rs_series = c / b
+        else:
+            c = pd.to_numeric(df_symbol["Close"], errors="coerce")
+            b = pd.to_numeric(df_benchmark["Close"], errors="coerce").replace(0, np.nan)
+            rs_series = c / b
+
+        indices = [-16, -11, -6, -1]
+        rs_vals = [float(rs_series.iloc[idx]) for idx in indices]
         base = rs_vals[0]
+        if base <= 0 or math.isnan(base):
+            return 0.0
         y = [((v / max(1e-6, base)) - 1.0) * 100.0 * 2.5 for v in rs_vals]
     else:
         c_base = float(c.iloc[indices[0]])
@@ -1224,14 +1249,21 @@ def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
     obv_dir.iloc[0] = 0.0
     df["OBV"] = (df["Volume"] * obv_dir).cumsum()
     df["OBV_HIGH20"] = df["OBV"].rolling(20).max().shift(1)
+
+    # Rolling 20-day CMF (CMF20) - vector order flow proxy (strictly <= t)
+    hl = df["High"] - df["Low"]
+    hl_safe = hl.replace(0, np.nan)
+    clv = (((df["Close"] - df["Low"]) - (df["High"] - df["Close"])) / hl_safe).fillna(0.0).clip(-1.0, 1.0)
+    clv_vol = clv * df["Volume"]
+    roll_clv_vol = clv_vol.rolling(20, min_periods=20).sum()
+    roll_vol = df["Volume"].rolling(20, min_periods=20).sum()
+    cmf20 = (roll_clv_vol / roll_vol.replace(0, np.nan)).clip(-1.0, 1.0)
+    df["CMF20"] = cmf20
+
     if "OBV_CONFIRM" not in df.columns:
         obv_ok = df["OBV"] > df["OBV_HIGH20"]
-        ofi_val = calculate_ofi20(df)
-        if ofi_val is not None:
-            df["OBV_CONFIRM"] = obv_ok & (ofi_val >= OFI_GATE)
-        else:
-            # Fall back to OBV-only on absent/insufficient history (<20 bars)
-            df["OBV_CONFIRM"] = obv_ok
+        # Set OBV_CONFIRM = (OBV > OBV_HIGH20) & (CMF20 >= OFI_GATE) (falling back to OBV > OBV_HIGH20 only where CMF20 is NaN)
+        df["OBV_CONFIRM"] = np.where(cmf20.isna(), obv_ok, obv_ok & (cmf20 >= OFI_GATE))
 
     # Trend Filter (Minervini / O'Neil style)
     df["TREND_OK"] = (
@@ -1287,16 +1319,61 @@ def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
     safe_hl = (df["High"] - df["Low"]).replace(0, np.nan)
     df["STRONG_CLOSE"] = ((df["Close"] - df["Low"]) / safe_hl) >= 0.60
 
-    # Rising RS slope gate against benchmark (^CNXSC) (slope >= +2 percentile-points / week)
+    # Rising RS slope gate against benchmark (^CNXSC) (slope >= +2 percentile-points / week, strictly Date-aligned)
     if "RS_SLOPE_OK" not in df.columns:
         bench_df = get_cached_index_df()
-        slope_val = calculate_weekly_rs_slope(df, df_benchmark=bench_df)
-        df["RS_SLOPE_OK"] = slope_val >= 2.0
+        if bench_df is None or bench_df.empty or len(bench_df) < 20:
+            try:
+                bench_df = get_history(INDEX_SYMBOL)
+            except Exception:
+                bench_df = None
 
-    # Momentum rank cutoff gate (volatility-adjusted 6-month return > 0)
+        if "Date" in df.columns and bench_df is not None and "Date" in bench_df.columns and not bench_df.empty:
+            sym_temp = pd.DataFrame({
+                "Date": pd.to_datetime(df["Date"]).astype("datetime64[ns]"),
+                "Close_sym": pd.to_numeric(df["Close"], errors="coerce"),
+                "_orig_idx": np.arange(len(df)),
+            }).sort_values("Date")
+
+            bench_temp = pd.DataFrame({
+                "Date": pd.to_datetime(bench_df["Date"]).astype("datetime64[ns]"),
+                "Close_bench": pd.to_numeric(bench_df["Close"], errors="coerce"),
+            }).dropna(subset=["Date", "Close_bench"]).sort_values("Date")
+
+            merged = pd.merge_asof(
+                sym_temp,
+                bench_temp,
+                on="Date",
+                direction="backward",
+            ).sort_values("_orig_idx").reset_index(drop=True)
+
+            close_b = merged["Close_bench"].replace(0, np.nan)
+            rs_ratio = pd.Series((merged["Close_sym"] / close_b).values, index=df.index)
+        else:
+            rs_ratio = pd.to_numeric(df["Close"], errors="coerce")
+
+        v3 = rs_ratio
+        v2 = rs_ratio.shift(5)
+        v1 = rs_ratio.shift(10)
+        v0 = rs_ratio.shift(15)
+
+        v0_safe = v0.replace(0, np.nan)
+        y1 = ((v1 / v0_safe) - 1.0) * 250.0
+        y2 = ((v2 / v0_safe) - 1.0) * 250.0
+        y3 = ((v3 / v0_safe) - 1.0) * 250.0
+
+        rs_slope = (3.0 * y3 + y2 - y1) / 10.0
+        df["RS_SLOPE"] = rs_slope
+        df["RS_SLOPE_OK"] = (rs_slope >= 2.0).fillna(False)
+
+    # Momentum rank cutoff gate (rolling volatility-adjusted 6-month return > 0, strictly <= t)
     if "MOMENTUM_OK" not in df.columns:
-        vol_adj = calculate_vol_adj_return(df)
-        df["MOMENTUM_OK"] = (vol_adj is not None) and (vol_adj > 0)
+        ret_126 = (df["Close"] / df["Close"].shift(126)) - 1.0
+        daily_pct = df["Close"].pct_change()
+        std_126 = daily_pct.rolling(126).std()
+        vol_adj_ret = ret_126 / std_126.replace(0, np.nan)
+        df["VOL_ADJ_RET"] = vol_adj_ret
+        df["MOMENTUM_OK"] = (vol_adj_ret > 0).fillna(False)
 
     # Edge: SPRING trigger (new entry class)
     # Over 20-day base, price breaks below 20-day low intraday but closes back above on >=1.5x avg volume
@@ -1920,31 +1997,117 @@ def load_earnings_dates() -> Dict[str, str]:
         return {}
 
 
+def save_earnings_dates(dates_map: Dict[str, str]) -> None:
+    """Save earnings date map to earnings_dates.json."""
+    try:
+        with open(EARNINGS_FILE, "w", encoding="utf-8") as f:
+            json.dump(dates_map, f, indent=2)
+    except Exception:
+        pass
+
+
+def fetch_upcoming_earnings_yf(symbol: str) -> Optional[str]:
+    """
+    Attempt to look up upcoming earnings date via yfinance calendar.
+    Returns ISO date string 'YYYY-MM-DD' or None if unavailable.
+    """
+    try:
+        t = yf.Ticker(symbol)
+        cal = getattr(t, "calendar", None)
+        if cal is None:
+            return None
+
+        earn_val = None
+        if isinstance(cal, dict):
+            earn_val = cal.get("Earnings Date")
+        elif isinstance(cal, pd.DataFrame):
+            if "Earnings Date" in cal.index:
+                earn_val = cal.loc["Earnings Date"].values
+            elif "Earnings Date" in cal.columns:
+                earn_val = cal["Earnings Date"].values
+
+        if earn_val is not None:
+            if isinstance(earn_val, (list, np.ndarray)) and len(earn_val) > 0:
+                earn_val = earn_val[0]
+            if hasattr(earn_val, "strftime"):
+                return earn_val.strftime("%Y-%m-%d")
+            d_str = str(earn_val)[:10]
+            datetime.date.fromisoformat(d_str)
+            return d_str
+    except Exception:
+        pass
+    return None
+
+
+def refresh_earnings_dates(symbols: Optional[List[str]] = None) -> Dict[str, str]:
+    """
+    Automatic daily fetcher that checks yf.Ticker(sym).calendar for upcoming earnings
+    to populate and cache earnings_dates.json.
+    """
+    if symbols is None:
+        symbols = get_symbols()
+    dates_map = load_earnings_dates()
+    updated = False
+
+    for sym in (symbols or []):
+        clean_sym = sym.replace(".NS", "").upper()
+        if sym in dates_map or clean_sym in dates_map:
+            continue
+        yf_date = fetch_upcoming_earnings_yf(sym)
+        if yf_date:
+            dates_map[sym] = yf_date
+            updated = True
+
+    if updated:
+        save_earnings_dates(dates_map)
+    return dates_map
+
+
 def get_next_earnings(symbol: str) -> Optional[str]:
-    """Get next earnings date for a symbol if registered."""
+    """Get next earnings date for a symbol if registered or discoverable."""
     dates = load_earnings_dates()
     clean_sym = symbol.replace(".NS", "").upper()
-    return dates.get(symbol) or dates.get(clean_sym)
+    val = dates.get(symbol) or dates.get(clean_sym)
+    if val:
+        return val
+
+    # Dynamic lookup fallback for single symbol
+    yf_date = fetch_upcoming_earnings_yf(symbol)
+    if yf_date:
+        dates[symbol] = yf_date
+        save_earnings_dates(dates)
+        return yf_date
+
+    return None
 
 
 def check_earnings_blackout(symbol: str, current_date: datetime.date) -> Tuple[bool, str]:
     """
-    Fail-closed earnings check for small caps:
-    If symbol has NO entry -> treat next earnings as UNKNOWN -> BLOCK entry.
-    If next earnings is within EARNINGS_BLACKOUT_DAYS (5 days) -> BLOCK entry.
+    Check for small-cap earnings blackout within EARNINGS_BLACKOUT_DAYS (5 days):
+    - When an earnings date is known and within EARNINGS_BLACKOUT_DAYS (5 days):
+      strictly block the entry to protect against -20% lower circuit gaps.
+    - When an earnings date is known and outside 5 days: allow entry.
+    - When genuinely unavailable after attempting lookup:
+      * If EARNINGS_FAIL_CLOSED is True: block entry with (True, "UNKNOWN->blocked").
+      * If EARNINGS_FAIL_CLOSED is False (default): allow entry with loud warning
+        (False, "UNVERIFIED — CHECK NSE BEFORE ORDER").
     """
     next_earn_str = get_next_earnings(symbol)
     if not next_earn_str:
-        return True, "UNKNOWN->blocked"
+        if EARNINGS_FAIL_CLOSED:
+            return True, "UNKNOWN->blocked"
+        return False, "UNVERIFIED — CHECK NSE BEFORE ORDER"
 
     try:
-        earn_date = datetime.date.fromisoformat(next_earn_str)
+        earn_date = datetime.date.fromisoformat(str(next_earn_str)[:10])
         delta_days = (earn_date - current_date).days
         if 0 <= delta_days <= EARNINGS_BLACKOUT_DAYS:
-            return True, next_earn_str
-        return False, next_earn_str
+            return True, str(next_earn_str)[:10]
+        return False, str(next_earn_str)[:10]
     except Exception:
-        return True, "UNKNOWN->blocked"
+        if EARNINGS_FAIL_CLOSED:
+            return True, "UNKNOWN->blocked"
+        return False, "UNVERIFIED — CHECK NSE BEFORE ORDER"
 
 
 # =====================================================================
@@ -3237,6 +3400,12 @@ def scan_symbol(symbol: str) -> Optional[Dict[str, Any]]:
     days_base = calculate_days_in_base(df)
     score_val = diag.get("Score", 80) if ('diag' in locals() and diag and isinstance(diag, dict)) else 80
 
+    earnings_status = (
+        "UNVERIFIED — CHECK NSE BEFORE ORDER"
+        if next_earnings == "UNVERIFIED — CHECK NSE BEFORE ORDER"
+        else f"VERIFIED ({next_earnings})"
+    )
+
     sig_dict = {
         "Signal Date": pd.to_datetime(last_row["Date"]).strftime("%Y-%m-%d"),
         "Symbol": symbol,
@@ -3255,6 +3424,7 @@ def scan_symbol(symbol: str) -> Optional[Dict[str, Any]]:
         "adv20_cr": round(adv20_rupees / 10000000.0, 2),
         "gap_qty_applied": gap_qty_applied,
         "next_earnings": next_earnings,
+        "earnings_status": earnings_status,
         "circuit_skipped_reason": circuit_reason,
         "rs_rating": rs_val,
         "base_maturity": base_mat,
@@ -3264,9 +3434,9 @@ def scan_symbol(symbol: str) -> Optional[Dict[str, Any]]:
         "warn_event": bool(get_next_event(symbol, curr_date) and 0 <= get_next_event(symbol, curr_date)["days_to_event"] <= 3),
         "mtf_confluence": calculate_mtf_confluence(df, daily_trend_ok=bool(last_row.get("TREND_OK", True))),
         "hurst": calculate_hurst_exponent(df),
-        "ofi20": calculate_ofi20(df),
-        "cmf20": calculate_ofi20(df),
-        "mfi20": calculate_ofi20(df),
+        "ofi20": float(round(df["CMF20"].iloc[-1], 3)) if ("CMF20" in df and not pd.isna(df["CMF20"].iloc[-1])) else calculate_ofi20(df),
+        "cmf20": float(round(df["CMF20"].iloc[-1], 3)) if ("CMF20" in df and not pd.isna(df["CMF20"].iloc[-1])) else calculate_ofi20(df),
+        "mfi20": float(round(df["CMF20"].iloc[-1], 3)) if ("CMF20" in df and not pd.isna(df["CMF20"].iloc[-1])) else calculate_ofi20(df),
         "delivery_pct": deliv_info.get("delivery_pct"),
         "delivery_vol": deliv_info.get("delivery_vol"),
         "deliv_gate_status": deliv_reason,
@@ -3312,6 +3482,11 @@ def format_signal(sig: Dict[str, Any]) -> str:
     sig_date = sig.get("Signal Date", str(datetime.date.today()))
     exec_mode = sig.get("execution_mode", "GTT Limit Order")
     next_earn = sig.get("next_earnings", "No earnings in 5 days")
+    earn_status = sig.get("earnings_status", "")
+    if "UNVERIFIED" in str(earn_status) or "UNVERIFIED" in str(next_earn):
+        earn_display = "⚠️ UNVERIFIED — CHECK NSE BEFORE ORDER"
+    else:
+        earn_display = f"Safe ({next_earn})"
 
     est_profit = round((target - entry) * qty, 2)
     max_buy_price = round(entry * 1.015, 2)
@@ -3339,7 +3514,7 @@ def format_signal(sig: Dict[str, Any]) -> str:
         f"🛡️ SAFETY GUARDRAILS (99% Wealth Protection):",
         f"• Risk Capped: 1.0% portfolio heat (₹{risk_amt:,.2f}) | Risk/Unit: ₹{risk_per_unit:.2f}",
         f"• Reward-to-Risk: 2 to 1 (Risking ₹{risk_amt:,.2f} to make ₹{est_profit:,.2f})",
-        f"• Earnings Check: Safe ({next_earn})",
+        f"• Earnings Check: {earn_display}",
         f"• Execution Mode: {exec_mode}",
     ]
     return "\n".join(lines)
@@ -3374,6 +3549,10 @@ def run_scanner() -> Tuple[List[Dict[str, Any]], int, bool]:
 
     symbols = get_symbols()
     total = len(symbols)
+    try:
+        refresh_earnings_dates(symbols)
+    except Exception:
+        pass
     print(f"Scanning {total} symbols for swing setups...")
 
     signals: List[Dict[str, Any]] = []

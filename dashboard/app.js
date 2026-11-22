@@ -2353,6 +2353,10 @@ function removeMonitoredPosition(sym, exitPrice, exitDate, exitReason, portionPc
 
   // Refresh views
   renderOpenPositions(getAllMonitoredPositions(_cachedOpenPositions));
+  if (_cachedTradesData) {
+    renderHistory(_cachedTradesData);
+    renderStats(_cachedTradesData);
+  }
 }
 
 // =====================================================================
@@ -2730,7 +2734,7 @@ function computeStockDecision(item, scanData) {
   } else if (isConfirmedBreakout) {
     verdict = `🚀 TAKE ACTION TODAY: ENTER CONFIRMED BREAKOUT (IF GAP ≤ 1.5%)`;
     actionCategory = "ACTION";
-    badgeText = `🚀 ACTION: BUY`;
+    badgeText = `⚡ BUY AT OPEN`;
     badgeClass = "action-pill-success";
     bannerClass = "cockpit-banner-success";
     justification = `${item.Symbol} has closed above its 20-day resistance pivot (₹${pivot.toFixed(2)}) with institutional breakout volume (≥2.0× normal) confirming authentic institutional accumulation.`;
@@ -2738,7 +2742,7 @@ function computeStockDecision(item, scanData) {
   } else if (isTopGrade && dist >= -1.0 && dist <= 0.2 && isCoiling) {
     verdict = `🎯 TAKE ACTION TODAY: PLACE GTT LIMIT ORDER @ PIVOT`;
     actionCategory = "ACTION";
-    badgeText = `⚡ ACTION: GTT`;
+    badgeText = `🟢 PLACE GTT TONIGHT`;
     badgeClass = "action-pill-success";
     bannerClass = "cockpit-banner-success";
     justification = `${item.Symbol} is a Grade ${grade} leader hovering within ${Math.abs(dist).toFixed(2)}% of its 20-day breakout pivot (₹${pivot.toFixed(2)}). Volatility is tightly compressed like a spring ready to release, and volume has dried up.`;
@@ -2746,7 +2750,7 @@ function computeStockDecision(item, scanData) {
   } else if (dist > 0.2) {
     verdict = `⏳ WAIT & WATCH — EXTENDED (+${dist.toFixed(1)}%) — DO NOT CHASE`;
     actionCategory = "WAIT";
-    badgeText = `⏳ WAIT: EXTENDED`;
+    badgeText = `🛑 WAIT: EXTENDED`;
     badgeClass = "action-pill-warning";
     bannerClass = "cockpit-banner-warning";
     justification = `${item.Symbol} is trading ${dist.toFixed(1)}% above its 20-day resistance pivot without a fresh high-volume institutional confirmation today. Never chase extended stocks after the move has begun.`;
@@ -2754,7 +2758,7 @@ function computeStockDecision(item, scanData) {
   } else if (dist < -1.0 && dist >= -2.5) {
     verdict = `⏳ WAIT & WATCH — LATE-STAGE COILING (${Math.abs(dist).toFixed(1)}% to Pivot)`;
     actionCategory = "WAIT";
-    badgeText = `⏳ WAIT: COIL`;
+    badgeText = `⏳ WATCH: COILING`;
     badgeClass = "action-pill-info";
     bannerClass = "cockpit-banner-info";
     justification = `${item.Symbol} is forming a healthy base and volatility is contracting nicely, but price is still ${Math.abs(dist).toFixed(1)}% below the breakout line (₹${pivot.toFixed(2)}). Buying right now is premature—you risk tying up cash while the stock chops sideways inside its base.`;
@@ -2762,7 +2766,7 @@ function computeStockDecision(item, scanData) {
   } else {
     verdict = `⌛ WAIT & WATCH — BASE CONSOLIDATION (${dist.toFixed(1)}% to Pivot)`;
     actionCategory = "WAIT";
-    badgeText = `⌛ WAIT: BASE`;
+    badgeText = `☕ WATCH: IN BASE`;
     badgeClass = "action-pill-neutral";
     bannerClass = "cockpit-banner-neutral";
     justification = `${item.Symbol} is in a Stage 2 uptrend but is currently consolidating ${dist.toFixed(1)}% away from resistance. The stock needs more time to absorb overhead supply and dry up volume before an explosive move can begin.`;
@@ -2903,7 +2907,14 @@ function applyWatchlistFiltering(watchlist, scanData) {
   }
 
   // Chip filter
-  if (_wlSelectedFilter === "grade_a") {
+  if (_wlSelectedFilter === "ready_tonight") {
+    filtered = filtered.filter(item => {
+      const g = item.grade ?? item.Grade ?? "C";
+      const isGradeA = g === "A+" || g === "A";
+      const dist = parseFloat(item["DistToBreakout%"]) || 0;
+      return isGradeA && dist <= 0.2;
+    });
+  } else if (_wlSelectedFilter === "grade_a") {
     filtered = filtered.filter(item => {
       const g = item.grade ?? item.Grade ?? "C";
       return g === "A+" || g === "A";
@@ -3152,12 +3163,22 @@ function applyWatchlistFiltering(watchlist, scanData) {
 
 function updateFilterCounts(pool, totalCount) {
   const elAll = document.getElementById("countAll");
+  const elReadyTonight = document.getElementById("countReadyTonight");
   const elGradeA = document.getElementById("countGradeA");
   const elNearBreakout = document.getElementById("countNearBreakout");
   const elCoiling = document.getElementById("countCoiling");
   const elSecBullish = document.getElementById("countSectorBullish");
 
   if (elAll) elAll.textContent = pool.length;
+  if (elReadyTonight) {
+    const c = pool.filter(w => {
+      const g = w.grade ?? w.Grade ?? "C";
+      const isGradeA = g === "A+" || g === "A";
+      const dist = parseFloat(w["DistToBreakout%"]) || 0;
+      return isGradeA && dist <= 0.2;
+    }).length;
+    elReadyTonight.textContent = c;
+  }
   if (elGradeA) {
     const c = pool.filter(w => {
       const g = w.grade ?? w.Grade ?? "C";
@@ -5350,7 +5371,8 @@ function renderStats(trades) {
   const tradeList = Array.isArray(trades)
     ? trades
     : (trades && Array.isArray(trades.trades) ? trades.trades : []);
-  trades = tradeList;
+  const localList = getLocalClosedTrades();
+  trades = [...localList, ...tradeList];
 
   const statTotal = document.getElementById("statTotalTrades");
   const statWinRate = document.getElementById("statWinRate");

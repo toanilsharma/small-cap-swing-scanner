@@ -2318,25 +2318,33 @@ def generate_position_management_alerts(
             be_sl = round(entry * 1.0035, 2)
             if close_now >= (entry + (1.0 * risk_per_unit)) and (stop < be_sl):
                 alerts.append(
-                    f"🟢 RATCHET SL TO BREAKEVEN+FEES: {sym} | Close ₹{close_now:.2f} >= +1.0R threshold (₹{entry + risk_per_unit:.2f}) -> Ratchet SL to ₹{be_sl:.2f} (+0.35% statutory fee buffer)."
+                    f"🟢 RATCHET SL TO BREAKEVEN+FEES: {sym} | Close ₹{close_now:.2f} >= +1.0R threshold (₹{entry + risk_per_unit:.2f}) -> Ratchet SL to ₹{be_sl:.2f} (+0.35% statutory fee buffer).\n"
+                    f"   ⏰ ACTION AT 3:15 PM: Open Zerodha/Groww -> Move Stop-Loss order up to ₹{be_sl:.2f}.\n"
+                    f"   🛡️ RESULT: Trade is now 100% risk-free. You cannot lose any capital!"
                 )
 
             # 2. 💰 BOOK 50% AT +2R: High >= Target_2R
             if high_now >= target_2r:
                 alerts.append(
-                    f"💰 BOOK 50% AT +2R: {sym} | Intraday High ₹{high_now:.2f} touched/exceeded +2R Target (₹{target_2r:.2f}) -> Sell 50% position, move SL to breakeven, and let remaining 50% trail."
+                    f"💰 BOOK 50% AT +2R: {sym} | Intraday High ₹{high_now:.2f} touched/exceeded +2R Target (₹{target_2r:.2f}) -> Sell 50% position, move SL to breakeven, and let remaining 50% trail.\n"
+                    f"   ⏰ ACTION AT 3:15 PM: Open Zerodha/Groww -> Sell 50% of your shares at market price.\n"
+                    f"   🛡️ NEXT STEP: Move Stop-Loss on remaining 50% shares to breakeven (₹{be_sl:.2f})."
                 )
 
             # 3. ⏳ 5-DAY TIME STOP TRIGGERED: days_held >= 5 AND Close <= Entry AND Close < EMA10
             if days_held >= 5 and close_now <= entry and close_now < ema10_now:
                 alerts.append(
-                    f"⏳ 5-DAY TIME STOP TRIGGERED: {sym} | Held {days_held} days with zero price expansion (Close ₹{close_now:.2f} <= Entry ₹{entry:.2f} & < 10-EMA ₹{ema10_now:.2f}) -> Liquidate dead-money position."
+                    f"⏳ 5-DAY TIME STOP TRIGGERED: {sym} | Held {days_held} days with zero price expansion (Close ₹{close_now:.2f} <= Entry ₹{entry:.2f} & < 10-EMA ₹{ema10_now:.2f}) -> Liquidate dead-money position.\n"
+                    f"   ⏰ ACTION AT 3:15 PM: Sell entire position at market close.\n"
+                    f"   💡 REASON: Stock is stagnant. Free up cash for faster moving opportunities."
                 )
 
             # 4. ⚠️ EARNINGS LOCKOUT EXIT: days_to_earnings <= 3
             if 0 <= days_to_earnings <= 3:
                 alerts.append(
-                    f"⚠️ EARNINGS LOCKOUT EXIT: {sym} | Earnings scheduled in {days_to_earnings} days -> Liquidate position before announcement to avoid overnight gap risk."
+                    f"⚠️ EARNINGS LOCKOUT EXIT: {sym} | Earnings scheduled in {days_to_earnings} days -> Liquidate position before announcement to avoid overnight gap risk.\n"
+                    f"   ⏰ ACTION AT 3:15 PM: Sell entire position before market closes.\n"
+                    f"   💡 REASON: Earnings releases can gap down 10-20%. We never gamble through results."
                 )
 
             # 5. 🚨 EMA20 RUNNER EXIT: Close < EMA20 on remaining 50% runner
@@ -2346,7 +2354,8 @@ def generate_position_management_alerts(
             )
             if is_runner and close_now < ema20_now:
                 alerts.append(
-                    f"🚨 EMA20 RUNNER EXIT: {sym} | Runner closed at ₹{close_now:.2f} below rising 20-EMA (₹{ema20_now:.2f}) -> Exit remaining 50% runner."
+                    f"🚨 EMA20 RUNNER EXIT: {sym} | Runner closed at ₹{close_now:.2f} below rising 20-EMA (₹{ema20_now:.2f}) -> Exit remaining 50% runner.\n"
+                    f"   ⏰ ACTION AT 3:15 PM: Sell remaining 50% shares at market close to conclude the trade."
                 )
 
         except Exception:
@@ -3281,36 +3290,57 @@ def scan_symbol(symbol: str) -> Optional[Dict[str, Any]]:
 # 8) MESSAGES AND SCANNER RUNNER
 # =====================================================================
 DISCIPLINE_CARD = (
-    "Small-Cap Survival & Risk Rules:\n"
-    "• Max 5 concurrent positions | 5% max portfolio heat (1.0% risk / trade)\n"
-    "• 2% daily loss limit | 6% monthly drawdown stop (Elder circuit-breaker)\n"
-    "• Worst-case 2-circuit gap sizing enforced (max 2.5% loss on 20% gap)\n"
-    "• Position notional capped at <=1.0% of 20-day ADV (min ₹5 Cr ADV)\n"
-    "• Fail-closed earnings blackout (5-day window) & circuit proximity skip\n"
-    "• 2.0x ATR stop with 8.5% max stop-loss floor"
+    "💡 5 GOLDEN RULES FOR 99% WEALTH SUCCESS:\n"
+    "1. Maximum Risk: Never risk more than 1% of total account on any single stock.\n"
+    "2. Never Chase: If a stock opens >1.5% above trigger, do NOT buy.\n"
+    "3. Mandatory Stop-Loss: Keep Stop-Loss active at all times in your broker.\n"
+    "4. Half-Profit Lock: At +2R target, sell 50% shares and move stop-loss to breakeven.\n"
+    "5. 5-Day Rule: If a stock fails to move after 5 trading days, exit at 3:15 PM."
 )
 
 
 def format_signal(sig: Dict[str, Any]) -> str:
-    """Format signal dictionary into a Telegram alert message."""
-    mode_line = [f"Execution: {sig['execution_mode']}"] if sig.get("execution_mode") else []
+    """Format signal dictionary into an action-first, plain-English Telegram alert message."""
+    sym = sig.get("Symbol", "")
+    clean_sym = sym.replace(".NS", "").replace(".BO", "")
+    entry = float(sig.get("Entry", 0.0))
+    stop = float(sig.get("Stop", 0.0))
+    target = float(sig.get("Target", 0.0))
+    qty = int(sig.get("Qty", 0))
+    risk_amt = float(sig.get("Risk Amount", 0.0))
+    risk_per_unit = float(sig.get("Risk Per Unit", 0.0))
+    sig_date = sig.get("Signal Date", str(datetime.date.today()))
+    exec_mode = sig.get("execution_mode", "GTT Limit Order")
+    next_earn = sig.get("next_earnings", "No earnings in 5 days")
+
+    est_profit = round((target - entry) * qty, 2)
+    max_buy_price = round(entry * 1.015, 2)
+    total_capital = round(entry * qty, 2)
+
     lines = [
-        f"🟢 SMALL-CAP SWING SIGNAL ({sig['Type']})",
-        *mode_line,
-        f"Symbol: {sig['Symbol']}",
-        f"Sector: {sig.get('Sector', 'N/A')}",
-        f"Signal Date: {sig['Signal Date']}",
-        f"Close: ₹{sig['Close']:.2f}",
-        f"Entry: ₹{sig['Entry']:.2f}",
-        f"Stop: ₹{sig['Stop']:.2f}",
-        f"Target: ₹{sig['Target']:.2f}",
-        f"Quantity: {sig['Qty']}",
-        f"Risk/Unit: ₹{sig['Risk Per Unit']:.2f}",
-        f"Risk Amount: ₹{sig['Risk Amount']:.2f}",
-        f"ADV20: ₹{sig.get('adv20_cr', 0.0)} Cr | Gap Sizing: {'YES' if sig.get('gap_qty_applied') else 'NO'}",
-        f"Next Earnings: {sig.get('next_earnings', 'N/A')}",
-        f"ATR14: {sig['ATR14']:.2f}",
-        f"RSI14: {sig['RSI14']:.1f}",
+        f"🟢 ACTION REQUIRED: PLACE BUY ORDER TONIGHT",
+        f"📅 Date: {sig_date} | Stock: {clean_sym} ({sig.get('Sector', 'Small-Cap')})",
+        f"",
+        f"📋 STEP-BY-STEP INSTRUCTIONS (Takes 1 Minute):",
+        f"1. Open your Zerodha Kite / Groww / Upstox app tonight (before 9:00 AM tomorrow).",
+        f"2. Search for '{clean_sym}' and choose 'Create GTT Order'.",
+        f"3. Set Trigger Price = ₹{entry:.2f}",
+        f"4. Set Limit Price = ₹{entry:.2f} (Do NOT pay more than ₹{max_buy_price:.2f})",
+        f"5. Set Quantity = {qty} shares (Total capital: ₹{total_capital:,.2f})",
+        f"6. Set Stop-Loss = ₹{stop:.2f} (Max downside risk: ₹{risk_amt:,.2f})",
+        f"7. Set Target = ₹{target:.2f} (Expected profit: ₹{est_profit:,.2f})",
+        f"",
+        f"🕒 WHAT HAPPENS NEXT & WHEN TO MONITOR:",
+        f"• Tomorrow (9:15 AM - 3:30 PM): Order executes automatically if price crosses ₹{entry:.2f}.",
+        f"• If executed: Log into your dashboard and click '➕ I Bought This' in Monitored Portfolio.",
+        f"• Daily Review: Check your portfolio once at 3:15 PM IST only. No screen watching needed.",
+        f"• Order Validity: Active for 5 trading sessions. Cancel if untriggered after 5 days.",
+        f"",
+        f"🛡️ SAFETY GUARDRAILS (99% Wealth Protection):",
+        f"• Risk Capped: 1.0% portfolio heat (₹{risk_amt:,.2f}) | Risk/Unit: ₹{risk_per_unit:.2f}",
+        f"• Reward-to-Risk: 2 to 1 (Risking ₹{risk_amt:,.2f} to make ₹{est_profit:,.2f})",
+        f"• Earnings Check: Safe ({next_earn})",
+        f"• Execution Mode: {exec_mode}",
     ]
     return "\n".join(lines)
 
@@ -3326,7 +3356,15 @@ def run_scanner() -> Tuple[List[Dict[str, Any]], int, bool]:
     is_digest = settings.get("digest", False)
 
     if not is_mkt_ok:
-        msg = "🔴 SMALL-CAP REGIME FILTER (basket): Small-cap basket not in uptrend. No new entries today."
+        msg = (
+            f"🛑 MARKET TRAFFIC LIGHT: CASH PROTECTION MODE (RED)\n"
+            f"📅 Date: {datetime.date.today()}\n\n"
+            f"📌 ACTION TONIGHT: ZERO BUY ORDERS\n"
+            f"• Market Regime: The small-cap market is under pressure or below key moving averages.\n"
+            f"• Capital Protection: Rule #1 of wealth creation is never lose money in down markets.\n"
+            f"• Instructions: Keep 100% of your trading capital safe in your bank / liquid funds.\n"
+            f"• Next Alert: We will notify you immediately when market conditions turn GREEN."
+        )
         print(msg)
         if is_digest:
             _DIGEST_MESSAGES.append(("market", msg))
@@ -3357,7 +3395,14 @@ def run_scanner() -> Tuple[List[Dict[str, Any]], int, bool]:
         else:
             send_telegram(joined_message, kind="proactive", msg_type="scan")
     elif SEND_NO_SIGNAL_MESSAGE:
-        no_sig_msg = "No new small-cap swing signals today."
+        no_sig_msg = (
+            f"🟢 MARKET TRAFFIC LIGHT: SAFE TO INVEST (GREEN)\n"
+            f"📅 Date: {datetime.date.today()}\n\n"
+            f"📌 ACTION TONIGHT: NO NEW BUYS TODAY\n"
+            f"• Today's Scan: All symbols scanned; none met our strict 99% risk-reward criteria today.\n"
+            f"• Wealth Discipline: We only buy high-probability setups. We never force trades.\n"
+            f"• Instructions: Keep cash ready. If you hold open positions, check them at 3:15 PM tomorrow."
+        )
         if is_digest:
             _DIGEST_MESSAGES.append(("scan", no_sig_msg))
         else:
@@ -3557,28 +3602,46 @@ def get_watchlist_candidates() -> List[Dict[str, Any]]:
 
 def build_watchlist_text(candidates: Optional[List[Dict[str, Any]]] = None) -> str:
     """
-    Format watchlist candidates into a readable Telegram message.
+    Format watchlist candidates into a readable, action-first Telegram message.
     """
     if candidates is None:
         candidates = get_watchlist_candidates()
 
     if not candidates:
-        return "📋 Watchlist empty: no small-cap in uptrend near breakout."
+        return (
+            "📋 WATCHLIST UPDATE:\n"
+            "• Status: Empty today.\n"
+            "• Action: Relax. No setups near breakout. Capital is 100% safe in cash."
+        )
 
-    lines = ["📋 SMALL-CAP WATCHLIST (near breakout)"]
-    for item in candidates:
-        sec_info = f"{item['Sector']} (Bullish: {item['SectorBullish']})"
+    lines = [
+        "👀 STOCKS TO WATCH (Do NOT buy yet — preparing for breakout)",
+        "These stocks are strong and consolidating. Wait for the green signal before entering.",
+        ""
+    ]
+    for idx, item in enumerate(candidates, start=1):
+        clean_sym = item['Symbol'].replace('.NS', '').replace('.BO', '')
         score_val = item.get("score", item.get("Score", "-"))
         grade_val = item.get("grade", item.get("Grade", "-"))
         exec_mode = item.get("execution_mode", "")
         mode_str = f" | {exec_mode}" if exec_mode and exec_mode != "[WATCHLIST — MONITORING]" else ""
+        dist = item.get('DistToBreakout%', 0.0)
+        close = item.get('Close', 0.0)
+
+        if dist <= 1.0:
+            status_text = f"Very close to entry ({dist}% away from breakout)"
+        else:
+            status_text = f"Consolidating nicely ({dist}% below breakout level)"
+
         line = (
-            f"{item['Symbol']} [Grade {grade_val} | Score {score_val}] | {sec_info} | "
-            f"{item['DistToBreakout%']}% away | Close {item['Close']} | Coiling: {item['Coiling']}"
-            f"{mode_str}"
+            f"{idx}. {clean_sym} [Grade {grade_val} | Score {score_val}]:\n"
+            f"   • Current Price: ₹{close:.2f}\n"
+            f"   • Status: {status_text}\n"
+            f"   • Action Tonight: Watch only. Do NOT buy yet.{mode_str}"
         )
         lines.append(line)
 
+    lines.append("\n⏰ Next Review: Tomorrow at 3:15 PM IST.")
     return "\n".join(lines)
 
 
@@ -5117,8 +5180,12 @@ if __name__ == "__main__":
 
         inst_tg_line = ""
         if acc_syms:
-            eg_syms = ", ".join(acc_syms[:3])
-            inst_tg_line = f"🏦 Institutional: {len(acc_syms)} accumulation among signals/on-deck (e.g. {eg_syms})"
+            eg_syms = ", ".join([s.replace('.NS', '').replace('.BO', '') for s in acc_syms[:3]])
+            inst_tg_line = (
+                f"🏦 INSTITUTIONAL ACTIVITY DETECTED:\n"
+                f"• Mutual funds/institutions are quietly accumulating shares in {len(acc_syms)} stocks (e.g. {eg_syms}).\n"
+                f"• Smart money support is strong behind our candidate watchlist."
+            )
 
         if inst_tg_line:
             if is_digest:

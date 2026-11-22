@@ -80,12 +80,12 @@
   <!-- Tabs Navigation -->
   <nav class="tabs-bar">
     <div class="page-container tabs-container">
-      <button class="tab-btn active" data-tab="tabNearBuy">🎯 Near Buy (Watchlist)</button>
-      <button class="tab-btn" data-tab="tabOpen">💼 Open Positions (<span id="openCountBadge">0</span>)</button>
-      <button class="tab-btn" data-tab="tabHistory">📜 Trade History</button>
-      <button class="tab-btn" data-tab="tabStats">📈 Performance Stats</button>
-      <button class="tab-btn" data-tab="tabBacktest">🧪 Backtest</button>
-      <button class="tab-btn" data-tab="tabHelp" id="helpTabBtn">📖 Help & Guide</button>
+      <button class="tab-btn active" data-tab="tabNearBuy">🎯 1. Today's Buy Setups</button>
+      <button class="tab-btn" data-tab="tabOpen">💼 2. My Monitored Portfolio (<span id="openCountBadge">0</span>)</button>
+      <button class="tab-btn" data-tab="tabHistory">📜 3. Closed Trades History</button>
+      <button class="tab-btn" data-tab="tabStats">📈 4. Wealth &amp; Win Stats</button>
+      <button class="tab-btn" data-tab="tabBacktest">🧪 5. System Backtest</button>
+      <button class="tab-btn" data-tab="tabHelp" id="helpTabBtn">📖 6. How It Works (Simple Guide)</button>
     </div>
   </nav>
 
@@ -125,6 +125,19 @@
           <div id="heroBreadthInline" class="hero-breadth-inline">
             <span id="heroBreadthSMA50" class="breadth-pill">SMA 50: --%</span>
             <span id="heroBreadthSMA200" class="breadth-pill">SMA 200: --%</span>
+          </div>
+        </div>
+
+        <!-- 🚦 EXECUTIVE MARKET TRAFFIC LIGHT & WEALTH GUIDE -->
+        <div id="heroTrafficLightBanner" class="market-traffic-light-card traffic-light-green">
+          <div class="traffic-light-icon" id="trafficLightIcon">🟢</div>
+          <div style="flex: 1;">
+            <div id="trafficLightTitle" class="traffic-light-title" style="color: #34d399;">
+              MARKET TRAFFIC LIGHT: GREEN (SAFE TO INVEST)
+            </div>
+            <div id="trafficLightDesc" class="traffic-light-desc">
+              The Indian small-cap index is in a healthy uptrend. Institutional demand is active. You are permitted to place GTT buy orders on our top recommended stocks tonight.
+            </div>
           </div>
         </div>
 
@@ -262,12 +275,15 @@
           <button id="leadersToggleBtn" class="leaders-toggle-btn" aria-expanded="true" title="Click to collapse/expand Leaders Board">
             <div class="leaders-toggle-title">
               <span style="font-size: 16px;">🏆</span>
-              <span class="leaders-title-text">Leaders Board (Top RS in Stage 2)</span>
+              <span class="leaders-title-text">Top 10 Market Champions (Institutional Leaders)</span>
               <span id="leadersCountBadge" class="badge badge-success">0 Leaders</span>
             </div>
             <span id="leadersChevron" class="chevron">▼</span>
           </button>
           <div id="leadersContent" class="leaders-content-collapse" style="display: block;">
+            <p style="font-size: 12px; color: var(--text-dim); margin: 6px 0 10px 0;">
+              These 10 stocks show the highest institutional demand and strongest relative strength over the past 12 months. When they pull back into tight bases, they become our highest-probability money-makers.
+            </p>
             <div id="leadersChipsRow" class="leaders-chips-row">
               <span class="text-dim" style="font-size: 12px;">Loading leaders...</span>
             </div>
@@ -279,14 +295,14 @@
           <button id="onDeckToggleBtn" class="on-deck-toggle-btn" aria-expanded="true" title="Click to collapse/expand On Deck Setups">
             <div class="on-deck-toggle-title">
               <span style="font-size: 18px;">🎯</span>
-              <span class="on-deck-title-text">On Deck (Near Misses)</span>
+              <span class="on-deck-title-text">On Radar (Preparing for Future Breakouts)</span>
               <span id="onDeckCountBadge" class="badge badge-warning">0 Setups</span>
             </div>
             <span id="onDeckChevron" class="chevron">▼</span>
           </button>
           <div id="onDeckContent" class="on-deck-content-collapse" style="display: block;">
             <p class="on-deck-subtitle" style="font-size: 12px; color: var(--text-dim); margin-bottom: 14px;">
-              Stage-2 setups passing Trend &amp; Squeeze filters under resistance, awaiting final breakout trigger or institutional volume spike.
+              These stocks are building consolidation bases under resistance. <strong>Action: Do NOT buy today.</strong> The system is automatically tracking them until an official breakout occurs.
             </p>
             <div id="onDeckCardsGrid" class="on-deck-grid">
               <div class="empty-state">Loading on-deck candidates...</div>
@@ -411,14 +427,14 @@
           <table id="watchlistTable">
             <thead>
               <tr>
-                <th>Symbol</th>
-                <th><span class="term-lookup" data-term="Grade">Grade</span></th>
-                <th>Close</th>
-                <th><span class="term-lookup" data-term="Dist to Breakout">Dist %</span></th>
-                <th>Status</th>
+                <th>Stock Symbol</th>
+                <th><span class="term-lookup" data-term="Grade">Quality Grade</span></th>
+                <th>Last Close</th>
+                <th><span class="term-lookup" data-term="Dist to Breakout">Distance to Buy</span></th>
+                <th>Today's Action &amp; Horizon</th>
                 <th class="hide-mobile"><span class="term-lookup" data-term="Setup score">Score</span></th>
                 <th class="hide-mobile">Sector</th>
-                <th>Action</th>
+                <th>What To Do</th>
                 <th style="width: 44px;"></th>
               </tr>
             </thead>
@@ -629,9 +645,18 @@
             The system monitors these stocks every market day and tells you date-wise and time-wise when to sell.
           </div>
         </div>
-        <button id="addBoughtStockBtn" class="btn btn-sm btn-primary" style="display: flex; align-items: center; gap: 6px;">
-          <span>➕</span><span>Add Bought Stock</span>
-        </button>
+        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+          <button id="exportPortfolioBtn" class="btn btn-xs btn-outline-secondary" title="Export your monitored positions & closed trades to a backup file">
+            📥 Backup Portfolio
+          </button>
+          <button id="importPortfolioBtn" class="btn btn-xs btn-outline-secondary" title="Restore your monitored positions & trades from a backup file">
+            📤 Restore
+          </button>
+          <input type="file" id="importPortfolioInput" accept=".json" style="display: none;" />
+          <button id="addBoughtStockBtn" class="btn btn-sm btn-primary" style="display: flex; align-items: center; gap: 6px;">
+            <span>➕</span><span>Add Bought Stock</span>
+          </button>
+        </div>
       </div>
 
       <!-- POINT-WISE ACTION DIRECTIVES FOR HELD STOCKS -->
@@ -641,14 +666,14 @@
         <table id="openPositionsTable">
           <thead>
             <tr>
-              <th>Symbol</th>
-              <th>Qty</th>
-              <th>Entry Price</th>
-              <th>Last Close</th>
-              <th><span class="term-lookup" data-term="Unrealized P&L">Unrealized P&amp;L</span></th>
-              <th><span class="term-lookup" data-term="R-multiple">R-Multiple</span></th>
-              <th>Days Held</th>
-              <th>Actions</th>
+              <th>Stock Symbol</th>
+              <th>Shares</th>
+              <th>Buy Price</th>
+              <th>Current Price</th>
+              <th><span class="term-lookup" data-term="Unrealized P&L">Profit / Loss</span></th>
+              <th><span class="term-lookup" data-term="R-multiple">Multiple (R)</span></th>
+              <th>Holding Period</th>
+              <th>Action Required</th>
               <th style="width: 44px; text-align: right;"></th>
             </tr>
           </thead>

@@ -1446,6 +1446,34 @@ function renderMarketPulse(scanData) {
     }
   }
 
+  // Update Executive Market Traffic Light Banner
+  const trafficBanner = document.getElementById("heroTrafficLightBanner");
+  const trafficIcon = document.getElementById("trafficLightIcon");
+  const trafficTitle = document.getElementById("trafficLightTitle");
+  const trafficDesc = document.getElementById("trafficLightDesc");
+
+  if (trafficBanner && trafficTitle && trafficDesc) {
+    if (scanData && scanData.market_ok) {
+      trafficBanner.className = "market-traffic-light-card traffic-light-green";
+      if (trafficIcon) trafficIcon.textContent = "🟢";
+      trafficTitle.style.color = "#34d399";
+      trafficTitle.textContent = "MARKET TRAFFIC LIGHT: GREEN (SAFE TO INVEST)";
+      trafficDesc.textContent = "The small-cap benchmark (^CNXSC) is confirmed in an institutional uptrend above its moving averages. You are permitted to place GTT buy orders on our top recommended setups tonight.";
+    } else if (scanData && !scanData.market_ok) {
+      trafficBanner.className = "market-traffic-light-card traffic-light-red";
+      if (trafficIcon) trafficIcon.textContent = "🛑";
+      trafficTitle.style.color = "#f87171";
+      trafficTitle.textContent = "MARKET TRAFFIC LIGHT: RED (DEFENSIVE CASH MODE)";
+      trafficDesc.textContent = "The small-cap benchmark is in correction or under institutional distribution pressure. All new buying is STRICTLY PAUSED. Keep 100% of your capital safe in cash. Do not open new trades.";
+    } else {
+      trafficBanner.className = "market-traffic-light-card traffic-light-yellow";
+      if (trafficIcon) trafficIcon.textContent = "🟡";
+      trafficTitle.style.color = "#fbbf24";
+      trafficTitle.textContent = "MARKET TRAFFIC LIGHT: YELLOW (ANALYZING SCAN)";
+      trafficDesc.textContent = "Awaiting fresh scan data from the post-market 4:15 PM IST scanner run.";
+    }
+  }
+
   const heroVolRegime = document.getElementById("heroVolRegimeWord");
   if (heroVolRegime) {
     const vr = (scanData && scanData.vol_regime) ? scanData.vol_regime : null;
@@ -2460,6 +2488,69 @@ function initPortfolioModalListeners() {
   const addBtn = document.getElementById("addBoughtStockBtn");
   if (addBtn) {
     addBtn.addEventListener("click", () => openBuyModal());
+  }
+
+  // Backup Monitored Portfolio (Export JSON)
+  const exportBtn = document.getElementById("exportPortfolioBtn");
+  if (exportBtn) {
+    exportBtn.addEventListener("click", () => {
+      const backupData = {
+        app: "small_cap_swing_scanner",
+        exported_at: new Date().toISOString(),
+        monitored_positions: getLocalMonitoredPositions(),
+        closed_trades: getLocalClosedTrades()
+      };
+      const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `smallcap_portfolio_backup_${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast("Portfolio backup downloaded!", "📥");
+    });
+  }
+
+  // Restore Monitored Portfolio (Import JSON)
+  const importBtn = document.getElementById("importPortfolioBtn");
+  const importInput = document.getElementById("importPortfolioInput");
+  if (importBtn && importInput) {
+    importBtn.addEventListener("click", () => {
+      importInput.value = "";
+      importInput.click();
+    });
+
+    importInput.addEventListener("change", (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const parsed = JSON.parse(event.target.result);
+          if (!parsed) throw new Error("Empty file");
+          const positions = Array.isArray(parsed.monitored_positions) ? parsed.monitored_positions : [];
+          const trades = Array.isArray(parsed.closed_trades) ? parsed.closed_trades : [];
+
+          if (positions.length === 0 && trades.length === 0) {
+            showToast("No valid positions or trades found in backup file.", "⚠️");
+            return;
+          }
+
+          saveLocalMonitoredPositions(positions);
+          saveLocalClosedTrades(trades);
+          showToast(`Restored ${positions.length} active positions and ${trades.length} closed trades!`, "✅");
+
+          renderOpenPositions(getAllMonitoredPositions(_cachedOpenPositions));
+          if (_cachedTradesData) renderHistory(_cachedTradesData);
+        } catch (err) {
+          showToast("Failed to parse backup JSON file.", "❌");
+        }
+      };
+      reader.readAsText(file);
+    });
   }
 
   // Buy Modal Close/Cancel
@@ -4692,7 +4783,7 @@ async function renderOpenPositions(positions) {
         <td data-label="R-Multiple">
           <span class="badge ${rClass}">${currentR >= 0 ? '+' : ''}${currentR.toFixed(2)}R</span>
         </td>
-        <td data-label="Days Held"><span class="badge badge-neutral">${daysHeld}d</span></td>
+        <td data-label="Days Held"><span class="badge badge-neutral" title="Holding duration: Day ${daysHeld} of 5-day momentum window">Day ${daysHeld} / 5d</span></td>
         <td data-label="Actions">
           <div style="display: flex; gap: 6px; align-items: center; flex-wrap: nowrap;" onclick="event.stopPropagation();">
             <button class="btn btn-xs btn-sold btn-sold-trigger"
@@ -4730,6 +4821,36 @@ async function renderOpenPositions(positions) {
       </tr>
       <tr class="accordion-drawer-row detail-row" id="open-drawer-${escapeHtml(pos.symbol)}" style="display: none;">
         <td colspan="9" style="padding: 16px; background: rgba(15, 23, 42, 0.45);">
+          <!-- RUPEE MILESTONE ROADMAP LADDER -->
+          <div class="milestone-ladder-container">
+            <div style="font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--accent); margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
+              <span>🎯 Rupee Roadmap &amp; Decision Milestones (${escapeHtml(pos.symbol)})</span>
+              <span style="font-size: 11px; color: var(--text-dim); text-transform: none;">Holding: <strong>Day ${daysHeld} of 5</strong> (${Math.max(0, 5 - daysHeld)} session${Math.max(0, 5 - daysHeld) === 1 ? '' : 's'} remaining before 5d review)</span>
+            </div>
+            <div class="milestone-grid">
+              <div class="milestone-box" style="background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.35);">
+                <div style="font-size: 10px; color: #f87171; font-weight: 800;">1. SAFETY FLOOR (STOP)</div>
+                <div style="font-size: 13.5px; font-weight: 800; color: #fff; margin-top: 2px;">${formatINR(stop)}</div>
+                <div style="font-size: 10.5px; color: #fca5a5; margin-top: 2px;">Exit 100% if touched</div>
+              </div>
+              <div class="milestone-box" style="background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.35);">
+                <div style="font-size: 10px; color: #38bdf8; font-weight: 800;">2. YOUR BUY PRICE</div>
+                <div style="font-size: 13.5px; font-weight: 800; color: #fff; margin-top: 2px;">${formatINR(entry)}</div>
+                <div style="font-size: 10.5px; color: #bae6fd; margin-top: 2px;">${pos.entry_date ? formatDate(pos.entry_date) : 'Original Entry'}</div>
+              </div>
+              <div class="milestone-box" style="background: rgba(234, 179, 8, 0.12); border: 1px solid rgba(234, 179, 8, 0.35);">
+                <div style="font-size: 10px; color: #facc15; font-weight: 800;">3. BREAKEVEN (+1.0R)</div>
+                <div style="font-size: 13.5px; font-weight: 800; color: #fff; margin-top: 2px;">${formatINR(entry + plannedRiskPerUnit)}</div>
+                <div style="font-size: 10.5px; color: #fef08a; margin-top: 2px;">Ratchet stop to ${formatINR(entry * 1.0035)}</div>
+              </div>
+              <div class="milestone-box" style="background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.35);">
+                <div style="font-size: 10px; color: #34d399; font-weight: 800;">4. PROFIT TARGET (+2.0R)</div>
+                <div style="font-size: 13.5px; font-weight: 800; color: #fff; margin-top: 2px;">${formatINR(target || (entry + 2 * plannedRiskPerUnit))}</div>
+                <div style="font-size: 10.5px; color: #6ee7b7; font-weight: 700; margin-top: 2px;">Sell 50% shares!</div>
+              </div>
+            </div>
+          </div>
+
           <!-- ACTION DIRECTIVE COCKPIT FOR OPEN POSITION -->
           <div class="stock-decision-cockpit" style="margin-bottom: 14px;">
             <div class="cockpit-banner ${posDec.badgeClass}">

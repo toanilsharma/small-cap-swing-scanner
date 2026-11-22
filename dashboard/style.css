@@ -6990,3 +6990,73 @@ th .term-lookup {
   border-color: #38bdf8;
   box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
 }
+
+/* Market Traffic Light & Daily Guidance Card */
+.market-traffic-light-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  border-radius: 10px;
+  margin-bottom: 14px;
+  transition: all 0.3s ease;
+}
+
+.traffic-light-green {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.traffic-light-yellow {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.traffic-light-red {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.traffic-light-icon {
+  font-size: 32px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.traffic-light-title {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.traffic-light-desc {
+  font-size: 13px;
+  color: #e2e8f0;
+  line-height: 1.45;
+  margin-top: 4px;
+}
+
+/* Rupee Milestone Progress Ladder */
+.milestone-ladder-container {
+  background: rgba(15, 23, 42, 0.65);
+  padding: 14px 16px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 12px;
+}
+
+.milestone-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.milestone-box {
+  border-radius: 6px;
+  padding: 8px 10px;
+  text-align: center;
+  border: 1px solid transparent;
+}
+

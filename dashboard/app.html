@@ -974,6 +974,127 @@
         </div>
       </div>
 
+      <!-- 🧮 INTERACTIVE WEALTH COMPOUNDING SIMULATOR (Recommendation #6) -->
+      <div id="wealthSimulatorCard" class="chart-card sim-card" style="margin-bottom: 24px;">
+        <div class="chart-header">
+          <div>
+            <h2 class="chart-title"><span>🧮</span> Interactive Wealth Compounding Simulator</h2>
+            <div style="font-size: 12px; color: var(--text-dim); margin-top: 2px;">
+              See how our +2R math creates handsome wealth even when losing more than half the time
+            </div>
+          </div>
+          <span class="badge badge-success" style="font-size: 11px; padding: 4px 10px;">Asymmetric Edge</span>
+        </div>
+
+        <div class="sim-controls-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-top: 14px; background: rgba(15, 23, 42, 0.4); padding: 14px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.06);">
+          <div class="sim-input-group">
+            <label for="simCapital" style="font-size: 11.5px; color: #94a3b8; font-weight: 600; display: block; margin-bottom: 4px;">Starting Capital (₹)</label>
+            <input type="number" id="simCapital" value="200000" min="10000" step="10000" class="form-input" style="width: 100%; padding: 6px 10px; background: #0f172a; border: 1px solid #334155; color: #fff; border-radius: 6px;">
+          </div>
+          <div class="sim-input-group">
+            <label for="simTrades" style="font-size: 11.5px; color: #94a3b8; font-weight: 600; display: block; margin-bottom: 4px;">Number of Trades (1 Year)</label>
+            <input type="number" id="simTrades" value="50" min="10" max="200" step="5" class="form-input" style="width: 100%; padding: 6px 10px; background: #0f172a; border: 1px solid #334155; color: #fff; border-radius: 6px;">
+          </div>
+          <div class="sim-input-group">
+            <label for="simWinRate" style="font-size: 11.5px; color: #94a3b8; font-weight: 600; display: block; margin-bottom: 4px;">Expected Win Rate (%)</label>
+            <input type="number" id="simWinRate" value="45" min="30" max="70" step="1" class="form-input" style="width: 100%; padding: 6px 10px; background: #0f172a; border: 1px solid #334155; color: #fff; border-radius: 6px;">
+          </div>
+          <div class="sim-input-group">
+            <label for="simAvgWinR" style="font-size: 11.5px; color: #94a3b8; font-weight: 600; display: block; margin-bottom: 4px;">Average Win Multiple (+R)</label>
+            <input type="number" id="simAvgWinR" value="2.2" min="1.5" max="4.0" step="0.1" class="form-input" style="width: 100%; padding: 6px 10px; background: #0f172a; border: 1px solid #334155; color: #fff; border-radius: 6px;">
+          </div>
+        </div>
+
+        <div class="sim-results-strip" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-top: 16px;">
+          <div class="stat-card" style="background: rgba(15, 23, 42, 0.6); padding: 12px; border-radius: 8px;">
+            <div class="stat-label">Wins vs Losses</div>
+            <div id="simWinsLosses" class="stat-value" style="font-size: 16px; color: #fff;">23 Wins / 27 Losses</div>
+            <div class="stat-sub-text" style="color: #94a3b8;">54% loss rate modeled</div>
+          </div>
+          <div class="stat-card" style="background: rgba(15, 23, 42, 0.6); padding: 12px; border-radius: 8px;">
+            <div class="stat-label">Controlled Losses</div>
+            <div id="simTotalLoss" class="stat-value negative" style="font-size: 16px;">-₹54,000</div>
+            <div class="stat-sub-text" style="color: #94a3b8;">Deterministic overhead</div>
+          </div>
+          <div class="stat-card" style="background: rgba(15, 23, 42, 0.6); padding: 12px; border-radius: 8px;">
+            <div class="stat-label">Harvested Wins</div>
+            <div id="simTotalWin" class="stat-value positive" style="font-size: 16px;">+₹101,200</div>
+            <div class="stat-sub-text" style="color: #94a3b8;">+2R asymmetric payouts</div>
+          </div>
+          <div class="stat-card" style="background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.35); padding: 12px; border-radius: 8px;">
+            <div class="stat-label" style="color: #34d399; font-weight: 700;">Net Cash Profit</div>
+            <div id="simNetProfit" class="stat-value highlight" style="font-size: 18px; color: #34d399;">+₹47,200 (+23.6%)</div>
+            <div id="simAccountTotal" class="stat-sub-text" style="color: #6ee7b7;">Ending: ₹2,47,200</div>
+          </div>
+        </div>
+
+        <div id="simVerdictBox" style="margin-top: 14px; padding: 10px 14px; background: rgba(30, 41, 59, 0.5); border-left: 3px solid #10b981; border-radius: 6px; font-size: 12.5px; color: #e2e8f0; line-height: 1.45;">
+          💡 <strong>The Layman Math Lesson:</strong> Even though you lost 27 out of 50 trades (more than half the time!), you generated <strong>+₹47,200 in net profit</strong> because your winners paid out over 2x your controlled losses. You do not need to predict the future to build wealth!
+        </div>
+      </div>
+
+      <!-- 🏅 WEEKLY DISCIPLINE SCORECARD (Recommendation #10) -->
+      <div id="disciplineScorecardCard" class="chart-card scorecard-card" style="margin-bottom: 24px;">
+        <div class="chart-header">
+          <div>
+            <h2 class="chart-title"><span>🏅</span> Weekly Discipline Scorecard (Habit Builder)</h2>
+            <div style="font-size: 12px; color: var(--text-dim); margin-top: 2px;">
+              Graded every Saturday at 10:00 AM IST &bull; Measures mechanical rule execution rather than short-term luck
+            </div>
+          </div>
+          <span id="scorecardGradePill" class="badge badge-success" style="font-size: 12px; padding: 4px 12px; font-weight: 800;">GRADE A+ &bull; 96/100</span>
+        </div>
+
+        <div class="scorecard-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-top: 14px;">
+          <div style="background: rgba(15, 23, 42, 0.5); padding: 12px 14px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.06);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <span style="font-size: 12px; font-weight: 700; color: #fff;">🛡️ Safety Stop Floor</span>
+              <span class="badge badge-success" style="font-size: 10px;">100% Score</span>
+            </div>
+            <p style="font-size: 11.5px; color: var(--text-dim); margin: 0; line-height: 1.4;">
+              Never lowered or cancelled an initial stop loss. Losses kept strictly within 1% safety budget.
+            </p>
+          </div>
+
+          <div style="background: rgba(15, 23, 42, 0.5); padding: 12px 14px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.06);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <span style="font-size: 12px; font-weight: 700; color: #fff;">💰 Profit Harvesting (+2R)</span>
+              <span class="badge badge-success" style="font-size: 10px;">100% Score</span>
+            </div>
+            <p style="font-size: 11.5px; color: var(--text-dim); margin: 0; line-height: 1.4;">
+              Mechanically locked 50% shares when targets were reached, letting runners trail safely on 20 EMA.
+            </p>
+          </div>
+
+          <div style="background: rgba(15, 23, 42, 0.5); padding: 12px 14px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.06);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <span style="font-size: 12px; font-weight: 700; color: #fff;">⏳ 8-Day Stagnant Money Exit</span>
+              <span class="badge badge-success" style="font-size: 10px;">95% Score</span>
+            </div>
+            <p style="font-size: 11.5px; color: var(--text-dim); margin: 0; line-height: 1.4;">
+              Liquidated sluggish dead money at close after 8 trading sessions to liberate cash for faster setups.
+            </p>
+          </div>
+
+          <div style="background: rgba(15, 23, 42, 0.5); padding: 12px 14px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.06);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <span style="font-size: 12px; font-weight: 700; color: #fff;">🔥 Total Account Risk (&le;6%)</span>
+              <span class="badge badge-success" style="font-size: 10px;">100% Score</span>
+            </div>
+            <p style="font-size: 11.5px; color: var(--text-dim); margin: 0; line-height: 1.4;">
+              Portfolio heat never exceeded the 6% hard ceiling across max 6 concurrent positions.
+            </p>
+          </div>
+        </div>
+
+        <div style="margin-top: 14px; padding: 12px 16px; background: rgba(56, 189, 248, 0.1); border-left: 3px solid #38bdf8; border-radius: 6px; display: flex; align-items: center; gap: 10px;">
+          <span style="font-size: 20px;">🏆</span>
+          <div style="font-size: 12.5px; color: #bae6fd; line-height: 1.45;">
+            <strong>Weekly Coach Verdict:</strong> "Outstanding execution discipline! You executed like an institutional fund manager this week. Your profits are mathematically protected. Enjoy your weekend!"
+          </div>
+        </div>
+      </div>
+
       <!-- Performance Breakdowns & Analytics -->
       <div class="stats-insights-section">
         <h2 class="stats-section-title"><span>🧠</span> Performance &amp; Discipline Breakdowns</h2>
@@ -4831,7 +4952,7 @@
               </div>
             </div>
             <div>
-              <span style="font-size: 11px; color: var(--text-dim); font-weight: 700; text-transform: uppercase;">Limit Price (+0.5% cap)</span>
+              <span style="font-size: 11px; color: var(--text-dim); font-weight: 700; text-transform: uppercase;">Limit Price (+1.5% small-cap buffer)</span>
               <div style="display: flex; align-items: center; gap: 6px; margin-top: 2px;">
                 <span id="gttFieldLimit" style="font-weight: 800; color: #38bdf8; font-size: 15px;">₹0.00</span>
                 <button class="btn btn-xs btn-outline-secondary copy-field-btn" data-target="gttFieldLimit">Copy</button>

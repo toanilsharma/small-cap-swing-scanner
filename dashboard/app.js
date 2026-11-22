@@ -4853,6 +4853,30 @@ async function renderOpenPositions(positions) {
       </tr>
       <tr class="accordion-drawer-row detail-row" id="open-drawer-${escapeHtml(pos.symbol)}" style="display: none;">
         <td colspan="9" style="padding: 16px; background: rgba(15, 23, 42, 0.45);">
+          <!-- 🚦 3:15 PM ACTION DIRECTIVE FOR BROKER TERMINAL -->
+          <div class="broker-action-box" style="margin-bottom: 14px; padding: 12px 16px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(15, 23, 42, 0.6);">
+            <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #38bdf8; margin-bottom: 4px;">
+              👉 WHAT TO DO IN ZERODHA / GROWW AT 3:15 PM TODAY:
+            </div>
+            <div style="font-size: 13px; font-weight: 600; color: #fff; line-height: 1.45;">
+              ${posDec.action === 'BOOK_HALF' ?
+                `💰 <span style="color: #34d399;">TAKE PROFIT IN BROKER:</span> Sell exactly <strong>${Math.floor(qty / 2)} shares</strong> right now at market to lock in cash. Move your stop on the remaining ${qty - Math.floor(qty / 2)} runner shares to <strong>₹${(entry * 1.0035).toFixed(2)}</strong> (entry + statutory fees) and let it ride on the 20 EMA.` :
+                (posDec.action === 'RATCHET' ?
+                  `🔒 <span style="color: #38bdf8;">MOVE STOP TO FREE TRADE:</span> In your broker GTT, raise your Stop Loss price to <strong>₹${(entry * 1.0035).toFixed(2)}</strong> (Entry ₹${entry.toFixed(2)} × 1.0035). This covers all STT & broker fees. This trade can NEVER turn into a loss!` :
+                  (posDec.action === 'EXIT' && daysHeld >= 8 ?
+                    `⏳ <span style="color: #fbbf24;">8-DAY DEAD MONEY CUT:</span> Sell all <strong>${qty} shares</strong> today before the 3:30 PM closing bell. Stagnant dead money is freed to redeploy into fresh momentum breakout leaders.` :
+                    (posDec.action === 'EXIT' && stop && close <= stop ?
+                      `🚨 <span style="color: #f87171;">DEFEND SAFETY FLOOR:</span> Sell all <strong>${qty} shares</strong> immediately at market. Initial stop loss reached. Cutting losses small guarantees 99% of your capital survives for the next winning run.` :
+                      `🟢 <span style="color: #34d399;">HOLD & RELAX:</span> Price is behaving normally in its trend cycle. Keep your stop-loss floor active at <strong>₹${stop ? stop.toFixed(2) : 'n/a'}</strong>. No broker action required today.`
+                    )
+                  )
+                )
+              }
+            </div>
+          </div>
+
+          ${eventWarnBox}
+
           <!-- RUPEE MILESTONE ROADMAP LADDER -->
           <div class="milestone-ladder-container">
             <div style="font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--accent); margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
@@ -6316,7 +6340,7 @@ function openGttModal(params) {
   const stop = parseFloat(params.stop || params.effectiveStop || 0);
   const target = parseFloat(params.target || params.targetPrice || 0);
   const qty = parseInt(params.qty, 10) || 1;
-  const limitPrice = pivot * 1.005;
+  const limitPrice = pivot * 1.015; // +1.5% small-cap slippage buffer
 
   const titleEl = document.getElementById("gttModalTitle");
   if (titleEl) titleEl.textContent = `GTT Order Assistant: ${sym}`;
@@ -6358,13 +6382,15 @@ function copyGttParameters(symbol, entry, stop, target, qty) {
   const stopLimit = (sPrice * 0.995).toFixed(2);
   const targetTrigger = tPrice.toFixed(2);
 
-  const gttText = `[GTT ORDER: NSE:${sym}]
-Broker: Zerodha Kite / Groww / Upstox
-• Stop Loss Trigger: ₹${sPrice.toFixed(2)}
-• Stop Loss Limit: ₹${stopLimit} (0.5% buffer)
-• Target Trigger: ₹${targetTrigger}
-• Qty: ${q}
-• Entry Ref: ₹${ePrice.toFixed(2)}`;
+  const limitPrice = (ePrice * 1.015).toFixed(2);
+  const gttText = `[ZERODHA / GROWW GTT BUY ORDER: NSE:${sym}]
+• Transaction Type: BUY (Single GTT)
+• Trigger Price: ₹${ePrice.toFixed(2)} (Buy when price touches this)
+• Limit Price: ₹${limitPrice} (+1.5% small-cap slippage buffer)
+• Recommended Quantity: ${q} shares
+• Stop Loss Floor: ₹${sPrice.toFixed(2)} (-1R risk budget)
+• Profit Target (+2R): ₹${targetTrigger} (Harvest 50% cash here)
+• Order Validity: GTC (Good-Til-Cancelled)`;
 
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(gttText).catch(() => {});
@@ -6435,8 +6461,15 @@ function initGttListeners() {
     copyAllBtn.addEventListener("click", () => {
       if (!_currentGttParams) return;
       const p = _currentGttParams;
-      const limitPrice = (p.pivot * 1.005).toFixed(2);
-      const text = `BUY ${p.symbol} | Trigger ₹${p.pivot.toFixed(2)} | Limit ₹${limitPrice} | SL ₹${p.stop.toFixed(2)} | Target ₹${p.target.toFixed(2)} | Qty: ${p.qty} | GTC`;
+      const limitPrice = (p.pivot * 1.015).toFixed(2);
+      const text = `[ZERODHA / GROWW GTT BUY ORDER: NSE:${p.symbol}]
+• Transaction Type: BUY (Single GTT)
+• Trigger Price: ₹${p.pivot.toFixed(2)}
+• Limit Price: ₹${limitPrice} (+1.5% small-cap buffer)
+• Quantity: ${p.qty} shares
+• Stop Loss Floor: ₹${p.stop.toFixed(2)}
+• Profit Target (+2R): ₹${p.target.toFixed(2)}
+• Validity: GTC (Good-Til-Cancelled)`;
       navigator.clipboard.writeText(text).then(() => {
         showToast(`Copied GTT order for ${p.symbol}!`, "📋");
       });
@@ -7436,4 +7469,82 @@ document.addEventListener('DOMContentLoaded', () => {
   updateLiveActionClock();
   setInterval(updateLiveActionClock, 30000);
   initWealthTourModal();
+  initWealthSimulator();
 });
+
+
+// ==========================================================================
+// INTERACTIVE WEALTH COMPOUNDING SIMULATOR ENGINE (Rec #6)
+// ==========================================================================
+function initWealthSimulator() {
+  const capInput = document.getElementById('simCapital');
+  const tradesInput = document.getElementById('simTrades');
+  const winRateInput = document.getElementById('simWinRate');
+  const avgWinRInput = document.getElementById('simAvgWinR');
+
+  const winsLossesEl = document.getElementById('simWinsLosses');
+  const totalLossEl = document.getElementById('simTotalLoss');
+  const totalWinEl = document.getElementById('simTotalWin');
+  const netProfitEl = document.getElementById('simNetProfit');
+  const accountTotalEl = document.getElementById('simAccountTotal');
+  const verdictBoxEl = document.getElementById('simVerdictBox');
+
+  if (!capInput || !tradesInput || !winRateInput || !avgWinRInput) return;
+
+  function calculateSimulation() {
+    const capital = Math.max(1000, parseFloat(capInput.value) || 200000);
+    const trades = Math.max(5, parseInt(tradesInput.value, 10) || 50);
+    const winRate = Math.min(95, Math.max(5, parseFloat(winRateInput.value) || 45));
+    const avgWinR = Math.max(1.0, parseFloat(avgWinRInput.value) || 2.2);
+
+    const riskPerTrade = capital * 0.01; // 1% risk per trade
+    const wins = Math.round(trades * (winRate / 100));
+    const losses = trades - wins;
+
+    const grossLoss = losses * riskPerTrade * 1.0;
+    const grossWin = wins * riskPerTrade * avgWinR;
+    const netProfit = grossWin - grossLoss;
+    const endingCapital = capital + netProfit;
+    const returnPct = ((netProfit / capital) * 100);
+
+    if (winsLossesEl) {
+      winsLossesEl.textContent = `${wins} Wins / ${losses} Losses`;
+      winsLossesEl.nextElementSibling.textContent = `${((losses / trades) * 100).toFixed(0)}% loss rate modeled`;
+    }
+
+    if (totalLossEl) {
+      totalLossEl.textContent = `-₹${Math.round(grossLoss).toLocaleString('en-IN')}`;
+    }
+
+    if (totalWinEl) {
+      totalWinEl.textContent = `+₹${Math.round(grossWin).toLocaleString('en-IN')}`;
+    }
+
+    if (netProfitEl) {
+      const sign = netProfit >= 0 ? '+' : '';
+      netProfitEl.textContent = `${sign}₹${Math.round(netProfit).toLocaleString('en-IN')} (${sign}${returnPct.toFixed(1)}%)`;
+      netProfitEl.style.color = netProfit >= 0 ? '#34d399' : '#f87171';
+    }
+
+    if (accountTotalEl) {
+      accountTotalEl.textContent = `Ending Account: ₹${Math.round(endingCapital).toLocaleString('en-IN')}`;
+    }
+
+    if (verdictBoxEl) {
+      if (netProfit > 0) {
+        verdictBoxEl.innerHTML = `💡 <strong>The Layman Math Lesson:</strong> Even though you lost ${losses} out of ${trades} trades (${((losses / trades) * 100).toFixed(0)}% of the time!), you generated <strong>+₹${Math.round(netProfit).toLocaleString('en-IN')} in net profit</strong> because your winners paid out ${avgWinR}x your small controlled losses. You do not need high accuracy to build massive wealth!`;
+        verdictBoxEl.style.borderLeftColor = '#10b981';
+      } else {
+        verdictBoxEl.innerHTML = `⚠️ With an average win multiple under 1.2R, even a ${winRate}% win rate struggles against losses. That is why our system strictly targets +2R exits!`;
+        verdictBoxEl.style.borderLeftColor = '#ef4444';
+      }
+    }
+  }
+
+  [capInput, tradesInput, winRateInput, avgWinRInput].forEach(inp => {
+    inp.addEventListener('input', calculateSimulation);
+    inp.addEventListener('change', calculateSimulation);
+  });
+
+  calculateSimulation();
+}

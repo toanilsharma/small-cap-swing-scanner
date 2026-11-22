@@ -50,6 +50,10 @@
       <div class="header-actions">
         <!-- Desktop buttons (>900px) -->
         <div class="header-actions-desktop">
+          <button id="tourGuideBtn" class="btn btn-outline-primary tour-trigger-btn" style="display: flex; align-items: center; gap: 6px; font-weight: 700; border-color: #38bdf8; color: #38bdf8;" title="60-Second Simple Wealth Guide for Beginners">
+            <span style="font-size: 14px;">🧭</span>
+            <span>60-Sec Tour</span>
+          </button>
           <button id="globalSearchBtn" class="search-trigger-btn" title="Search terms and definitions (Press /)">
             <span style="font-size: 14px;">🔍</span>
             <span>Search</span>
@@ -68,6 +72,7 @@
             ⋯
           </button>
           <div id="headerDropdownMenu" class="header-dropdown-menu" style="display: none;">
+            <button id="mobileTourGuideBtn" class="dropdown-item">🧭 60-Sec Tour</button>
             <button id="mobileSearchBtn" class="dropdown-item">🔍 Search (/)</button>
             <button id="mobileRefreshBtn" class="dropdown-item">🔄 Refresh</button>
             <button id="mobileLogoutBtn" class="dropdown-item dropdown-item-danger">🚪 Sign Out</button>
@@ -100,6 +105,26 @@
       <!-- ZONE 1: MARKET OVERVIEW (Pulse + Breadth + Sector Chips) -->
       <!-- ZONE 1: MARKET OVERVIEW & ACTION PLAN HERO -->
       <div class="zone-card market-overview-zone hero-zone" id="zoneMarketOverview">
+
+        <!-- ⏱️ LIVE ACTION CLOCK & TIME-AWARE ACTION BANNER -->
+        <div id="liveActionClockCard" class="live-action-clock-card">
+          <div class="clock-card-left">
+            <div class="clock-live-indicator">
+              <span class="live-pulse-dot"></span>
+              <span id="clockIstTimeText" class="clock-time-val">--:-- IST</span>
+              <span id="clockPhaseBadge" class="badge badge-primary clock-phase-pill">CHECKING MARKET TIMINGS...</span>
+            </div>
+            <div id="clockScheduleTitle" class="clock-schedule-title">Indian Market Timing &amp; Action Window</div>
+            <div id="clockDirectiveText" class="clock-directive-text">Loading current time action guide...</div>
+          </div>
+          <div class="clock-card-right">
+            <div class="clock-countdown-box">
+              <span class="clock-countdown-label">NEXT ACTION WINDOW:</span>
+              <span id="clockNextMilestone" class="clock-countdown-val">Calculating...</span>
+            </div>
+          </div>
+        </div>
+
         <!-- Hero Header Row: Index Level & ±% and Market Regime Word in Large Type -->
         <div class="hero-header-row">
           <div class="hero-telemetry">
@@ -603,19 +628,19 @@
       <!-- LIVE OPEN POSITIONS SUMMARY STRIP -->
       <div class="summary-strip">
         <div class="stat-card">
-          <div class="stat-label"><span class="term-lookup" data-term="Unrealized P&L">Total Unrealized PnL</span></div>
+          <div class="stat-label"><span class="term-lookup" data-term="Unrealized P&L">Current Floating Profit / Loss</span> <span class="dual-lang-sub">(Unrealized P&amp;L)</span></div>
           <div id="openTotalPnl" class="stat-value neutral">₹0.00</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label"><span class="term-lookup" data-term="Open positions">Open Positions</span></div>
+          <div class="stat-label"><span class="term-lookup" data-term="Open positions">Active Stocks Held</span> <span class="dual-lang-sub">(Open Positions)</span></div>
           <div id="openPositionsCount" class="stat-value">0</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">Total Capital Deployed</div>
+          <div class="stat-label">Active Money Working <span class="dual-lang-sub">(Deployed Capital)</span></div>
           <div id="openCapitalDeployed" class="stat-value">₹0.00</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label"><span class="term-lookup" data-term="Portfolio Heat">Portfolio Heat (Risk)</span></div>
+          <div class="stat-label"><span class="term-lookup" data-term="Portfolio Heat">Total Account Risk</span> <span class="dual-lang-sub">(Portfolio Heat &bull; Max 6%)</span></div>
           <div id="openPortfolioHeat" class="stat-value positive">0.0%</div>
           <div id="openPortfolioHeatSub" class="stat-sub-text">₹0 at risk across 0 trades</div>
         </div>
@@ -708,9 +733,9 @@
               <th>Buy Price</th>
               <th>Current Price</th>
               <th><span class="term-lookup" data-term="Unrealized P&L">Profit / Loss</span></th>
-              <th><span class="term-lookup" data-term="R-multiple">Multiple (R)</span></th>
-              <th>Holding Period</th>
-              <th>Action Required</th>
+              <th><span class="term-lookup" data-term="R-multiple">Profit Multiplier</span> <span class="dual-lang-sub">(R-Score)</span></th>
+              <th>Trading Sessions <span class="dual-lang-sub">(Day 1 to 8)</span></th>
+              <th>Your Action Today <span class="dual-lang-sub">(At 3:15 PM)</span></th>
               <th style="width: 44px; text-align: right;"></th>
             </tr>
           </thead>
@@ -896,43 +921,43 @@
           <div id="statTotalTrades" class="stat-value">0</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label"><span class="term-lookup" data-term="Win rate">Win Rate</span></div>
+          <div class="stat-label"><span class="term-lookup" data-term="Win rate">Win Rate</span> <span class="dual-lang-sub">(Target: 45-55%)</span></div>
           <div id="statWinRate" class="stat-value">0.0%</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label"><span class="term-lookup" data-term="Realized PnL">Total Realized PnL</span></div>
+          <div class="stat-label"><span class="term-lookup" data-term="Realized PnL">Banked Cash Profit</span> <span class="dual-lang-sub">(Realized P&amp;L)</span></div>
           <div id="statTotalPnl" class="stat-value">₹0.00</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label"><span class="term-lookup" data-term="Profit factor">Profit Factor</span></div>
+          <div class="stat-label"><span class="term-lookup" data-term="Profit factor">Profit Factor</span> <span class="dual-lang-sub">(Target &gt; 1.5)</span></div>
           <div id="statProfitFactor" class="stat-value">0.00</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label"><span class="term-lookup" data-term="R-multiple">Avg Win R</span></div>
+          <div class="stat-label"><span class="term-lookup" data-term="R-multiple">Avg Win Multiplier</span> <span class="dual-lang-sub">(Avg Win R)</span></div>
           <div id="statAvgWinR" class="stat-value positive">+0.00R</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label"><span class="term-lookup" data-term="R-multiple">Avg Loss R</span></div>
+          <div class="stat-label"><span class="term-lookup" data-term="R-multiple">Avg Loss Multiplier</span> <span class="dual-lang-sub">(Avg Loss R)</span></div>
           <div id="statAvgLossR" class="stat-value negative">-0.00R</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label"><span class="term-lookup" data-term="Expectancy">Expectancy R</span></div>
+          <div class="stat-label"><span class="term-lookup" data-term="Expectancy">Expectancy Multiplier</span> <span class="dual-lang-sub">(Per ₹1 Risk)</span></div>
           <div id="statExpectancyR" class="stat-value">0.00R</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label"><span class="term-lookup" data-term="Max drawdown">Max Drawdown</span></div>
+          <div class="stat-label"><span class="term-lookup" data-term="Max drawdown">Max Account Dip</span> <span class="dual-lang-sub">(Max Drawdown)</span></div>
           <div id="statMaxDD" class="stat-value negative">₹0.00</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">Best Trade</div>
+          <div class="stat-label">Best Trade Profit</div>
           <div id="statBestTrade" class="stat-value positive">+₹0.00</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">Worst Trade</div>
+          <div class="stat-label">Worst Trade Loss</div>
           <div id="statWorstTrade" class="stat-value negative">-₹0.00</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label"><span class="term-lookup" data-term="Tail capture">Tails Captured (&gt;2R)</span></div>
+          <div class="stat-label"><span class="term-lookup" data-term="Tail capture">Monster Winners (&gt;2R)</span> <span class="dual-lang-sub">(Tail Capture)</span></div>
           <div id="statTailsCaptured" class="stat-value highlight">0.0%</div>
           <div id="statTailsCapturedSub" class="stat-sub-text">0 of 0 winners</div>
         </div>
@@ -4844,5 +4869,67 @@
   </div>
 
   <script src="app.js"></script>
+  <!-- ❓ 60-SECOND WEALTH BUILDER TOUR MODAL -->
+  <div id="tourModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content tour-modal-content">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 20px;">🧭</span>
+          <h3 class="modal-title">60-Second Simple Guide (How to Make Wealth)</h3>
+        </div>
+        <button id="closeTourModalBtn" class="modal-close" aria-label="Close modal">&times;</button>
+      </div>
+      <div class="modal-body tour-modal-body">
+        <div class="tour-step-progress">
+          <div class="tour-dot active" id="tourDot1">1</div>
+          <div class="tour-line"></div>
+          <div class="tour-dot" id="tourDot2">2</div>
+          <div class="tour-line"></div>
+          <div class="tour-dot" id="tourDot3">3</div>
+          <div class="tour-line"></div>
+          <div class="tour-dot" id="tourDot4">4</div>
+        </div>
+
+        <!-- Slide 1 -->
+        <div class="tour-slide" id="tourSlide1" style="display: block;">
+          <div class="tour-slide-icon">🟢</div>
+          <h4 class="tour-slide-title">Step 1: Check the Big Traffic Light</h4>
+          <p class="tour-slide-desc">Every evening after <strong>4:30 PM</strong>, open this website. If the Traffic Light is <strong>GREEN</strong>, it means the Indian market is safe and rising. If it is <strong>RED</strong>, you do nothing and safely hold cash!</p>
+          <div class="tour-tip-box">💡 <em>Takes 10 seconds. You never have to guess whether the market is good or bad.</em></div>
+        </div>
+
+        <!-- Slide 2 -->
+        <div class="tour-slide" id="tourSlide2" style="display: none;">
+          <div class="tour-slide-icon">📋</div>
+          <h4 class="tour-slide-title">Step 2: Copy Our Top Stock Recommendation</h4>
+          <p class="tour-slide-desc">Look at our <strong>#1 Stock Pick</strong> on this page. Click <strong>"📋 Copy GTT Order"</strong> and paste the trigger and limit numbers into your broker app (Zerodha Kite, Groww, or AngelOne) before 9:00 AM.</p>
+          <div class="tour-tip-box">💡 <em>Takes 1 minute. The order sits in your broker and buys automatically when price breaks out.</em></div>
+        </div>
+
+        <!-- Slide 3 -->
+        <div class="tour-slide" id="tourSlide3" style="display: none;">
+          <div class="tour-slide-icon">☕</div>
+          <h4 class="tour-slide-title">Step 3: Zero Screen-Watching During the Day</h4>
+          <p class="tour-slide-desc">Between <strong>9:15 AM and 3:15 PM</strong>, your broker handles everything automatically. If your order executes, open this site and click <strong>"➕ I Bought This"</strong> so we can monitor it for you.</p>
+          <div class="tour-tip-box">💡 <em>Zero stress. You do not need to sit in front of charts or watch every tick.</em></div>
+        </div>
+
+        <!-- Slide 4 -->
+        <div class="tour-slide" id="tourSlide4" style="display: none;">
+          <div class="tour-slide-icon">💰</div>
+          <h4 class="tour-slide-title">Step 4: The 2-Minute Daily Check (3:15 PM)</h4>
+          <p class="tour-slide-desc">At <strong>3:15 PM</strong>, check your Monitored Portfolio. If a stock says <strong>💰 BOOK 50% PROFIT</strong> or <strong>⏳ 8-DAY EXIT</strong>, place the exit order in your broker before the 3:30 PM closing bell.</p>
+          <div class="tour-tip-box">💡 <em>Our math ensures your winners pay for all your small losses with handsome net cash leftover!</em></div>
+        </div>
+      </div>
+      <div class="modal-footer tour-modal-footer">
+        <button id="prevTourBtn" class="btn btn-secondary btn-sm" style="display: none;">◀ Previous</button>
+        <div style="flex: 1;"></div>
+        <button id="nextTourBtn" class="btn btn-primary btn-sm">Next Step ▶</button>
+        <button id="finishTourBtn" class="btn btn-success btn-sm" style="display: none;">✅ Got It! Let's Start</button>
+      </div>
+    </div>
+  </div>
+
 </body>
 </html>

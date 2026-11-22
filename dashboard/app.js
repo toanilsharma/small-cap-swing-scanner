@@ -4805,7 +4805,17 @@ async function renderOpenPositions(positions) {
         <td data-label="R-Multiple">
           <span class="badge ${rClass}">${currentR >= 0 ? '+' : ''}${currentR.toFixed(2)}R</span>
         </td>
-        <td data-label="Days Held"><span class="badge badge-neutral" title="Holding duration: Day ${daysHeld} of 5-day momentum window">Day ${daysHeld} / 5d</span></td>
+        <td data-label="Trading Sessions">
+          <div class="session-meter-container" title="Holding duration: Session ${Math.min(8, Math.max(1, daysHeld || 1))} of 8 NSE trading sessions (weekends excluded)">
+            <div class="session-meter-header">
+              <span>Day ${Math.min(8, Math.max(1, daysHeld || 1))} of 8</span>
+              <span style="color: var(--text-dim);">${Math.max(0, 8 - (daysHeld || 1))} left</span>
+            </div>
+            <div class="session-meter-pips">
+              ${Array.from({length: 8}, (_, idx) => `<span class="session-pip ${idx < Math.min(8, Math.max(1, daysHeld || 1)) ? (idx >= 6 ? 'warning' : 'filled') : ''}"></span>`).join('')}
+            </div>
+          </div>
+        </td>
         <td data-label="Actions">
           <div style="display: flex; gap: 6px; align-items: center; flex-wrap: nowrap;" onclick="event.stopPropagation();">
             <button class="btn btn-xs btn-sold btn-sold-trigger"
@@ -4847,7 +4857,7 @@ async function renderOpenPositions(positions) {
           <div class="milestone-ladder-container">
             <div style="font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--accent); margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
               <span>🎯 Rupee Roadmap &amp; Decision Milestones (${escapeHtml(pos.symbol)})</span>
-              <span style="font-size: 11px; color: var(--text-dim); text-transform: none;">Holding: <strong>Day ${daysHeld} of 5</strong> (${Math.max(0, 5 - daysHeld)} session${Math.max(0, 5 - daysHeld) === 1 ? '' : 's'} remaining before 5d review)</span>
+              <span style="font-size: 11px; color: var(--text-dim); text-transform: none;">Holding: <strong>Day ${daysHeld} of 8</strong> (${Math.max(0, 8 - daysHeld)} session${Math.max(0, 8 - daysHeld) === 1 ? '' : 's'} remaining before 8-day dead money review)</span>
             </div>
             <div class="milestone-grid">
               <div class="milestone-box" style="background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.35);">
@@ -7256,3 +7266,174 @@ function initPlaybookCheatStrip() {
 
   checkPlaybookCollapse();
 }
+
+
+// ==========================================================================
+// LIVE ACTION CLOCK & TIME-AWARE ACTION ENGINE
+// ==========================================================================
+function updateLiveActionClock() {
+  const clockTimeEl = document.getElementById('clockIstTimeText');
+  const phaseBadgeEl = document.getElementById('clockPhaseBadge');
+  const schedTitleEl = document.getElementById('clockScheduleTitle');
+  const directiveEl = document.getElementById('clockDirectiveText');
+  const nextMilestoneEl = document.getElementById('clockNextMilestone');
+
+  if (!clockTimeEl || !phaseBadgeEl || !directiveEl) return;
+
+  // Calculate current IST time (UTC + 5:30)
+  const now = new Date();
+  const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+  const ist = new Date(utc + (3600000 * 5.5));
+
+  const hours = ist.getHours();
+  const minutes = ist.getMinutes();
+  const day = ist.getDay(); // 0 = Sunday, 6 = Saturday
+  const timeStr = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')} IST`;
+  clockTimeEl.textContent = timeStr;
+
+  const totalMin = hours * 60 + minutes;
+  const isWeekend = (day === 0 || day === 6);
+
+  if (isWeekend) {
+    phaseBadgeEl.className = 'badge badge-primary clock-phase-pill';
+    phaseBadgeEl.textContent = '📊 WEEKEND WEALTH REVIEW';
+    schedTitleEl.textContent = 'Weekend Strategy & Portfolio Compounding';
+    directiveEl.textContent = 'Indian stock exchanges are closed for the weekend. Review your weekly profit curve in Tab 4 (Wealth Stats) and relax with family.';
+    nextMilestoneEl.textContent = 'Monday Pre-Open at 9:00 AM IST';
+  } else if (totalMin >= 960 && totalMin <= 1440 || totalMin >= 0 && totalMin < 540) {
+    // 4:00 PM (960) to 9:00 AM (540) Nightly Order Window
+    phaseBadgeEl.className = 'badge badge-primary clock-phase-pill';
+    phaseBadgeEl.textContent = '🌙 ORDER PLACEMENT WINDOW (4:30 PM – 9:00 AM)';
+    schedTitleEl.textContent = 'Nightly Off-Market Preparation';
+    directiveEl.textContent = 'Market is closed. Review our Top #1 Stock Pick below. Place your GTT buy order in Zerodha Kite / Groww tonight before market opens tomorrow.';
+    nextMilestoneEl.textContent = 'Pre-Market Check at 9:00 AM IST';
+  } else if (totalMin >= 540 && totalMin < 548) {
+    // 9:00 AM to 9:08 AM Pre-Market Auction
+    phaseBadgeEl.className = 'badge badge-warning clock-phase-pill';
+    phaseBadgeEl.textContent = '🔍 PRE-MARKET OPEN AUCTION (9:00 AM – 9:08 AM)';
+    schedTitleEl.textContent = 'Check Pre-Open Indicative Price';
+    directiveEl.textContent = 'Check the opening price in your broker. If your stock is opening > 1.5% above our buy trigger, CANCEL your order immediately. Never chase morning gaps!';
+    nextMilestoneEl.textContent = 'Market Opening Bell at 9:15 AM IST';
+  } else if (totalMin >= 548 && totalMin < 555) {
+    // 9:08 AM to 9:15 AM Pre-Open Transition
+    phaseBadgeEl.className = 'badge badge-neutral clock-phase-pill';
+    phaseBadgeEl.textContent = '⏳ PRE-OPEN ORDER BUFFER (9:08 AM – 9:15 AM)';
+    schedTitleEl.textContent = 'Stand By for Market Open';
+    directiveEl.textContent = 'Pre-open matching complete. Opening price confirmed. Orders are queued for immediate execution at 9:15 AM.';
+    nextMilestoneEl.textContent = 'Opening Bell at 9:15 AM IST';
+  } else if (totalMin >= 555 && totalMin < 570) {
+    // 9:15 AM to 9:30 AM Opening Breakout Execution
+    phaseBadgeEl.className = 'badge badge-success clock-phase-pill';
+    phaseBadgeEl.textContent = '⚡ OPENING EXECUTION WINDOW (9:15 AM – 9:30 AM)';
+    schedTitleEl.textContent = 'Monitor Trigger Fills & Confirm Purchases';
+    directiveEl.textContent = 'GTT orders trigger automatically on price breakouts. If your broker fills an order, open this website and click "➕ I Bought This" to start tracking.';
+    nextMilestoneEl.textContent = 'Hands-Off Safe Time until 3:15 PM IST';
+  } else if (totalMin >= 570 && totalMin < 915) {
+    // 9:30 AM to 3:15 PM Daytime
+    phaseBadgeEl.className = 'badge badge-neutral clock-phase-pill';
+    phaseBadgeEl.textContent = '🧘 ZERO SCREEN WATCHING (9:30 AM – 3:15 PM)';
+    schedTitleEl.textContent = 'Automated Risk Protection Active';
+    directiveEl.textContent = 'No manual action needed. Automated safety stops in your broker protect your capital. Focus on your work, business, or daily life.';
+    nextMilestoneEl.textContent = 'Closing Action Window at 3:15 PM IST';
+  } else if (totalMin >= 915 && totalMin <= 925) {
+    // 3:15 PM to 3:25 PM Closing 10-Minute Action Window
+    phaseBadgeEl.className = 'badge badge-danger clock-phase-pill';
+    phaseBadgeEl.textContent = '⏰ 10-MIN CLOSING ACTION WINDOW (3:15 PM – 3:25 PM)';
+    schedTitleEl.textContent = 'Daily Portfolio Review Required';
+    directiveEl.textContent = 'Check Tab 2 (My Portfolio). If any stock displays "💰 BOOK 50% PROFIT" or "⏳ 8-DAY TIME STOP", execute the sell order in your broker before 3:30 PM!';
+    nextMilestoneEl.textContent = 'Closing Bell at 3:30 PM IST';
+  } else {
+    // 3:25 PM to 4:00 PM Post-Market Closing Transition
+    phaseBadgeEl.className = 'badge badge-info clock-phase-pill';
+    phaseBadgeEl.textContent = '🔄 POST-MARKET RECALIBRATION (3:30 PM – 4:30 PM)';
+    schedTitleEl.textContent = 'Nightly Algorithmic Scan Preparing';
+    directiveEl.textContent = 'NSE market closed for today. Automated scanning runs at 4:15 PM. Fresh Stage-2 setups will be ready by 4:30 PM.';
+    nextMilestoneEl.textContent = 'Nightly Order Window at 4:30 PM IST';
+  }
+}
+
+// ==========================================================================
+// 60-SECOND ONBOARDING TOUR MODAL ENGINE
+// ==========================================================================
+function initWealthTourModal() {
+  const tourModal = document.getElementById('tourModal');
+  const openTourBtn = document.getElementById('tourGuideBtn');
+  const openMobileTourBtn = document.getElementById('mobileTourGuideBtn');
+  const closeTourBtn = document.getElementById('closeTourModalBtn');
+  const prevBtn = document.getElementById('prevTourBtn');
+  const nextBtn = document.getElementById('nextTourBtn');
+  const finishBtn = document.getElementById('finishTourBtn');
+
+  if (!tourModal) return;
+
+  let currentTourStep = 1;
+  const totalTourSteps = 4;
+
+  function showTourStep(step) {
+    currentTourStep = step;
+    for (let i = 1; i <= totalTourSteps; i++) {
+      const slide = document.getElementById(`tourSlide${i}`);
+      const dot = document.getElementById(`tourDot${i}`);
+      if (slide) slide.style.display = (i === step) ? 'block' : 'none';
+      if (dot) {
+        if (i === step) {
+          dot.className = 'tour-dot active';
+        } else if (i < step) {
+          dot.className = 'tour-dot completed';
+        } else {
+          dot.className = 'tour-dot';
+        }
+      }
+    }
+
+    if (prevBtn) prevBtn.style.display = (step > 1) ? 'inline-block' : 'none';
+    if (nextBtn) nextBtn.style.display = (step < totalTourSteps) ? 'inline-block' : 'none';
+    if (finishBtn) finishBtn.style.display = (step === totalTourSteps) ? 'inline-block' : 'none';
+  }
+
+  function openTour() {
+    tourModal.style.display = 'flex';
+    showTourStep(1);
+  }
+
+  function closeTour() {
+    tourModal.style.display = 'none';
+    try { localStorage.setItem('wealth_tour_seen', '1'); } catch (e) {}
+  }
+
+  if (openTourBtn) openTourBtn.addEventListener('click', openTour);
+  if (openMobileTourBtn) openMobileTourBtn.addEventListener('click', openTour);
+  if (closeTourBtn) closeTourBtn.addEventListener('click', closeTour);
+  if (finishBtn) finishBtn.addEventListener('click', closeTour);
+
+  if (nextBtn) {
+    nextBtn.addEventListener('click', () => {
+      if (currentTourStep < totalTourSteps) showTourStep(currentTourStep + 1);
+    });
+  }
+
+  if (prevBtn) {
+    prevBtn.addEventListener('click', () => {
+      if (currentTourStep > 1) showTourStep(currentTourStep - 1);
+    });
+  }
+
+  // Click outside modal content to close
+  tourModal.addEventListener('click', (e) => {
+    if (e.target === tourModal) closeTour();
+  });
+
+  // Auto-launch once on first visit
+  try {
+    if (!localStorage.getItem('wealth_tour_seen')) {
+      setTimeout(() => { openTour(); }, 1200);
+    }
+  } catch (e) {}
+}
+
+// Call on startup
+document.addEventListener('DOMContentLoaded', () => {
+  updateLiveActionClock();
+  setInterval(updateLiveActionClock, 30000);
+  initWealthTourModal();
+});

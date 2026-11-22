@@ -410,6 +410,79 @@ SECTOR_MAP: Dict[str, str] = {
     "INTERGLOBE.NS": "^NSEI",
 }
 
+# =====================================================================
+# SMALL-CAP INDUSTRY GROUPS & SECTOR INDEX MAPPING
+# =====================================================================
+SMALLCAP_INDUSTRIES_FILE = "smallcap_industries.json"
+
+
+def load_smallcap_industries() -> Dict[str, str]:
+    """Load cached small-cap industry mappings from smallcap_industries.json."""
+    if os.path.exists(SMALLCAP_INDUSTRIES_FILE):
+        try:
+            with open(SMALLCAP_INDUSTRIES_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if isinstance(data, dict):
+                    return {str(k).upper(): str(v) for k, v in data.items()}
+        except Exception:
+            return {}
+    return {}
+
+
+def save_smallcap_industries(industries: Dict[str, str]) -> None:
+    """Save small-cap industry mappings to smallcap_industries.json."""
+    try:
+        with open(SMALLCAP_INDUSTRIES_FILE, "w", encoding="utf-8") as f:
+            json.dump(industries, f, indent=2, ensure_ascii=False)
+    except Exception:
+        pass
+
+
+# Official small-cap industry group map: loaded from cached JSON with baseline defaults
+INDUSTRY_GROUP_MAP: Dict[str, str] = load_smallcap_industries()
+
+
+def get_stock_industry(symbol: str) -> str:
+    """
+    Returns official industry classification for symbol.
+    Checks INDUSTRY_GROUP_MAP (from smallcap_industries.json).
+    Falls back to f"UNCLASSIFIED_{clean_sym}" so unmapped symbols never falsely collide with each other.
+    """
+    clean_sym = symbol.strip().upper()
+    if not clean_sym.endswith(".NS"):
+        clean_sym = f"{clean_sym}.NS"
+    if clean_sym in INDUSTRY_GROUP_MAP:
+        return INDUSTRY_GROUP_MAP[clean_sym]
+    raw_sym = clean_sym.replace(".NS", "")
+    if raw_sym in INDUSTRY_GROUP_MAP:
+        return INDUSTRY_GROUP_MAP[raw_sym]
+    if symbol in INDUSTRY_GROUP_MAP:
+        return INDUSTRY_GROUP_MAP[symbol]
+    return f"UNCLASSIFIED_{clean_sym}"
+
+
+# Map NSE Industry names to verified live Yahoo Finance sector indices
+# Unmapped or niche industries default to INDEX_SYMBOL (^CNXSC)
+SECTOR_INDEX_MAP: Dict[str, str] = {
+    "Information Technology": "^CNXIT",
+    "Healthcare": "^CNXPHARMA",
+    "Automobile and Auto Components": "^CNXAUTO",
+    "Fast Moving Consumer Goods": "^CNXFMCG",
+    "Metals & Mining": "^CNXMETAL",
+    "Realty": "^CNXREALTY",
+    "Financial Services": "^NSEBANK",
+    "Construction": "^CNXINFRA",
+    "Construction Materials": "^CNXINFRA",
+    "Power": "^CNXINFRA",
+    "Telecommunication": "^CNXINFRA",
+    "Capital Goods": "^CNXINFRA",
+    "Chemicals": INDEX_SYMBOL,
+    "Consumer Durables": INDEX_SYMBOL,
+    "Consumer Services": INDEX_SYMBOL,
+    "Oil Gas & Consumable Fuels": INDEX_SYMBOL,
+    "Services": INDEX_SYMBOL,
+}
+
 # Cache for the index historical dataframe
 _INDEX_CACHE: Optional[pd.DataFrame] = None
 # Cache for sector historical dataframes
@@ -625,22 +698,36 @@ def get_symbols() -> List[str]:
                 csv_payload = "\n".join(lines[start_line_idx:])
                 df_csv = pd.read_csv(io.StringIO(csv_payload))
 
-                # Identify symbol column
+                # Identify symbol and industry columns
                 target_col = None
+                industry_col = None
                 for col in df_csv.columns:
-                    if "symbol" in str(col).lower():
+                    col_str = str(col).lower()
+                    if "symbol" in col_str and target_col is None:
                         target_col = col
-                        break
+                    if "industry" in col_str and industry_col is None:
+                        industry_col = col
 
+                new_industries: Dict[str, str] = {}
                 if target_col is not None:
-                    raw_symbols = df_csv[target_col].dropna().astype(str).str.upper().str.strip()
-                    for raw_sym in raw_symbols:
+                    for idx_row, row in df_csv.iterrows():
+                        raw_sym = str(row[target_col]).strip().upper()
+                        if not raw_sym or raw_sym == "NAN":
+                            continue
                         if raw_sym.endswith(".NS"):
                             raw_sym = raw_sym[:-3]
                         if re.match(r"^[A-Z0-9&.-]+$", raw_sym):
                             sym = f"{raw_sym}.NS"
                             if sym not in symbols:
                                 symbols.append(sym)
+                            if industry_col is not None and industry_col in row:
+                                ind_val = str(row[industry_col]).strip()
+                                if ind_val and ind_val.lower() != "nan":
+                                    new_industries[sym] = ind_val
+
+                if new_industries:
+                    INDUSTRY_GROUP_MAP.update(new_industries)
+                    save_smallcap_industries(INDUSTRY_GROUP_MAP)
         else:
             print(f"Notice: CSV URL {SYMBOL_SOURCE_URL} returned HTTP {resp.status_code}.")
             print(f"Instruction: Please populate '{SYMBOLS_SMALLCAP_FILE}' with small-cap symbols (one per line).")
@@ -758,7 +845,7 @@ _MOMENTUM_ELIGIBLE_CACHE: Optional[Tuple[datetime.date, Set[str]]] = None
 def get_momentum_eligible_symbols(symbols: Optional[List[str]] = None, history_map: Optional[Dict[str, pd.DataFrame]] = None) -> Set[str]:
     """
     Rank universe by volatility-adjusted 6-month return = ret_126d / (std of daily returns over 126d).
-    Only the top MOMENTUM_RANK_TOP=20 symbols are ELIGIBLE for any new entry.
+    Only the top 25% symbols (MOMENTUM_RANK_TOP = max(25, int(len(symbols) * 0.25))) are ELIGIBLE for any new entry.
     Ties broken by symbol ascending.
     If universe <= MOMENTUM_RANK_TOP, all symbols with history are eligible.
     """
@@ -772,7 +859,8 @@ def get_momentum_eligible_symbols(symbols: Optional[List[str]] = None, history_m
     if not symbols:
         return set()
 
-    if len(symbols) <= MOMENTUM_RANK_TOP:
+    top_n = max(MOMENTUM_RANK_TOP, int(len(symbols) * 0.25))
+    if len(symbols) <= top_n:
         eligible = set(symbols)
         _MOMENTUM_ELIGIBLE_CACHE = (today, eligible)
         return eligible
@@ -791,7 +879,7 @@ def get_momentum_eligible_symbols(symbols: Optional[List[str]] = None, history_m
 
     # Sort descending by score, ascending by symbol for tie breaks
     scores.sort(key=lambda x: (-x[0], x[1]))
-    eligible = {sym for _, sym in scores[:MOMENTUM_RANK_TOP]}
+    eligible = {sym for _, sym in scores[:top_n]}
     _MOMENTUM_ELIGIBLE_CACHE = (today, eligible)
     return eligible
 
@@ -1753,6 +1841,32 @@ def check_circuit_proximity(symbol: str, df: pd.DataFrame) -> Tuple[bool, Option
 _NSE_METADATA_CACHE: Dict[str, Dict[str, Any]] = {}
 _DELIVERY_DATA_CACHE: Dict[str, Dict[str, Any]] = {}
 
+_NSE_SESSION: Optional[requests.Session] = None
+_NSE_SESSION_WARMED_AT: Optional[float] = None
+
+
+def get_nse_session() -> Optional[requests.Session]:
+    """
+    Returns a persistent requests.Session with warmed-up cookies from NSE homepage.
+    Refreshes every 300 seconds to prevent cookie expiration.
+    """
+    global _NSE_SESSION, _NSE_SESSION_WARMED_AT
+    now = time.time()
+    if _NSE_SESSION is None or _NSE_SESSION_WARMED_AT is None or (now - _NSE_SESSION_WARMED_AT > 300):
+        session = requests.Session()
+        session.headers.update({
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.9",
+        })
+        try:
+            session.get("https://www.nseindia.com", timeout=3)
+        except Exception:
+            pass
+        _NSE_SESSION = session
+        _NSE_SESSION_WARMED_AT = now
+    return _NSE_SESSION
+
 
 def get_nse_microstructure_metadata(symbol: str, df: Optional[pd.DataFrame] = None) -> Dict[str, Any]:
     """
@@ -1761,13 +1875,16 @@ def get_nse_microstructure_metadata(symbol: str, df: Optional[pd.DataFrame] = No
     - band_pct: e.g. 0.20, 0.10, 0.05, 0.02
     - asm_stage: int (0 if none, 1..4)
     - is_gsm: bool
-    - source: 'live_nse' | 'cached_json' | 'price_action_fallback'
-    
+    - is_esm: bool (SEBI Enhanced Surveillance Measure for small-caps/micro-caps)
+    - esm_stage: int (0 if none, 1..2)
+    - source: 'live_nse' | 'cached_json' | 'default_fallback'
+    - metadata_verified: bool (True for live NSE or fresh cache, False for fallback)
+
     Graceful fallback sequence:
     1. In-memory cache
     2. Cached nse_surveillance.json and circuits.json
-    3. Live NSE quote API (with timeout & browser headers)
-    4. Price action band estimation from recent df daily bars
+    3. Live NSE quote API via cookie-warmed session
+    4. Safe default fallback
     """
     clean_sym = symbol.replace(".NS", "").upper()
     if clean_sym in _NSE_METADATA_CACHE:
@@ -1791,22 +1908,24 @@ def get_nse_microstructure_metadata(symbol: str, df: Optional[pd.DataFrame] = No
     band_pct = float(known_band) if known_band is not None else None
     asm_stage = int(cached_entry.get("asm_stage", 0))
     is_gsm = bool(cached_entry.get("gsm", False) or cached_entry.get("is_gsm", False))
+    esm_stage = int(cached_entry.get("esm_stage", 0))
+    is_esm = bool(cached_entry.get("esm", False) or cached_entry.get("is_esm", False) or esm_stage > 0)
     source = "cached_json" if (cached_entry or known_band is not None) else None
 
     # If missing band or surveillance info, attempt live fetch from NSE
     if source is None or band_pct is None:
         try:
-            headers = {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-                "Accept": "application/json, text/plain, */*",
-                "Accept-Language": "en-US,en;q=0.9",
-            }
-            quote_url = f"https://www.nseindia.com/api/quote-equity?symbol={clean_sym}"
-            req = urllib.request.Request(quote_url, headers=headers)
-            with urllib.request.urlopen(req, timeout=3) as resp:
-                if resp.status == 200:
-                    raw_text = resp.read().decode("utf-8")
-                    data = json.loads(raw_text)
+            session = get_nse_session()
+            if session is not None:
+                quote_url = f"https://www.nseindia.com/api/quote-equity?symbol={clean_sym}"
+                api_headers = {
+                    "Accept": "application/json, text/plain, */*",
+                    "Referer": f"https://www.nseindia.com/get-quotes/equity?symbol={clean_sym}",
+                    "X-Requested-With": "XMLHttpRequest",
+                }
+                resp = session.get(quote_url, headers=api_headers, timeout=3)
+                if resp.status_code == 200:
+                    data = resp.json()
                     if isinstance(data, dict):
                         info = data.get("info", {})
                         series = str(info.get("series", series or "EQ")).upper()
@@ -1826,6 +1945,14 @@ def get_nse_microstructure_metadata(symbol: str, df: Optional[pd.DataFrame] = No
                         surv_text = (str(surv_dict.get("surv", "")) + " " + str(surv_dict.get("desc", ""))).upper()
                         if "GSM" in surv_text:
                             is_gsm = True
+                        if "ESM" in surv_text or "ENHANCED SURVEILLANCE" in surv_text:
+                            is_esm = True
+                            if any(k in surv_text for k in ["STAGE 2", "STAGE II"]):
+                                esm_stage = 2
+                            elif any(k in surv_text for k in ["STAGE 1", "STAGE I"]):
+                                esm_stage = 1
+                            else:
+                                esm_stage = 1
                         if "LT-ASM" in surv_text or "LONG TERM ASM" in surv_text or "ASM" in surv_text:
                             if any(k in surv_text for k in ["STAGE 4", "STAGE IV", "STAGE 3", "STAGE III", "STAGE 2", "STAGE II"]):
                                 asm_stage = 2
@@ -1842,13 +1969,18 @@ def get_nse_microstructure_metadata(symbol: str, df: Optional[pd.DataFrame] = No
         band_pct = DEFAULT_CIRCUIT_BAND
         source = source or "default_fallback"
 
+    metadata_verified = bool(source in ("live_nse", "cached_json"))
+
     result = {
         "symbol": clean_sym,
         "series": series,
         "band_pct": band_pct,
         "asm_stage": asm_stage,
         "is_gsm": is_gsm,
+        "is_esm": is_esm,
+        "esm_stage": esm_stage,
         "source": source or "default_fallback",
+        "metadata_verified": metadata_verified,
     }
     _NSE_METADATA_CACHE[clean_sym] = result
     return result
@@ -1859,9 +1991,9 @@ def check_nse_microstructure_gate(symbol: str, df: Optional[pd.DataFrame] = None
     Rule 18: NSE Microstructure, Series, Circuit Band & Surveillance Gate
     Filters out retail pump-and-dumps and SEBI/NSE surveillance traps:
     1. Series Filter: Strictly exclude tickers in 'BE' (Trade-to-Trade) or 'BZ'.
-    2. Surveillance Filter: Reject any stock under Long-Term ASM (Stage 2, 3, or 4) or GSM.
+    2. Surveillance Filter: Reject any stock under Long-Term ASM (Stage 2, 3, or 4), GSM, or SEBI ESM (Stage 1 & 2).
     3. Circuit Band Filter: Reject any stock whose daily circuit band is < 10% (strictly blocks 2% and 5% circuit stocks).
-    
+
     Returns (is_approved: bool, rejection_reason: Optional[str]).
     """
     meta = get_nse_microstructure_metadata(symbol, df)
@@ -1869,14 +2001,19 @@ def check_nse_microstructure_gate(symbol: str, df: Optional[pd.DataFrame] = None
     band_pct = float(meta.get("band_pct", 0.10))
     asm_stage = int(meta.get("asm_stage", 0))
     is_gsm = bool(meta.get("is_gsm", False))
+    is_esm = bool(meta.get("is_esm", False))
+    esm_stage = int(meta.get("esm_stage", 0))
 
     # 1. Series check: exclude BE and BZ
     if series in ("BE", "BZ", "BT", "IL", "IT"):
         return False, f"SERIES_RESTRICTED: Ticker trades in restricted {series} series (Trade-to-Trade)"
 
-    # 2. Surveillance check: reject Long-Term ASM Stage 2, 3, 4 and GSM
+    # 2. Surveillance check: reject GSM, SEBI ESM Stage 1/2, and Long-Term ASM Stage 2, 3, 4
     if is_gsm:
         return False, "SURVEILLANCE_TRAP: Stock is under SEBI/NSE GSM (Graded Surveillance Measure)"
+    if is_esm or esm_stage > 0:
+        stage_str = f"Stage {esm_stage}" if esm_stage > 0 else "Stage 1/2"
+        return False, f"SURVEILLANCE_TRAP: Stock is under SEBI/NSE ESM {stage_str} (Enhanced Surveillance Measure)"
     if asm_stage >= 2:
         return False, f"SURVEILLANCE_TRAP: Stock is under Long-Term ASM Stage {asm_stage} (100% margin restriction)"
 
@@ -2557,10 +2694,10 @@ def check_buy_limits(sym: str, entry_price: float, qty: int, stop: Optional[floa
 
     # 1b. Sector concentration guard (Rule 08 / Rule 15)
     sector_cap = MAX_SECTOR_CONCURRENT if MAX_CONCURRENT_SMALLCAP >= 5 else 1
-    sym_sec = SECTOR_MAP.get(sym, INDEX_SYMBOL)
+    sym_sec = get_stock_industry(sym)
     same_sector_count = sum(
         1 for p in open_positions
-        if (p.get("sector") or SECTOR_MAP.get(p.get("symbol"), INDEX_SYMBOL)) == sym_sec
+        if (p.get("sector") or get_stock_industry(p.get("symbol", ""))) == sym_sec
     )
     if same_sector_count >= sector_cap:
         return (
@@ -2653,7 +2790,7 @@ def get_sector_df(sector_symbol: str) -> Optional[pd.DataFrame]:
 def sector_ok(symbol: str) -> bool:
     """
     Sector strength filter:
-    Looks up stock's sector symbol from SECTOR_MAP (defaults to ^NSEI).
+    Looks up stock's industry from INDUSTRY_GROUP_MAP and maps to verified Yahoo sector index via SECTOR_INDEX_MAP (defaults to ^CNXSC).
     Returns True if sector's last Close > SMA50 AND > SMA200 AND SMA50 > SMA200.
     Returns True if sector data is unavailable or fails (fail-open).
     """
@@ -2662,7 +2799,11 @@ def sector_ok(symbol: str) -> bool:
         if not clean_sym.endswith(".NS"):
             clean_sym = f"{clean_sym}.NS"
 
-        sector_sym = SECTOR_MAP.get(clean_sym, SECTOR_MAP.get(symbol, INDEX_SYMBOL))
+        ind = get_stock_industry(clean_sym)
+        sector_sym = SECTOR_INDEX_MAP.get(ind)
+        if not sector_sym:
+            sector_sym = SECTOR_MAP.get(clean_sym, SECTOR_MAP.get(symbol, INDEX_SYMBOL))
+
         sec_df = get_sector_df(sector_sym)
         if sec_df is None or len(sec_df) < 200:
             return True  # Fail-open so a download glitch never blocks trades
@@ -2896,7 +3037,7 @@ def compute_open_positions_correlation(
     any_high_corr = any(p["corr"] > 0.7 for p in pairs)
     sector_counts: Dict[str, int] = {}
     for p in valid_positions:
-        sec = p.get("sector") or SECTOR_MAP.get(p.get("symbol"), INDEX_SYMBOL)
+        sec = p.get("sector") or get_stock_industry(p.get("symbol", ""))
         sector_counts[sec] = sector_counts.get(sec, 0) + 1
     more_than_two_same_sector = any(cnt > 2 for cnt in sector_counts.values())
 
@@ -2929,12 +3070,12 @@ def compute_sector_rotation(
     on_deck_sector_counts: Dict[str, int] = {}
     for od in on_deck:
         od_sym = od.get("symbol") or ""
-        od_sec = SECTOR_MAP.get(od_sym, INDEX_SYMBOL)
+        od_sec = get_stock_industry(od_sym)
         on_deck_sector_counts[od_sec] = on_deck_sector_counts.get(od_sec, 0) + 1
 
     sectors_data: Dict[str, Dict[str, Any]] = {}
     for sym in symbols:
-        sec = SECTOR_MAP.get(sym, INDEX_SYMBOL)
+        sec = get_stock_industry(sym)
         if sec not in sectors_data:
             sectors_data[sec] = {
                 "symbols": [],
@@ -3275,7 +3416,11 @@ def calculate_position_risk_parameters(
 # =====================================================================
 # 7) SINGLE SYMBOL SCANNER & POSITION SIZER
 # =====================================================================
-def scan_symbol(symbol: str) -> Optional[Dict[str, Any]]:
+def scan_symbol(
+    symbol: str,
+    rs_rating: Optional[int] = None,
+    momentum_eligible: Optional[Set[str]] = None,
+) -> Optional[Dict[str, Any]]:
     """
     Scan an individual symbol for Breakout or Pullback swing setups.
     Calculates entry, stop loss, profit target, and position quantity.
@@ -3302,9 +3447,17 @@ def scan_symbol(symbol: str) -> Optional[Dict[str, Any]]:
     if circuit_skip:
         return None
 
-    # 2b) Rule 18: NSE Microstructure Gate (Series, Circuit Band < 10%, & ASM/GSM)
+    # 2b) Rule 18: NSE Microstructure Gate (Series, Circuit Band < 10%, & ASM/GSM/ESM)
     micro_ok, micro_reason = check_nse_microstructure_gate(symbol, df)
     if not micro_ok:
+        return None
+
+    # 2c) Top-momentum gate: Must be in top 25% of volatility-adjusted 6-month momentum
+    if momentum_eligible is not None and symbol not in momentum_eligible:
+        return None
+
+    # 2d) Cross-sectional RS Rating gate: rs_rating >= 75 when available
+    if rs_rating is not None and rs_rating < 75:
         return None
 
     # 3) Relative strength filter: 50-day stock return must beat index/basket 50-day return
@@ -3322,14 +3475,14 @@ def scan_symbol(symbol: str) -> Optional[Dict[str, Any]]:
     if not sector_ok(symbol):
         return None
 
-    # 4b) Sector concentration guard (Rule 08 / Rule 15): block if already at sector capacity
-    sym_sec = SECTOR_MAP.get(symbol, INDEX_SYMBOL)
+    # 4b) Sector/Industry concentration guard (Rule 08 / Rule 15): block if already at sector capacity
+    sym_sec = get_stock_industry(symbol)
     sector_cap = MAX_SECTOR_CONCURRENT if MAX_CONCURRENT_SMALLCAP >= 5 else 1
     try:
         open_pos = load_open_positions()
         same_sec_count = sum(
             1 for p in open_pos
-            if (p.get("sector") or SECTOR_MAP.get(p.get("symbol"), INDEX_SYMBOL)) == sym_sec
+            if (p.get("sector") or get_stock_industry(p.get("symbol", ""))) == sym_sec
         )
         if same_sec_count >= sector_cap:
             return None
@@ -3424,10 +3577,9 @@ def scan_symbol(symbol: str) -> Optional[Dict[str, Any]]:
     effective_atr_mult = risk_params.get("effective_ATR_mult", ATR_STOP_MULTIPLIER)
     vol_regime = risk_params.get("vol_regime", "NORMAL")
 
-    sector_sym = SECTOR_MAP.get(symbol, INDEX_SYMBOL)
+    sector_sym = get_stock_industry(symbol)
 
-    rs_map = calculate_rs_rating([symbol])
-    rs_val = rs_map.get(symbol)
+    rs_val = rs_rating if rs_rating is not None else calculate_rs_rating([symbol]).get(symbol)
     base_mat = calculate_base_maturity(df)
     days_base = calculate_days_in_base(df)
     score_val = diag.get("Score", 80) if ('diag' in locals() and diag and isinstance(diag, dict)) else 80
@@ -3437,6 +3589,9 @@ def scan_symbol(symbol: str) -> Optional[Dict[str, Any]]:
         if next_earnings == "UNVERIFIED — CHECK NSE BEFORE ORDER"
         else f"VERIFIED ({next_earnings})"
     )
+
+    nse_meta = get_nse_microstructure_metadata(symbol, df)
+    meta_verified = bool(nse_meta.get("metadata_verified", False))
 
     sig_dict = {
         "Signal Date": pd.to_datetime(last_row["Date"]).strftime("%Y-%m-%d"),
@@ -3472,8 +3627,9 @@ def scan_symbol(symbol: str) -> Optional[Dict[str, Any]]:
         "delivery_pct": deliv_info.get("delivery_pct"),
         "delivery_vol": deliv_info.get("delivery_vol"),
         "deliv_gate_status": deliv_reason,
-        "series": get_nse_microstructure_metadata(symbol, df).get("series", "EQ"),
-        "circuit_band_pct": get_nse_microstructure_metadata(symbol, df).get("band_pct", 0.10),
+        "series": nse_meta.get("series", "EQ"),
+        "circuit_band_pct": nse_meta.get("band_pct", 0.10),
+        "metadata_verified": meta_verified,
         "grade": grade,
         "Grade": grade,
         "score": score_val,
@@ -3523,6 +3679,8 @@ def format_signal(sig: Dict[str, Any]) -> str:
     est_profit = round((target - entry) * qty, 2)
     max_buy_price = round(entry * 1.015, 2)
     total_capital = round(entry * qty, 2)
+    meta_verified = sig.get("metadata_verified", True)
+    surv_display = "Verified (Normal EQ)" if meta_verified else "⚠️ UNVERIFIED SURVEILLANCE — CHECK NSE BEFORE ORDER"
 
     lines = [
         f"🟢 ACTION REQUIRED: PLACE BUY ORDER TONIGHT",
@@ -3548,6 +3706,7 @@ def format_signal(sig: Dict[str, Any]) -> str:
         f"• Risk Capped: 1.0% portfolio heat (₹{risk_amt:,.2f}) | Risk/Unit: ₹{risk_per_unit:.2f}",
         f"• Reward-to-Risk: 2 to 1 (Risking ₹{risk_amt:,.2f} to make ₹{est_profit:,.2f})",
         f"• Earnings Check: {earn_display}",
+        f"• Surveillance Check: {surv_display}",
         f"• Execution Mode: {exec_mode}",
     ]
     return "\n".join(lines)
@@ -3588,12 +3747,20 @@ def run_scanner() -> Tuple[List[Dict[str, Any]], int, bool]:
         pass
     print(f"Scanning {total} symbols for swing setups...")
 
+    # Cross-sectional RS rating & top 25% momentum eligibility computed once across universe
+    rs_map = calculate_rs_rating(symbols)
+    momentum_eligible = get_momentum_eligible_symbols(symbols)
+
     signals: List[Dict[str, Any]] = []
     messages: List[str] = []
 
     for i, sym in enumerate(symbols, start=1):
         print(f"{i}/{total}: {sym}")
-        sig = scan_symbol(sym)
+        sig = scan_symbol(
+            sym,
+            rs_rating=rs_map.get(sym),
+            momentum_eligible=momentum_eligible,
+        )
         if sig:
             signals.append(sig)
             formatted = f"{format_signal(sig)}\n\n{DISCIPLINE_CARD}"
@@ -3626,11 +3793,16 @@ def run_scanner() -> Tuple[List[Dict[str, Any]], int, bool]:
 # =====================================================================
 # 9) WATCHLIST GENERATOR
 # =====================================================================
-def diagnose(symbol: str) -> Optional[Dict[str, Any]]:
+def diagnose(
+    symbol: str,
+    df: Optional[pd.DataFrame] = None,
+    rs_rating: Optional[int] = None,
+) -> Optional[Dict[str, Any]]:
     """
     Diagnose a symbol's trend, coiling status, and breakout proximity.
     """
-    df = get_history(symbol)
+    if df is None:
+        df = get_history(symbol)
     if df is None or len(df) < 50:
         return None
 
@@ -3649,7 +3821,7 @@ def diagnose(symbol: str) -> Optional[Dict[str, Any]]:
         return None
 
     sym_name = symbol[:-3] if symbol.endswith(".NS") else symbol
-    sec_sym = SECTOR_MAP.get(symbol, INDEX_SYMBOL)
+    sec_sym = get_stock_industry(symbol)
     sec_ok = sector_ok(symbol)
     sec_bullish = "YES" if sec_ok else "no"
     trend_ok = bool(last_row["TREND_OK"]) if "TREND_OK" in last_row else True
@@ -3742,7 +3914,7 @@ def diagnose(symbol: str) -> Optional[Dict[str, Any]]:
         "series": nse_meta.get("series", "EQ"),
         "circuit_band_pct": nse_meta.get("band_pct", 0.10),
         "delivery_pct": deliv_info.get("delivery_pct"),
-        "rs_rating": calculate_rs_rating([symbol]).get(symbol),
+        "rs_rating": rs_rating if rs_rating is not None else calculate_rs_rating([symbol]).get(symbol),
         "base_maturity": calculate_base_maturity(df),
         "days_in_base": calculate_days_in_base(df),
         "inst_footprint": classify_inst_footprint(symbol, df),
@@ -3791,18 +3963,24 @@ def diagnose(symbol: str) -> Optional[Dict[str, Any]]:
     return diag_dict
 
 
-def get_watchlist_candidates() -> List[Dict[str, Any]]:
+def get_watchlist_candidates(
+    symbols: Optional[List[str]] = None,
+    rs_map: Optional[Dict[str, Optional[int]]] = None,
+) -> List[Dict[str, Any]]:
     """
     Scan symbols to build a watchlist of stocks in an uptrend near breakout.
     Returns list of diagnose() dicts with Trend YES and DistToBreakout% <= 5.0,
     sorted by score descending.
     """
-    symbols = get_symbols()
+    if symbols is None:
+        symbols = get_symbols()
+    if rs_map is None:
+        rs_map = calculate_rs_rating(symbols)
     watchlist_candidates: List[Dict[str, Any]] = []
 
     print("Building watchlist...")
     for sym in symbols:
-        diag = diagnose(sym)
+        diag = diagnose(sym, rs_rating=rs_map.get(sym))
         if diag and diag["Trend"] == "YES" and diag["DistToBreakout%"] <= 5.0:
             watchlist_candidates.append(diag)
         time.sleep(0.2)

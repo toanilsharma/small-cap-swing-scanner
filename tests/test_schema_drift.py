@@ -111,6 +111,7 @@ EXPECTED_SIGNAL_KEYS = {
     "Grade",
     "execution_mode",
     "earnings_status",
+    "metadata_verified",
 }
 
 EXPECTED_WATCHLIST_KEYS = {

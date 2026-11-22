@@ -448,9 +448,12 @@ def run_backtest(
                 if any(p["symbol"] == sym for p in open_positions):
                     continue
 
-                # Sector cap check (MAX_SECTOR_CONCURRENT = 2)
-                cand_sector = main.SECTOR_MAP.get(sym, main.INDEX_SYMBOL)
-                sec_count = sum(1 for p in open_positions if main.SECTOR_MAP.get(p["symbol"], main.INDEX_SYMBOL) == cand_sector)
+                # Sector / Industry cap check (MAX_SECTOR_CONCURRENT = 2)
+                cand_sector = getattr(main, "get_stock_industry", lambda s: main.SECTOR_MAP.get(s, main.INDEX_SYMBOL))(sym)
+                sec_count = sum(
+                    1 for p in open_positions
+                    if getattr(main, "get_stock_industry", lambda s: main.SECTOR_MAP.get(s, main.INDEX_SYMBOL))(p["symbol"]) == cand_sector
+                )
                 if sec_count >= getattr(main, "MAX_SECTOR_CONCURRENT", 2):
                     continue
 

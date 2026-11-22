@@ -418,3 +418,28 @@ def test_mean_reversion_setups_ignore_ofi(monkeypatch: pytest.MonkeyPatch):
     assert sig_pb is not None, "Pullback setup must NOT be blocked by low CMF20"
     assert sig_pb["Type"] == "PULLBACK"
 
+
+def test_top_momentum_and_rs_rating_gates(monkeypatch: pytest.MonkeyPatch):
+    """
+    Validates cross-sectional top 25% momentum and RS rating >= 75 gates in scan_symbol.
+    """
+    tb = build_scenario_dataframe("textbook")
+    monkeypatch.setattr(main, "get_history", lambda sym: tb.copy())
+    monkeypatch.setattr(main, "sector_ok", lambda sym: True)
+    monkeypatch.setattr(main, "index_return_50", lambda: 0.0)
+    monkeypatch.setattr(main, "get_next_earnings", lambda sym: "2026-12-01")
+    monkeypatch.setattr(main, "diagnose", lambda sym, rs_rating=None: {"grade": "A", "score": 85})
+
+    # 1. Symbol NOT in momentum_eligible set is rejected
+    sig_not_mom = main.scan_symbol("SYM1.NS", rs_rating=85, momentum_eligible={"LEADER1.NS", "LEADER2.NS"})
+    assert sig_not_mom is None, "Symbol outside top-momentum set must be rejected"
+
+    # 2. Symbol in momentum_eligible set but rs_rating < 75 is rejected
+    sig_low_rs = main.scan_symbol("SYM1.NS", rs_rating=68, momentum_eligible={"SYM1.NS", "LEADER2.NS"})
+    assert sig_low_rs is None, "Symbol with rs_rating < 75 must be rejected"
+
+    # 3. Symbol in momentum_eligible set with rs_rating >= 75 passes
+    sig_pass = main.scan_symbol("SYM1.NS", rs_rating=82, momentum_eligible={"SYM1.NS", "LEADER2.NS"})
+    assert sig_pass is not None, "Symbol with top-momentum and rs_rating >= 75 must pass"
+    assert sig_pass["rs_rating"] == 82
+

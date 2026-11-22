@@ -56,6 +56,65 @@ def test_rule18_surveillance_filter():
     assert not ok
     assert "SURVEILLANCE_TRAP" in reason
 
+    # SEBI ESM Stage 1
+    main._NSE_METADATA_CACHE["TEST_ESM1"] = {
+        "series": "EQ",
+        "band_pct": 0.20,
+        "asm_stage": 0,
+        "is_gsm": False,
+        "is_esm": True,
+        "esm_stage": 1,
+    }
+    ok, reason = main.check_nse_microstructure_gate("TEST_ESM1")
+    assert not ok
+    assert "SURVEILLANCE_TRAP" in reason
+    assert "ESM Stage 1" in reason
+
+    # SEBI ESM Stage 2
+    main._NSE_METADATA_CACHE["TEST_ESM2"] = {
+        "series": "EQ",
+        "band_pct": 0.20,
+        "asm_stage": 0,
+        "is_gsm": False,
+        "is_esm": True,
+        "esm_stage": 2,
+    }
+    ok, reason = main.check_nse_microstructure_gate("TEST_ESM2")
+    assert not ok
+    assert "SURVEILLANCE_TRAP" in reason
+    assert "ESM Stage 2" in reason
+
+
+def test_rule18_metadata_verified_flag():
+    """Rule 18: Verify metadata_verified is True for live/cache and False for fallback."""
+    main._NSE_METADATA_CACHE["TEST_VERIFIED"] = {
+        "symbol": "TEST_VERIFIED",
+        "series": "EQ",
+        "band_pct": 0.20,
+        "asm_stage": 0,
+        "is_gsm": False,
+        "is_esm": False,
+        "esm_stage": 0,
+        "source": "live_nse",
+        "metadata_verified": True,
+    }
+    meta = main.get_nse_microstructure_metadata("TEST_VERIFIED")
+    assert meta["metadata_verified"] is True
+
+    main._NSE_METADATA_CACHE["TEST_UNVERIFIED"] = {
+        "symbol": "TEST_UNVERIFIED",
+        "series": "EQ",
+        "band_pct": 0.10,
+        "asm_stage": 0,
+        "is_gsm": False,
+        "is_esm": False,
+        "esm_stage": 0,
+        "source": "default_fallback",
+        "metadata_verified": False,
+    }
+    meta_unver = main.get_nse_microstructure_metadata("TEST_UNVERIFIED")
+    assert meta_unver["metadata_verified"] is False
+
 
 def test_rule18_circuit_band_filter():
     """Rule 18: Strictly reject stocks with daily circuit band < 10% (2% and 5%)."""

@@ -69,3 +69,16 @@
   - Refactored `calculate_tail_capture_exit()` to evaluate stop-loss breaches strictly against `active_stop` entering day $t$ (carried over from $t-1$). Stop ratchets to fee-buffered breakeven (`entry * 1.0035`) take effect at the close of bar $t$ for day $t+1$ onward, eliminating retroactive same-bar breakeven stop-outs.
   - Stop fills model gap-downs via `min(Open, active_stop) * (1.0 - 0.001)` and partial fills take `max(Open, target_2r)`.
   - Deducts 0.30% round-trip statutory friction (`turnover * 0.0015`) on every trade.
+
+### 5. Small-Cap Industry Isolation, Top-Momentum Wiring & Microstructure Gate (Audit 2026-11)
+- **Elimination of Hidden Sector Collision**:
+  - `smallcap_industries.json` parses and caches official NSE `Industry` classifications (`Capital Goods`, `Healthcare`, `Financial Services`, etc.) directly from `ind_niftysmallcap100list.csv` / `ind_niftysmallcap250list.csv`.
+  - Disentangled `INDUSTRY_GROUP_MAP` (for concurrent small-cap concentration caps and correlation) from `SECTOR_INDEX_MAP` (mapping industries to live Yahoo indices like `^CNXIT`, `^CNXPHARMA`, `^NSEBANK`, `^CNXINFRA`, etc., defaulting to `^CNXSC` for `sector_ok()` trend tests).
+  - Unmapped tickers default to `f"UNCLASSIFIED_{clean_symbol}"`, preventing arbitrary mutual blocking among unrelated small-caps.
+- **Cross-Sectional RS & Top-25% Momentum Gate**:
+  - Universe-wide `rs_map = calculate_rs_rating(symbols)` and `momentum_eligible = get_momentum_eligible_symbols(symbols)` are evaluated once per scan/batch across all constituents.
+  - Enforces that new entries must reside in the top 25% of volatility-adjusted 6-month momentum (`max(20, int(len(symbols) * 0.25))`) and have `rs_rating >= 75` (when available).
+- **NSE Microstructure & Enhanced Surveillance Measure (ESM) Gate**:
+  - Uses cookie-warmed session targeting `https://www.nseindia.com` to prevent 401/403 HTTP rejections on live quote metadata lookup.
+  - Detects and strictly rejects **SEBI ESM (Enhanced Surveillance Measure) Stage 1 & 2** (mandatory 100% margin / trade-for-trade for speculative small/micro-caps) alongside BE/BZ series, GSM, LT-ASM Stage 2–4, and `< 10%` circuit bands.
+  - Emits `"metadata_verified": bool` across signals and Telegram alerts.

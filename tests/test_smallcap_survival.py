@@ -313,3 +313,44 @@ def test_event_open_warns_not_exits(tmp_cwd: Any):
     assert len(warn_lines) == 1
     assert "🔔 HELD.NS event (AGM) in 2 days" in warn_lines[0]
 
+
+def test_smallcap_industry_collision_prevention(monkeypatch: pytest.MonkeyPatch, tmp_cwd: Any):
+    """
+    Validates that unmapped small-caps get unique UNCLASSIFIED identifiers and do not
+    collide under MAX_SECTOR_CONCURRENT=2, while mapped same-industry stocks do enforce the cap.
+    """
+    # 1. Two unmapped symbols have distinct industries
+    ind_a = main.get_stock_industry("UNMAPPED_A.NS")
+    ind_b = main.get_stock_industry("UNMAPPED_B.NS")
+    assert ind_a == "UNCLASSIFIED_UNMAPPED_A.NS"
+    assert ind_b == "UNCLASSIFIED_UNMAPPED_B.NS"
+    assert ind_a != ind_b
+
+    # 2. Open 2 positions in UNMAPPED_A.NS (unclassified):
+    open_pos = [
+        {"symbol": "UNMAPPED_A.NS", "entry_price": 100.0, "qty": 10, "stop": 91.0},
+        {"symbol": "OTHER_UNMAPPED.NS", "entry_price": 100.0, "qty": 10, "stop": 91.0},
+    ]
+    main.save_open_positions(open_pos)
+
+    # UNMAPPED_B.NS must NOT be blocked by the sector cap because it is a different unclassified industry
+    res = main.check_buy_limits("UNMAPPED_B.NS", 100.0, 10, 91.0)
+    assert res is None, f"Different unmapped stocks must not collide: {res}"
+
+    # 3. Two mapped stocks in same industry enforce MAX_SECTOR_CONCURRENT = 2
+    monkeypatch.setitem(main.INDUSTRY_GROUP_MAP, "IND_STOCK1.NS", "Capital Goods")
+    monkeypatch.setitem(main.INDUSTRY_GROUP_MAP, "IND_STOCK2.NS", "Capital Goods")
+    monkeypatch.setitem(main.INDUSTRY_GROUP_MAP, "IND_STOCK3.NS", "Capital Goods")
+
+    open_pos_mapped = [
+        {"symbol": "IND_STOCK1.NS", "entry_price": 100.0, "qty": 10, "stop": 91.0, "sector": "Capital Goods"},
+        {"symbol": "IND_STOCK2.NS", "entry_price": 100.0, "qty": 10, "stop": 91.0, "sector": "Capital Goods"},
+    ]
+    main.save_open_positions(open_pos_mapped)
+
+    res_blocked = main.check_buy_limits("IND_STOCK3.NS", 100.0, 10, 91.0)
+    assert res_blocked is not None
+    assert "BUY REJECTED" in res_blocked
+    assert "Capital Goods" in res_blocked
+
+

@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-11-24T20:43:25.818581+05:30",
+  "updated_at": "2026-11-25T02:28:35.915432+05:30",
   "market_ok": true,
   "vol_regime": {
     "bucket": "NORMAL",
@@ -42,8 +42,8 @@
       "ofi20": 0.078,
       "cmf20": 0.078,
       "mfi20": 0.078,
-      "execution_mode": "[WATCHLIST — MONITORING]",
-      "thesis_card": "GRADE A+ | RS 86 | Base 4/4 (25d)\nTrend ✓ / Setup Coiling / Sector Bullish / MTF ✓\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
+      "execution_mode": "[WATCHLIST \u2014 MONITORING]",
+      "thesis_card": "GRADE A+ | RS 86 | Base 4/4 (25d)\nTrend \u2713 / Setup Coiling / Sector Bullish / MTF \u2713\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
     },
     {
       "Symbol": "PNBHOUSING",
@@ -79,8 +79,8 @@
       "ofi20": -0.057,
       "cmf20": -0.057,
       "mfi20": -0.057,
-      "execution_mode": "[WATCHLIST — MONITORING]",
-      "thesis_card": "GRADE B | RS 74 | Base 1/4 (105d)\nTrend ✓ / Setup Consolidating / Sector Bullish / MTF ✓\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
+      "execution_mode": "[WATCHLIST \u2014 MONITORING]",
+      "thesis_card": "GRADE B | RS 74 | Base 1/4 (105d)\nTrend \u2713 / Setup Consolidating / Sector Bullish / MTF \u2713\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
     },
     {
       "Symbol": "RBLBANK",
@@ -116,8 +116,8 @@
       "ofi20": 0.161,
       "cmf20": 0.161,
       "mfi20": 0.161,
-      "execution_mode": "[WATCHLIST — MONITORING]",
-      "thesis_card": "GRADE B | RS 66 | Base 1/4 (28d)\nTrend ✓ / Setup Consolidating / Sector Bullish / MTF ✓\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
+      "execution_mode": "[WATCHLIST \u2014 MONITORING]",
+      "thesis_card": "GRADE B | RS 66 | Base 1/4 (28d)\nTrend \u2713 / Setup Consolidating / Sector Bullish / MTF \u2713\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
     },
     {
       "Symbol": "GLAND",
@@ -158,8 +158,8 @@
       "ofi20": 0.242,
       "cmf20": 0.242,
       "mfi20": 0.242,
-      "execution_mode": "[WATCHLIST — MONITORING]",
-      "thesis_card": "GRADE C | RS 91 | Base 1/4 (71d)\nTrend ✓ / Setup Consolidating / Sector Bullish / MTF ✓\nInst: unknown | Next event: EARNINGS in 65d\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
+      "execution_mode": "[WATCHLIST \u2014 MONITORING]",
+      "thesis_card": "GRADE C | RS 91 | Base 1/4 (71d)\nTrend \u2713 / Setup Consolidating / Sector Bullish / MTF \u2713\nInst: unknown | Next event: EARNINGS in 65d\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
     },
     {
       "Symbol": "LALPATHLAB",
@@ -200,8 +200,8 @@
       "ofi20": 0.044,
       "cmf20": 0.044,
       "mfi20": 0.044,
-      "execution_mode": "[WATCHLIST — MONITORING]",
-      "thesis_card": "GRADE C | RS 79 | Base 2/4 (83d)\nTrend ✓ / Setup Consolidating / Sector Bullish / MTF ✓\nInst: unknown | Next event: EARNINGS in 74d\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
+      "execution_mode": "[WATCHLIST \u2014 MONITORING]",
+      "thesis_card": "GRADE C | RS 79 | Base 2/4 (83d)\nTrend \u2713 / Setup Consolidating / Sector Bullish / MTF \u2713\nInst: unknown | Next event: EARNINGS in 74d\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
     },
     {
       "Symbol": "CUB",
@@ -237,8 +237,8 @@
       "ofi20": 0.046,
       "cmf20": 0.046,
       "mfi20": 0.046,
-      "execution_mode": "[WATCHLIST — MONITORING]",
-      "thesis_card": "GRADE C | RS 76 | Base 2/4 (102d)\nTrend ✓ / Setup Consolidating / Sector Bullish / MTF ✓\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
+      "execution_mode": "[WATCHLIST \u2014 MONITORING]",
+      "thesis_card": "GRADE C | RS 76 | Base 2/4 (102d)\nTrend \u2713 / Setup Consolidating / Sector Bullish / MTF \u2713\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
     },
     {
       "Symbol": "WOCKPHARMA",
@@ -274,8 +274,8 @@
       "ofi20": 0.224,
       "cmf20": 0.224,
       "mfi20": 0.224,
-      "execution_mode": "[WATCHLIST — MONITORING]",
-      "thesis_card": "GRADE C | RS 87 | Base 2/4 (39d)\nTrend ✓ / Setup Consolidating / Sector Bullish / MTF ✓\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
+      "execution_mode": "[WATCHLIST \u2014 MONITORING]",
+      "thesis_card": "GRADE C | RS 87 | Base 2/4 (39d)\nTrend \u2713 / Setup Consolidating / Sector Bullish / MTF \u2713\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
     },
     {
       "Symbol": "ATHERENERG",
@@ -311,8 +311,8 @@
       "ofi20": 0.282,
       "cmf20": 0.282,
       "mfi20": 0.282,
-      "execution_mode": "[WATCHLIST — MONITORING]",
-      "thesis_card": "GRADE C | RS 97 | Base 2/4 (76d)\nTrend ✓ / Setup Consolidating / Sector Neutral / MTF ✓\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
+      "execution_mode": "[WATCHLIST \u2014 MONITORING]",
+      "thesis_card": "GRADE C | RS 97 | Base 2/4 (76d)\nTrend \u2713 / Setup Consolidating / Sector Neutral / MTF \u2713\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
     },
     {
       "Symbol": "KARURVYSYA",
@@ -348,8 +348,8 @@
       "ofi20": 0.12,
       "cmf20": 0.12,
       "mfi20": 0.12,
-      "execution_mode": "[WATCHLIST — MONITORING]",
-      "thesis_card": "GRADE C | RS 83 | Base 1/4 (86d)\nTrend ✓ / Setup Consolidating / Sector Bullish / MTF ✓\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
+      "execution_mode": "[WATCHLIST \u2014 MONITORING]",
+      "thesis_card": "GRADE C | RS 83 | Base 1/4 (86d)\nTrend \u2713 / Setup Consolidating / Sector Bullish / MTF \u2713\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
     },
     {
       "Symbol": "CEMPRO",
@@ -385,8 +385,8 @@
       "ofi20": 0.195,
       "cmf20": 0.195,
       "mfi20": 0.195,
-      "execution_mode": "[CONFIRMED EOD BREAKOUT — ENTER NEXT OPEN IF GAP <= 1.5%]",
-      "thesis_card": "GRADE C | RS 94 | Base 1/4 (83d)\nTrend ✓ / Setup Consolidating / Sector Neutral / MTF ✓\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
+      "execution_mode": "[CONFIRMED EOD BREAKOUT \u2014 ENTER NEXT OPEN IF GAP <= 1.5%]",
+      "thesis_card": "GRADE C | RS 94 | Base 1/4 (83d)\nTrend \u2713 / Setup Consolidating / Sector Neutral / MTF \u2713\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
     },
     {
       "Symbol": "PWL",
@@ -422,8 +422,8 @@
       "ofi20": -0.134,
       "cmf20": -0.134,
       "mfi20": -0.134,
-      "execution_mode": "[PRE-BREAKOUT COIL — PLACE GTT @ PIVOT]",
-      "thesis_card": "GRADE C | RS 80 | Base 2/4 (55d)\nTrend ✓ / Setup Consolidating / Sector Neutral / MTF ✓\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
+      "execution_mode": "[PRE-BREAKOUT COIL \u2014 PLACE GTT @ PIVOT]",
+      "thesis_card": "GRADE C | RS 80 | Base 2/4 (55d)\nTrend \u2713 / Setup Consolidating / Sector Neutral / MTF \u2713\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
     },
     {
       "Symbol": "NAVINFLUOR",
@@ -459,8 +459,8 @@
       "ofi20": 0.322,
       "cmf20": 0.322,
       "mfi20": 0.322,
-      "execution_mode": "[WATCHLIST — MONITORING]",
-      "thesis_card": "GRADE C | RS 90 | Base 1/4 (112d)\nTrend ✓ / Setup Consolidating / Sector Neutral / MTF ✓\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
+      "execution_mode": "[WATCHLIST \u2014 MONITORING]",
+      "thesis_card": "GRADE C | RS 90 | Base 1/4 (112d)\nTrend \u2713 / Setup Consolidating / Sector Neutral / MTF \u2713\nInst: unknown | Next event: none\nPlan: 2R Target / Trail 20-EMA | Risk 1% (gap-capped @20%)"
     }
   ],
   "scanned_count": 100,
@@ -470,7 +470,7 @@
     "prev_close": 25800.6,
     "chg_pct": -1.75,
     "last_bar_date": "2026-11-23",
-    "as_of_ist": "2026-11-24T20:43:25.868768+05:30",
+    "as_of_ist": "2026-11-25T02:28:36.033435+05:30",
     "breadth_above_sma50": 54.0,
     "breadth_above_sma200": 55.0,
     "universe_size": 100,
@@ -501,7 +501,7 @@
       "mtf_confluence": true,
       "hurst": 0.711,
       "ofi20": 0.078,
-      "thesis_card": "GRADE n/a | RS n/a | Base n/a/4 (n/ad)\nTrend ✓ / Setup Consolidating / Sector n/a / MTF ✓\nInst: unknown | Next event: none\nPlan: GTT Breakout ₹2410.0 / Target 2R | Risk 1% (gap-capped @20%)"
+      "thesis_card": "GRADE n/a | RS n/a | Base n/a/4 (n/ad)\nTrend \u2713 / Setup Consolidating / Sector n/a / MTF \u2713\nInst: unknown | Next event: none\nPlan: GTT Breakout \u20b92410.0 / Target 2R | Risk 1% (gap-capped @20%)"
     }
   ],
   "leaders_board": [
@@ -937,7 +937,7 @@
     "strong_sell": 0
   },
   "market_internals": {
-    "oscillator": -10.01,
+    "oscillator": -10.75,
     "up_down_vol_ratio": 0.67,
     "breadth_thrust": false,
     "confidence": "weak"
@@ -1264,6 +1264,13 @@
       "up_down_vol_ratio": 0.67,
       "ratio": 0.67,
       "oscillator": -10.01
+    },
+    {
+      "date": "2026-11-23",
+      "net_advance": -31,
+      "up_down_vol_ratio": 0.67,
+      "ratio": 0.67,
+      "oscillator": -10.75
     }
   ]
 }
